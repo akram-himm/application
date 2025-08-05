@@ -71,7 +71,9 @@ const RadarView = () => {
     
     if (editingSubject) {
       newSubjects = subjects.map(subject =>
-        subject.id === editingSubject.id ? { ...subject, ...subjectData } : subject
+        subject.id === editingSubject.id ? 
+          { ...subject, ...subjectData, lastProgress: new Date().toISOString() } : 
+          subject
       );
     } else {
       const newSubject = {
@@ -87,54 +89,59 @@ const RadarView = () => {
     setModalOpen(false);
   };
   
-  const handleSubjectClick = (index, resetTimer) => {
-    const subject = subjects[index];
-    const penalty = penalties.find(p => p.subjectId === subject.id);
-    
-    if (penalty && resetTimer) {
-      // Réinitialiser le timer
-      const newSubjects = subjects.map((s, i) => 
-        i === index ? { ...s, lastProgress: new Date().toISOString(), value: Math.min(100, s.value + 1) } : s
-      );
-      updateRadar({ ...radar, subjects: newSubjects });
-    } else if (!penalty) {
-      // Navigation vers les chapitres
-      navigate(`/radar/${radarId}/subject/${subject.id}`);
+  const handleSubjectClick = (index) => {
+    if (subjects[index]) {
+      navigate(`/radar/${radarId}/subject/${subjects[index].id}`);
     }
   };
   
   const handleContextMenu = (e, index) => {
-    e.preventDefault();
+    // Vérifier si e est un vrai événement ou un objet avec clientX/clientY
+    if (e && e.preventDefault && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    
     setSelectedSubjectIndex(index);
-    setContextMenu({ show: true, x: e.clientX, y: e.clientY });
+    setContextMenu({
+      show: true,
+      x: e.clientX || e.x,
+      y: e.clientY || e.y
+    });
   };
   
   useEffect(() => {
-    const handleClick = () => setContextMenu({ show: false, x: 0, y: 0 });
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
+    const handleClickOutside = () => {
+      if (contextMenu.show) {
+        setContextMenu({ show: false, x: 0, y: 0 });
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [contextMenu.show]);
   
   return (
-    <div className="min-h-screen bg-[rgb(25,25,25)] flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-[rgb(25,25,25)]">
       {/* Navigation */}
-      <div className="absolute top-5 left-5 z-50">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-lg text-white/46 text-sm transition-all duration-150 hover:bg-white/[0.08] hover:text-white/81 hover:translate-x-[-2px]"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M10.78 12.78a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 1 1 1.06 1.06L6.56 8l4.22 4.22a.75.75 0 0 1 0 1.06z" />
-          </svg>
-          Retour
+      <nav className="p-5 flex items-center gap-2 text-sm text-white/46">
+        <button onClick={() => navigate('/')} className="hover:text-white/81 transition-colors">
+          Tableau de bord
         </button>
-      </div>
+        <span>/</span>
+        <span className="text-white/81">{radar.name}</span>
+      </nav>
       
-      {/* Titre et progression */}
-      <div className="absolute top-5 left-1/2 -translate-x-1/2 text-center z-50">
-        <h1 className="text-[28px] font-bold text-white/81 mb-2">{radar.name}</h1>
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-[200px] h-1.5 bg-white/[0.055] rounded-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-5 mb-5">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-4xl">{radar.icon}</span>
+          <h1 className="text-3xl font-bold text-white/81">{radar.name}</h1>
+        </div>
+        <p className="text-white/46">{radar.description}</p>
+        
+        {/* Progress Bar */}
+        <div className="flex items-center gap-3 mt-4">
+          <div className="flex-1 h-2 bg-white/[0.055] rounded-sm overflow-hidden">
             <div
               className="h-full bg-[rgb(35,131,226)] rounded-sm transition-all duration-300"
               style={{ width: `${progress}%` }}
@@ -179,6 +186,7 @@ const RadarView = () => {
         <div
           className="fixed bg-[rgb(37,37,37)]/95 backdrop-blur-xl border border-white/10 rounded-lg p-1 shadow-2xl z-[300] animate-scaleIn"
           style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={handleEditSubject}

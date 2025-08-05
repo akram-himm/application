@@ -9,6 +9,7 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
   const tooltipRef = useRef(null);
   const { penalties } = useContext(AkramContext);
   const [animationProgress, setAnimationProgress] = useState(0);
+  const [stackedSubjectsMenu, setStackedSubjectsMenu] = useState(null);
   const animationRef = useRef(null);
 
   // Configuration du radar
@@ -16,6 +17,9 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
   const centerX = size / 2;
   const centerY = size / 2;
   const radius = size * 0.4;
+
+  // Toujours afficher 6 axes
+  const FIXED_AXES_COUNT = 6;
 
   const animateRadar = useCallback(() => {
     setAnimationProgress(prev => {
@@ -42,6 +46,17 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     };
   }, [subjects]);
 
+  // Créer un tableau de 6 éléments avec les matières existantes
+  const getAxisData = () => {
+    const axisData = new Array(FIXED_AXES_COUNT).fill(null);
+    subjects.forEach((subject, index) => {
+      if (index < FIXED_AXES_COUNT) {
+        axisData[index] = subject;
+      }
+    });
+    return axisData;
+  };
+
   const drawRadar = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -49,11 +64,10 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, size, size);
     
-    if (subjects.length === 0) return;
-    
-    const angleStep = (Math.PI * 2) / subjects.length;
+    const angleStep = (Math.PI * 2) / FIXED_AXES_COUNT;
+    const axisData = getAxisData();
 
-    // Grilles avec animation
+    // Grilles circulaires
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.055)';
     ctx.lineWidth = 1;
     
@@ -61,11 +75,10 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       ctx.beginPath();
       ctx.globalAlpha = animationProgress;
       
-      for (let j = 0; j < subjects.length; j++) {
+      for (let j = 0; j < FIXED_AXES_COUNT; j++) {
         const angle = j * angleStep - Math.PI / 2;
-        const currentRadius = radius * i / 5 * animationProgress;
-        const x = centerX + Math.cos(angle) * currentRadius;
-        const y = centerY + Math.sin(angle) * currentRadius;
+        const x = centerX + Math.cos(angle) * radius * (i / 5) * animationProgress;
+        const y = centerY + Math.sin(angle) * radius * (i / 5) * animationProgress;
         
         if (j === 0) {
           ctx.moveTo(x, y);
@@ -73,249 +86,476 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
           ctx.lineTo(x, y);
         }
       }
+      
       ctx.closePath();
       ctx.stroke();
     }
-
-    // Lignes radiales
-    subjects.forEach((subject, index) => {
-      const angle = index * angleStep - Math.PI / 2;
-      const x = centerX + Math.cos(angle) * radius * animationProgress;
-      const y = centerY + Math.sin(angle) * radius * animationProgress;
-
+    
+    // Axes radiaux (toujours 6)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.094)';
+    ctx.lineWidth = 1;
+    
+    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+      const angle = i * angleStep - Math.PI / 2;
       ctx.beginPath();
+      ctx.globalAlpha = animationProgress;
       ctx.moveTo(centerX, centerY);
-      ctx.lineTo(x, y);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.055)';
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = animationProgress;
+      ctx.lineTo(
+        centerX + Math.cos(angle) * radius * animationProgress,
+        centerY + Math.sin(angle) * radius * animationProgress
+      );
       ctx.stroke();
-
-      // Labels
-      ctx.save();
-      const penalty = penalties.find(p => p.subjectId === subject.id);
-      const hasWarning = penalty !== undefined;
-      
-      ctx.fillStyle = hasWarning ? 'rgb(251, 191, 36)' : 
-                     (hoveredSubject === index ? 'rgba(255, 255, 255, 0.81)' : 'rgba(255, 255, 255, 0.46)');
-      ctx.font = hoveredSubject === index ? '600 15px -apple-system' : '15px -apple-system';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.globalAlpha = animationProgress;
-      
-      const labelX = centerX + Math.cos(angle) * (radius + 35);
-      const labelY = centerY + Math.sin(angle) * (radius + 35);
-      ctx.fillText(subject.name, labelX, labelY);
-      
-      if (hasWarning) {
-        ctx.fillStyle = 'rgb(251, 191, 36)';
-        ctx.font = '12px -apple-system';
-        ctx.fillText('⚠', labelX + ctx.measureText(subject.name).width / 2 + 10, labelY);
-      }
-      
-      ctx.restore();
-    });
-
-    // Zone de données avec animation
-    ctx.beginPath();
-    ctx.fillStyle = 'rgba(35, 131, 226, 0.1)';
-    ctx.strokeStyle = 'rgb(35, 131, 226)';
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = animationProgress;
-
-    subjects.forEach((subject, index) => {
-      const angle = index * angleStep - Math.PI / 2;
-      let value = subject.value;
-      
-      const penalty = penalties.find(p => p.subjectId === subject.id);
-      if (penalty) {
-        value = Math.max(0, value - penalty.penaltyValue);
-      }
-      
-      const displayValue = (value / subject.max) * radius * animationProgress;
-      const x = centerX + Math.cos(angle) * displayValue;
-      const y = centerY + Math.sin(angle) * displayValue;
-
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Points avec animation
-    subjects.forEach((subject, index) => {
-      const angle = index * angleStep - Math.PI / 2;
-      let value = subject.value;
-      
-      const penalty = penalties.find(p => p.subjectId === subject.id);
-      if (penalty) {
-        value = Math.max(0, value - penalty.penaltyValue);
-      }
-      
-      const displayValue = (value / subject.max) * radius * animationProgress;
-      const x = centerX + Math.cos(angle) * displayValue;
-      const y = centerY + Math.sin(angle) * displayValue;
-
+    }
+    
+    // Forme du radar (seulement pour les matières existantes)
+    const validSubjects = axisData.filter(s => s !== null);
+    if (validSubjects.length > 0) {
+      // Forme remplie - Connecter tous les points en ordre
       ctx.beginPath();
-      ctx.arc(x, y, hoveredSubject === index ? 7 : 5, 0, Math.PI * 2);
-      ctx.fillStyle = penalty ? 'rgb(251, 191, 36)' : 'rgb(35, 131, 226)';
-      ctx.globalAlpha = animationProgress;
-      ctx.fill();
+      ctx.globalAlpha = 0.1 * animationProgress;
+      ctx.fillStyle = 'rgb(35, 131, 226)';
       
-      if (hoveredSubject === index) {
-        ctx.strokeStyle = penalty ? 'rgba(251, 191, 36, 0.3)' : 'rgba(35, 131, 226, 0.3)';
-        ctx.lineWidth = 3;
+      let hasStarted = false;
+      for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+        if (axisData[i]) {
+          const angle = i * angleStep - Math.PI / 2;
+          let value = axisData[i].value;
+          
+          const penalty = penalties.find(p => p.subjectId === axisData[i].id);
+          if (penalty) {
+            value = Math.max(0, value - penalty.penaltyValue);
+          }
+          
+          const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
+          const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
+          
+          if (!hasStarted) {
+            ctx.moveTo(x, y);
+            hasStarted = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+      }
+      
+      if (hasStarted) {
+        ctx.closePath();
+        ctx.fill();
+      }
+      
+      // Bordure de la forme - Connecter tous les points en ordre
+      ctx.beginPath();
+      ctx.globalAlpha = 1 * animationProgress;
+      ctx.strokeStyle = 'rgb(35, 131, 226)';
+      ctx.lineWidth = 2;
+      
+      hasStarted = false;
+      for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+        if (axisData[i]) {
+          const angle = i * angleStep - Math.PI / 2;
+          let value = axisData[i].value;
+          
+          const penalty = penalties.find(p => p.subjectId === axisData[i].id);
+          if (penalty) {
+            value = Math.max(0, value - penalty.penaltyValue);
+          }
+          
+          const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
+          const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
+          
+          if (!hasStarted) {
+            ctx.moveTo(x, y);
+            hasStarted = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+      }
+      
+      if (hasStarted) {
+        ctx.closePath();
         ctx.stroke();
       }
-    });
+      
+      // Points sur les axes et au centre
+      axisData.forEach((subject, index) => {
+        if (subject) {
+          const angle = index * angleStep - Math.PI / 2;
+          let value = subject.value;
+          
+          const penalty = penalties.find(p => p.subjectId === subject.id);
+          let hasPenalty = false;
+          if (penalty) {
+            value = Math.max(0, value - penalty.penaltyValue);
+            hasPenalty = true;
+          }
+          
+          const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
+          const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
+          
+          // Point
+          ctx.beginPath();
+          ctx.globalAlpha = 1;
+          
+          if (hasPenalty) {
+            ctx.fillStyle = 'rgb(251, 191, 36)';
+          } else if (subjects.indexOf(subject) === hoveredSubject) {
+            ctx.fillStyle = 'rgb(35, 131, 226)';
+          } else {
+            ctx.fillStyle = 'white';
+          }
+          
+          ctx.arc(x, y, subjects.indexOf(subject) === hoveredSubject ? 8 : 6, 0, Math.PI * 2);
+          ctx.fill();
+          
+          if (hasPenalty) {
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+        }
+      });
+      
+      // Indicateur spécial pour les matières empilées au centre
+      const stackedSubjects = getStackedSubjectsAtCenter();
+      if (stackedSubjects && stackedSubjects.length > 0) {
+        // Cercle plus grand au centre pour indiquer l'empilement
+        ctx.beginPath();
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = 'rgb(251, 191, 36)';
+        ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Nombre de matières empilées
+        ctx.fillStyle = 'rgb(25, 25, 25)';
+        ctx.font = 'bold 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(stackedSubjects.length.toString(), centerX, centerY);
+      }
+    }
     
+    // Labels pour tous les axes
     ctx.globalAlpha = 1;
-  }, [subjects, hoveredSubject, penalties, animationProgress, size, centerX, centerY, radius]);
+    ctx.font = '14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+      const angle = i * angleStep - Math.PI / 2;
+      const labelRadius = radius + 30;
+      const x = centerX + Math.cos(angle) * labelRadius * animationProgress;
+      const y = centerY + Math.sin(angle) * labelRadius * animationProgress;
+      
+      if (axisData[i]) {
+        const subject = axisData[i];
+        const penalty = penalties.find(p => p.subjectId === subject.id);
+        
+        if (penalty) {
+          ctx.fillStyle = 'rgb(251, 191, 36)';
+        } else if (subjects.indexOf(subject) === hoveredSubject) {
+          ctx.fillStyle = 'rgb(35, 131, 226)';
+        } else {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.81)';
+        }
+        
+        ctx.fillText(subject.name, x, y);
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillText('---', x, y);
+      }
+    }
+    
+    // Gérer les matières supplémentaires (plus de 6)
+    if (subjects.length > FIXED_AXES_COUNT) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.46)';
+      ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`+${subjects.length - FIXED_AXES_COUNT} matières supplémentaires`, 10, size - 10);
+    }
+    
+  }, [size, centerX, centerY, radius, subjects, hoveredSubject, penalties, animationProgress]);
 
   useEffect(() => {
     drawRadar();
   }, [drawRadar]);
 
-  const handleMouseMove = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (size / rect.width);
-    const y = (e.clientY - rect.top) * (size / rect.height);
-    
-    let foundIndex = null;
-    const angleStep = (Math.PI * 2) / subjects.length;
-    
-    subjects.forEach((subject, index) => {
-      const angle = index * angleStep - Math.PI / 2;
+  // Détecter les matières empilées au centre
+  const getStackedSubjectsAtCenter = () => {
+    const stacked = [];
+    subjects.forEach(subject => {
       let value = subject.value;
-      
       const penalty = penalties.find(p => p.subjectId === subject.id);
       if (penalty) {
         value = Math.max(0, value - penalty.penaltyValue);
       }
-      
-      const displayValue = (value / subject.max) * radius;
-      const px = centerX + Math.cos(angle) * displayValue;
-      const py = centerY + Math.sin(angle) * displayValue;
-      
-      const distance = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
-      
-      if (distance < 20) {
-        foundIndex = index;
+      if (value === 0) {
+        stacked.push(subject);
       }
     });
+    return stacked.length > 1 ? stacked : null;
+  };
+
+  const handleCanvasClick = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     
-    onHoverSubject(foundIndex);
+    // Vérifier d'abord si on clique au centre (matières empilées)
+    const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+    if (distanceFromCenter <= 12) {
+      const stackedSubjects = getStackedSubjectsAtCenter();
+      if (stackedSubjects && stackedSubjects.length > 0) {
+        e.stopPropagation();
+        setStackedSubjectsMenu({
+          x: e.clientX,
+          y: e.clientY,
+          subjects: stackedSubjects,
+          type: 'select'
+        });
+        return;
+      }
+    }
     
-    // Tooltip
-    if (foundIndex !== null && tooltipRef.current) {
-      const subject = subjects[foundIndex];
+    // Si le menu est ouvert et qu'on clique ailleurs sur le canvas, le fermer
+    if (stackedSubjectsMenu) {
+      setStackedSubjectsMenu(null);
+      return;
+    }
+    
+    // Sinon, vérifier les points sur les axes
+    const angleStep = (Math.PI * 2) / FIXED_AXES_COUNT;
+    const axisData = getAxisData();
+    
+    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+      if (axisData[i]) {
+        const angle = i * angleStep - Math.PI / 2;
+        let value = axisData[i].value;
+        
+        const penalty = penalties.find(p => p.subjectId === axisData[i].id);
+        if (penalty) {
+          value = Math.max(0, value - penalty.penaltyValue);
+        }
+        
+        const pointX = centerX + Math.cos(angle) * radius * (value / 100);
+        const pointY = centerY + Math.sin(angle) * radius * (value / 100);
+        
+        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+        
+        if (distance <= 10) {
+          const subjectIndex = subjects.indexOf(axisData[i]);
+          onSelectSubject(subjectIndex);
+          return;
+        }
+      }
+    }
+  };
+
+  const handleCanvasContextMenu = (e) => {
+    e.preventDefault();
+    
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Vérifier si on fait un clic droit au centre
+    const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+    if (distanceFromCenter <= 12) {
+      const stackedSubjects = getStackedSubjectsAtCenter();
+      if (stackedSubjects && stackedSubjects.length > 0) {
+        setStackedSubjectsMenu({
+          x: e.clientX,
+          y: e.clientY,
+          subjects: stackedSubjects,
+          type: 'context'
+        });
+        return;
+      }
+    }
+    
+    // Sinon, vérifier les points sur les axes
+    const angleStep = (Math.PI * 2) / FIXED_AXES_COUNT;
+    const axisData = getAxisData();
+    
+    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+      if (axisData[i]) {
+        const angle = i * angleStep - Math.PI / 2;
+        let value = axisData[i].value;
+        
+        const penalty = penalties.find(p => p.subjectId === axisData[i].id);
+        if (penalty) {
+          value = Math.max(0, value - penalty.penaltyValue);
+        }
+        
+        const pointX = centerX + Math.cos(angle) * radius * (value / 100);
+        const pointY = centerY + Math.sin(angle) * radius * (value / 100);
+        
+        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+        
+        if (distance <= 10) {
+          const subjectIndex = subjects.indexOf(axisData[i]);
+          onContextMenu(e, subjectIndex);
+          return;
+        }
+      }
+    }
+  };
+
+  const handleCanvasMouseMove = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const angleStep = (Math.PI * 2) / FIXED_AXES_COUNT;
+    const axisData = getAxisData();
+    let hovered = null;
+    
+    // Vérifier d'abord le centre
+    const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+    const stackedSubjects = getStackedSubjectsAtCenter();
+    
+    if (distanceFromCenter <= 12 && stackedSubjects && stackedSubjects.length > 0) {
+      canvasRef.current.style.cursor = 'pointer';
+      tooltipRef.current.innerHTML = `<div class="text-sm font-semibold">${stackedSubjects.length} matières empilées</div><div class="text-xs opacity-70">Cliquez pour voir la liste</div>`;
+      tooltipRef.current.style.display = 'block';
+      tooltipRef.current.style.left = e.clientX + 10 + 'px';
+      tooltipRef.current.style.top = e.clientY - 10 + 'px';
+      return;
+    }
+    
+    // Vérifier les points sur les axes
+    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+      if (axisData[i]) {
+        const angle = i * angleStep - Math.PI / 2;
+        let value = axisData[i].value;
+        
+        const penalty = penalties.find(p => p.subjectId === axisData[i].id);
+        if (penalty) {
+          value = Math.max(0, value - penalty.penaltyValue);
+        }
+        
+        const pointX = centerX + Math.cos(angle) * radius * (value / 100);
+        const pointY = centerY + Math.sin(angle) * radius * (value / 100);
+        
+        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+        
+        if (distance <= 10) {
+          hovered = subjects.indexOf(axisData[i]);
+          break;
+        }
+      }
+    }
+    
+    onHoverSubject(hovered);
+    canvasRef.current.style.cursor = hovered !== null ? 'pointer' : 'default';
+    
+    // Tooltip pour les points normaux
+    if (hovered !== null && subjects[hovered]) {
+      const subject = subjects[hovered];
       const penalty = penalties.find(p => p.subjectId === subject.id);
+      let displayValue = subject.value;
+      
+      if (penalty) {
+        displayValue = Math.max(0, displayValue - penalty.penaltyValue);
+      }
+      
+      tooltipRef.current.innerHTML = `
+        <div class="font-semibold">${subject.name}</div>
+        <div class="text-sm opacity-70">Progression: ${displayValue}%</div>
+        ${penalty ? `<div class="text-sm text-yellow-400">Pénalité: -${penalty.penaltyValue}%</div>` : ''}
+      `;
       
       tooltipRef.current.style.display = 'block';
-      tooltipRef.current.style.left = e.clientX + 15 + 'px';
+      tooltipRef.current.style.left = e.clientX + 10 + 'px';
       tooltipRef.current.style.top = e.clientY - 10 + 'px';
-      
-      const tooltipTitle = tooltipRef.current.querySelector('.tooltip-title');
-      const tooltipValue = tooltipRef.current.querySelector('.tooltip-value');
-      const tooltipBar = tooltipRef.current.querySelector('.tooltip-bar-fill');
-      const tooltipWarning = tooltipRef.current.querySelector('.tooltip-warning');
-      
-      tooltipTitle.textContent = subject.name;
-      
-      if (penalty) {
-        const adjustedValue = Math.max(0, subject.value - penalty.penaltyValue);
-        tooltipValue.textContent = `${adjustedValue}%`;
-        tooltipBar.style.width = adjustedValue + '%';
-        tooltipBar.style.background = 'rgb(251, 191, 36)';
-        tooltipWarning.style.display = 'flex';
-        tooltipWarning.textContent = `${penalty.daysSince} jours sans progrès (-${penalty.penaltyValue}%)`;
-      } else {
-        tooltipValue.textContent = `${subject.value}%`;
-        tooltipBar.style.width = subject.value + '%';
-        tooltipBar.style.background = 'rgb(35, 131, 226)';
-        tooltipWarning.style.display = 'none';
-      }
-    } else if (tooltipRef.current) {
+    } else if (distanceFromCenter > 10) {
       tooltipRef.current.style.display = 'none';
     }
   };
 
-  const handleClick = (e) => {
-    if (hoveredSubject !== null) {
-      const subject = subjects[hoveredSubject];
-      const penalty = penalties.find(p => p.subjectId === subject.id);
-      
-      if (penalty) {
-        // Si la matière a une pénalité, on demande confirmation
-        if (confirm(`Voulez-vous marquer une progression pour ${subject.name} et réinitialiser le timer ?`)) {
-          onSelectSubject(hoveredSubject, true); // true = réinitialiser le timer
-        }
-      } else {
-        // Navigation vers la page des chapitres
-        navigate(`/radar/${radarId}/subject/${subject.id}`);
-      }
-    }
-  };
-
-  const handleContextMenu = (e) => {
-    e.preventDefault();
-    if (hoveredSubject !== null) {
-      onContextMenu(e, hoveredSubject);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    onHoverSubject(null);
-    if (tooltipRef.current) {
-      tooltipRef.current.style.display = 'none';
-    }
-  };
-
+  // Fermer le menu quand on clique ailleurs
   useEffect(() => {
-    const handleResize = () => {
-      drawRadar();
+    const handleClickOutside = (e) => {
+      // Ne pas fermer si on clique sur le canvas (pour permettre l'ouverture du menu)
+      if (stackedSubjectsMenu && 
+          !e.target.closest('.stacked-subjects-menu') && 
+          !e.target.closest('canvas')) {
+        setStackedSubjectsMenu(null);
+      }
     };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [drawRadar]);
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [stackedSubjectsMenu]);
 
   return (
-    <>
+    <div className="relative">
       <canvas
         ref={canvasRef}
         width={size}
         height={size}
-        onMouseMove={handleMouseMove}
-        onClick={handleClick}
-        onContextMenu={handleContextMenu}
-        onMouseLeave={handleMouseLeave}
-        className="cursor-pointer drop-shadow-[0_0_20px_rgba(35,131,226,0.1)] hover:drop-shadow-[0_0_30px_rgba(35,131,226,0.2)] transition-all duration-300"
+        className="max-w-full h-auto mx-auto"
+        onClick={handleCanvasClick}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseLeave={() => {
+          onHoverSubject(null);
+          tooltipRef.current.style.display = 'none';
+        }}
+        onContextMenu={handleCanvasContextMenu}
       />
       
       <div
         ref={tooltipRef}
-        className="fixed bg-[rgb(37,37,37)]/95 backdrop-blur-xl border border-white/10 rounded-lg p-3 pointer-events-none opacity-100 z-[200] shadow-2xl hidden"
-      >
-        <h4 className="tooltip-title text-sm font-semibold text-white/81 mb-1"></h4>
-        <div className="flex items-center gap-2 mb-2">
-          <p className="tooltip-value text-sm text-white/46"></p>
-          <div className="w-20 h-1 bg-white/10 rounded-sm overflow-hidden">
-            <div className="tooltip-bar-fill h-full rounded-sm transition-all duration-300"></div>
+        className="fixed bg-[rgb(37,37,37)] border border-white/[0.094] rounded-lg px-3 py-2 text-white/81 text-sm z-[100] pointer-events-none"
+        style={{ display: 'none' }}
+      />
+      
+      {/* Menu pour les matières empilées */}
+      {stackedSubjectsMenu && (
+        <div
+          className="stacked-subjects-menu fixed bg-[rgb(37,37,37)]/95 backdrop-blur-xl border border-white/10 rounded-lg p-1 shadow-2xl z-[300] animate-scaleIn"
+          style={{ left: stackedSubjectsMenu.x, top: stackedSubjectsMenu.y }}
+        >
+          <div className="text-xs text-white/46 px-3 py-1.5 border-b border-white/10">
+            Matières au centre
+          </div>
+          {stackedSubjectsMenu.subjects.map((subject, index) => (
+            <button
+              key={subject.id}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-white/81 rounded-md transition-all duration-150 hover:bg-white/[0.08]"
+              onClick={(e) => {
+                e.stopPropagation();
+                const subjectIndex = subjects.indexOf(subject);
+                if (stackedSubjectsMenu.type === 'select') {
+                  // Navigation directe
+                  navigate(`/radar/${radarId}/subject/${subject.id}`);
+                } else {
+                  // Menu contextuel
+                  onContextMenu({ 
+                    clientX: stackedSubjectsMenu.x, 
+                    clientY: stackedSubjectsMenu.y,
+                    preventDefault: () => {} // Ajouter une fonction preventDefault factice
+                  }, subjectIndex);
+                }
+                setStackedSubjectsMenu(null);
+              }}
+            >
+              {subject.name}
+            </button>
+          ))}
+        </div>
+      )}
+      
+      {/* Message si pas de matières */}
+      {subjects.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center">
+            <p className="text-white/46 text-lg mb-2">Aucune matière créée</p>
+            <p className="text-white/30 text-sm">Cliquez sur "Ajouter" pour créer votre première matière</p>
           </div>
         </div>
-        <p className="tooltip-warning text-xs text-[rgb(251,191,36)] items-center gap-1 hidden">
-          <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z" />
-          </svg>
-        </p>
-      </div>
-    </>
+      )}
+    </div>
   );
 };
 

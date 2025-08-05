@@ -86,7 +86,7 @@ const ChaptersTable = ({
       case 'checkbox':
         if (!subtopic) {
           return (
-            <td className="w-10">
+            <td key={column} className="w-10">
               <input
                 type="checkbox"
                 checked={chapter.enabled}
@@ -97,15 +97,15 @@ const ChaptersTable = ({
             </td>
           );
         } else {
-          return <td className="w-10"></td>;
+          return <td key={column} className="w-10"></td>;
         }
         
       case 'name':
         if (!subtopic) {
-          return <td className="font-semibold text-white/81">{chapter.name}</td>;
+          return <td key={column} className="font-semibold text-white/81">{chapter.name}</td>;
         } else {
           return (
-            <td className="pl-10">
+            <td key={column} className="pl-10">
               <span className="text-white/81">
                 {subtopic.icon} {subtopic.name}
               </span>
@@ -114,9 +114,9 @@ const ChaptersTable = ({
         }
         
       case 'startDate':
-        if (!subtopic) return <td></td>;
+        if (!subtopic) return <td key={column}></td>;
         return (
-          <td className="w-[120px]">
+          <td key={column} className="w-[120px]">
             <input
               type="date"
               value={subtopic.startDate || ''}
@@ -128,9 +128,9 @@ const ChaptersTable = ({
         );
         
       case 'endDate':
-        if (!subtopic) return <td></td>;
+        if (!subtopic) return <td key={column}></td>;
         return (
-          <td className="w-[120px]">
+          <td key={column} className="w-[120px]">
             <input
               type="date"
               value={subtopic.endDate || ''}
@@ -142,9 +142,9 @@ const ChaptersTable = ({
         );
         
       case 'priority':
-        if (!subtopic) return <td></td>;
+        if (!subtopic) return <td key={column}></td>;
         return (
-          <td className="w-[130px]">
+          <td key={column} className="w-[130px]">
             <select
               value={subtopic.priority}
               onChange={(e) => onUpdateSubtopic(chapter.id, subtopic.id, { priority: e.target.value })}
@@ -163,9 +163,9 @@ const ChaptersTable = ({
         );
         
       case 'progress':
-        if (!subtopic) return <td></td>;
+        if (!subtopic) return <td key={column}></td>;
         return (
-          <td className="w-[120px]">
+          <td key={column} className="w-[120px]">
             <select
               value={subtopic.status}
               onChange={(e) => onUpdateSubtopic(chapter.id, subtopic.id, { status: e.target.value })}
@@ -185,7 +185,7 @@ const ChaptersTable = ({
         
       case 'actions':
         return (
-          <td className="w-20">
+          <td key={column} className="w-20">
             <div className="flex gap-1 opacity-0 hover:opacity-100 transition-opacity duration-150">
               <button
                 onClick={() => subtopic ? onEditSubtopic(chapter.id, subtopic) : onEditChapter(chapter)}
@@ -211,7 +211,7 @@ const ChaptersTable = ({
         );
         
       default:
-        return <td></td>;
+        return <td key={column}></td>;
     }
   };
   
@@ -274,8 +274,8 @@ const ChaptersTable = ({
                     className="cursor-pointer hover:bg-white/[0.03] transition-colors duration-150"
                     onClick={() => onAddSubtopic(chapter.id)}
                   >
-                    <td></td>
-                    <td className="pl-10 py-3 text-white/46">
+                    <td key="add-checkbox"></td>
+                    <td key="add-name" className="pl-10 py-3 text-white/46">
                       <span className="flex items-center gap-1.5">
                         <svg className="w-[14px] h-[14px]" viewBox="0 0 16 16" fill="currentColor">
                           <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
@@ -283,8 +283,8 @@ const ChaptersTable = ({
                         Ajouter un sous-chapitre
                       </span>
                     </td>
-                    {columnOrder.slice(2).map(col => (
-                      <td key={col}></td>
+                    {columnOrder.slice(2).map((col, index) => (
+                      <td key={`add-${col}`}></td>
                     ))}
                   </tr>
                 )}

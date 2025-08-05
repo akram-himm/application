@@ -1,15 +1,15 @@
 {
   "name": "gestion-desktop",
-  "private": true,
   "version": "1.0.0",
+  "description": "Application de gestion personnelle",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "electron": "electron .",
-    "electron:dev": "vite build && electron .",
-    "electron:build": "vite build && electron-builder"
+    "electron-dev": "vite build && electron .",
+    "dist": "vite build && electron-builder"
   },
   "dependencies": {
     "react": "^18.2.0",
