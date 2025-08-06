@@ -1,7 +1,6 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
-import TaskModal from '../components/plan/TaskModal';
 
 const PlanView = () => {
   const navigate = useNavigate();
@@ -13,10 +12,181 @@ const PlanView = () => {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteOptions, setAutocompleteOptions] = useState([]);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
+  const [tableWidth, setTableWidth] = useState('100%');
+  const [columnWidths, setColumnWidths] = useState({
+    checkbox: 50,
+    name: 400,
+    status: 120,
+    priority: 100,
+    date: 120,
+    dragHandle: 40
+  });
+  const [visibleColumns, setVisibleColumns] = useState(['checkbox', 'name', 'status', 'priority', 'date', 'dragHandle']);
+  const [availableColumns] = useState([
+    { id: 'checkbox', name: '', canHide: false },
+    { id: 'name', name: 'Tâche', canHide: false },
+    { id: 'status', name: 'Statut', canHide: true },
+    { id: 'priority', name: 'Priorité', canHide: true },
+    { id: 'date', name: 'Date', canHide: true },
+    { id: 'assignee', name: 'Assigné à', canHide: true },
+    { id: 'tags', name: 'Tags', canHide: true },
+    { id: 'dragHandle', name: '', canHide: false }
+  ]);
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
+  const [draggedRow, setDraggedRow] = useState(null);
+  const [draggedRowIndex, setDraggedRowIndex] = useState(null);
+  const [dragOverRow, setDragOverRow] = useState(null);
+  const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0, taskId: null });
   const inputRef = useRef(null);
+  const tableRef = useRef(null);
+  const autocompleteRef = useRef(null);
+
+  // Colonnes disponibles
+  const columnHeaders = {
+    checkbox: '',
+    name: 'Tâche',
+    status: 'Statut',
+    priority: 'Priorité',
+    date: 'Date',
+    assignee: 'Assigné à',
+    tags: 'Tags',
+    dragHandle: ''
+  };
+
+  // Gérer le redimensionnement des colonnes
+  const handleColumnResize = (e, column) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = columnWidths[column] || 100;
+    
+    const handleMouseMove = (e) => {
+      const diff = e.clientX - startX;
+      const newWidth = Math.max(50, startWidth + diff);
+      setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+  };
+
+  // Gérer le redimensionnement du tableau
+  const handleTableResize = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = tableRef.current?.offsetWidth || 800;
+    
+    const handleMouseMove = (e) => {
+      const diff = e.clientX - startX;
+      const newWidth = Math.max(600, Math.min(1200, startWidth + diff));
+      setTableWidth(`${newWidth}px`);
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'ew-resize';
+  };
+
+  // Gérer le drag & drop des lignes
+  const handleRowDragStart = (e, taskId, index) => {
+    setDraggedRow(taskId);
+    setDraggedRowIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.classList.add('dragging');
+  };
+
+  const handleRowDragEnd = (e) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggedRow(null);
+    setDraggedRowIndex(null);
+    setDragOverRow(null);
+  };
+
+  const handleRowDragOver = (e, taskId) => {
+    e.preventDefault();
+    if (taskId !== draggedRow) {
+      setDragOverRow(taskId);
+    }
+  };
+
+  const handleRowDrop = (e, targetTaskId) => {
+    e.preventDefault();
+    if (draggedRow && draggedRow !== targetTaskId) {
+      const draggedTask = tasks.find(t => t.id === draggedRow);
+      const targetIndex = tasks.findIndex(t => t.id === targetTaskId);
+      
+      if (draggedTask && targetIndex !== -1) {
+        // Créer une nouvelle liste de tâches avec l'ordre modifié
+        const newTasks = tasks.filter(t => t.id !== draggedRow);
+        newTasks.splice(targetIndex, 0, draggedTask);
+        
+        // Mettre à jour l'ordre dans le contexte
+        // Note: Vous devrez implémenter reorderTasks dans AppContext
+        if (typeof reorderTasks === 'function') {
+          reorderTasks(newTasks);
+        }
+      }
+    }
+    setDragOverRow(null);
+  };
+
+  // Menu contextuel pour les actions
+  const handleContextMenu = (e, taskId) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const menuHeight = 100; // Estimation de la hauteur du menu
+    
+    // Calculer la position pour éviter le débordement
+    let top = e.clientY;
+    if (top + menuHeight > viewportHeight) {
+      top = viewportHeight - menuHeight - 10;
+    }
+    
+    setContextMenu({
+      show: true,
+      x: e.clientX,
+      y: top,
+      taskId
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu({ show: false, x: 0, y: 0, taskId: null });
+  };
+
+  // Gérer les colonnes visibles
+  const toggleColumn = (columnId) => {
+    if (visibleColumns.includes(columnId)) {
+      setVisibleColumns(prev => prev.filter(c => c !== columnId));
+    } else {
+      // Ajouter la colonne avant dragHandle
+      const newColumns = [...visibleColumns];
+      const dragHandleIndex = newColumns.indexOf('dragHandle');
+      newColumns.splice(dragHandleIndex, 0, columnId);
+      setVisibleColumns(newColumns);
+      
+      // Définir une largeur par défaut si elle n'existe pas
+      if (!columnWidths[columnId]) {
+        setColumnWidths(prev => ({ ...prev, [columnId]: 120 }));
+      }
+    }
+  };
 
   // Filtrer les tâches selon le mode de vue
-  const getFilteredTasks = () => {
+  const getFilteredTasks = (type) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -27,19 +197,19 @@ const PlanView = () => {
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    if (viewMode === 'day') {
+    if (type === 'day') {
       return tasks.filter(task => {
         const taskDate = new Date(task.date);
         taskDate.setHours(0, 0, 0, 0);
         return taskDate.getTime() === today.getTime();
       });
-    } else if (viewMode === 'week') {
+    } else if (type === 'week') {
       return tasks.filter(task => {
         const taskDate = new Date(task.date);
         return taskDate >= weekStart && taskDate <= weekEnd;
       });
     }
-    return tasks; // 'both' - toutes les tâches
+    return tasks;
   };
 
   // Générer les options d'autocomplete
@@ -62,33 +232,23 @@ const PlanView = () => {
           icon: radar.icon,
           path: `/radar/${radar.id}`
         });
+      }
 
-        // Si un radar correspond, ajouter ses matières
-        radar.subjects?.forEach(subject => {
+      // Rechercher dans les matières
+      radar.subjects?.forEach(subject => {
+        if (subject.name.toLowerCase().includes(lowerQuery) || 
+            radar.name.toLowerCase().includes(lowerQuery)) {
           options.push({
             type: 'subject',
             id: subject.id,
             radarId: radar.id,
-            name: `${radar.name} > ${subject.name}`,
+            radarName: radar.name,
+            name: subject.name,
             icon: '📚',
             path: `/radar/${radar.id}/subject/${subject.id}`
           });
-        });
-      } else {
-        // Rechercher aussi dans les matières
-        radar.subjects?.forEach(subject => {
-          if (subject.name.toLowerCase().includes(lowerQuery)) {
-            options.push({
-              type: 'subject',
-              id: subject.id,
-              radarId: radar.id,
-              name: `${radar.name} > ${subject.name}`,
-              icon: '📚',
-              path: `/radar/${radar.id}/subject/${subject.id}`
-            });
-          }
-        });
-      }
+        }
+      });
     });
 
     setAutocompleteOptions(options);
@@ -110,7 +270,9 @@ const PlanView = () => {
     if (editingTaskId && editingField) {
       const task = tasks.find(t => t.id === editingTaskId);
       if (task) {
-        updateTask({ ...task, [editingField]: tempValue });
+        if (editingField === 'name') {
+          updateTask({ ...task, name: tempValue });
+        }
       }
     }
     handleCancelEdit();
@@ -133,6 +295,7 @@ const PlanView = () => {
         tag: {
           type: option.type,
           radarId: option.radarId || option.id,
+          radarName: option.radarName || option.name,
           subjectId: option.type === 'subject' ? option.id : null,
           path: option.path
         }
@@ -142,6 +305,12 @@ const PlanView = () => {
   };
 
   const handleKeyDown = (e) => {
+    if (!showAutocomplete && e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEdit();
+      return;
+    }
+
     if (!showAutocomplete) return;
 
     if (e.key === 'ArrowDown') {
@@ -188,12 +357,6 @@ const PlanView = () => {
     }
   };
 
-  const handleNavigateToTag = (task) => {
-    if (task.tag?.path) {
-      navigate(task.tag.path);
-    }
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'todo': return 'bg-gray-500/10 text-gray-400';
@@ -224,13 +387,321 @@ const PlanView = () => {
     }
     
     return date.toLocaleDateString('fr-FR', {
-      weekday: 'short',
       day: 'numeric',
       month: 'short'
     });
   };
 
-  const filteredTasks = getFilteredTasks();
+  // Effet pour fermer le menu contextuel
+  useEffect(() => {
+    const handleClick = () => closeContextMenu();
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  // Effet pour sauvegarder quand on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (editingTaskId && !e.target.closest('.editing-input') && !e.target.closest('.autocomplete-dropdown')) {
+        handleSaveEdit();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingTaskId, tempValue]);
+
+  // Calculer la position de l'autocomplete pour éviter le débordement
+  const calculateAutocompletePosition = () => {
+    if (!inputRef.current) return { top: 0, left: 0 };
+    
+    const rect = inputRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const dropdownWidth = 300;
+    const dropdownHeight = 240; // max-h-60 = 15rem = 240px
+    
+    let left = rect.left;
+    let top = rect.bottom + 5;
+    
+    // Ajuster si déborde à droite
+    if (left + dropdownWidth > viewportWidth) {
+      left = viewportWidth - dropdownWidth - 10;
+    }
+    
+    // Ajuster si déborde en bas
+    if (top + dropdownHeight > viewportHeight) {
+      top = rect.top - dropdownHeight - 5;
+    }
+    
+    return { top, left };
+  };
+
+  // Rendu des cellules selon le type
+  const renderCell = (task, column, index) => {
+    switch (column) {
+      case 'checkbox':
+        return (
+          <td key={column} className="px-4 py-3" style={{ width: columnWidths[column] }}>
+            <input
+              type="checkbox"
+              checked={task.completed}
+              onChange={() => handleToggleTask(task.id)}
+              className="w-4 h-4 rounded border-2 border-white/20 checked:bg-[rgb(35,131,226)] checked:border-[rgb(35,131,226)] cursor-pointer"
+            />
+          </td>
+        );
+
+      case 'name':
+        return (
+          <td key={column} className="px-4 py-3 relative group" style={{ width: columnWidths[column] }}>
+            {editingTaskId === task.id && editingField === 'name' ? (
+              <>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={tempValue}
+                  onChange={(e) => {
+                    setTempValue(e.target.value);
+                    generateAutocompleteOptions(e.target.value);
+                    setShowAutocomplete(true);
+                  }}
+                  onKeyDown={handleKeyDown}
+                  className="editing-input w-full px-2 py-1 bg-white/[0.055] border border-white/20 rounded text-white/81 focus:outline-none focus:border-[rgb(35,131,226)]"
+                  autoFocus
+                />
+                
+                {/* Autocomplete dropdown */}
+                {showAutocomplete && autocompleteOptions.length > 0 && (
+                  <div 
+                    ref={autocompleteRef}
+                    className="autocomplete-dropdown fixed bg-[rgb(37,37,37)] border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto min-w-[300px] z-[9999]"
+                    style={calculateAutocompletePosition()}
+                  >
+                    {autocompleteOptions.map((option, index) => (
+                      <button
+                        key={`${option.type}-${option.id}`}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                          index === selectedOptionIndex
+                            ? 'bg-white/10 text-white/81'
+                            : 'text-white/46 hover:bg-white/[0.055] hover:text-white/81'
+                        }`}
+                        onMouseDown={() => handleSelectAutocomplete(option)}
+                        onMouseEnter={() => setSelectedOptionIndex(index)}
+                      >
+                        <span>{option.icon}</span>
+                        <div className="flex-1">
+                          <div className="text-white/81">{option.name}</div>
+                          {option.type === 'subject' && (
+                            <div className="text-xs text-white/40">{option.radarName}</div>
+                          )}
+                        </div>
+                        <span className="text-xs text-white/30">
+                          {option.type === 'radar' ? 'Radar' : 'Matière'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div>
+                <div
+                  onClick={() => task.tag?.path && navigate(task.tag.path)}
+                  className={`cursor-pointer ${task.completed ? 'line-through opacity-50' : ''} ${
+                    task.tag ? 'hover:text-[rgb(35,131,226)]' : ''
+                  }`}
+                >
+                  {task.name || (
+                    <span 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(task.id, 'name', '');
+                      }}
+                      className="text-white/30 cursor-text"
+                    >
+                      Cliquez pour ajouter une tâche...
+                    </span>
+                  )}
+                </div>
+                {task.tag && (
+                  <div className="text-xs text-white/40 mt-0.5">
+                    {task.tag.radarName}
+                  </div>
+                )}
+              </div>
+            )}
+          </td>
+        );
+
+      case 'status':
+        return (
+          <td key={column} className="px-4 py-3" style={{ width: columnWidths[column] }}>
+            <select
+              value={task.status}
+              onChange={(e) => updateTask({ ...task, status: e.target.value })}
+              className={`px-2 py-1 rounded-md text-xs cursor-pointer transition-all ${getStatusColor(task.status)}`}
+            >
+              <option value="todo">À faire</option>
+              <option value="in-progress">En cours</option>
+              <option value="done">Terminé</option>
+            </select>
+          </td>
+        );
+
+      case 'priority':
+        return (
+          <td key={column} className="px-4 py-3" style={{ width: columnWidths[column] }}>
+            <select
+              value={task.priority}
+              onChange={(e) => updateTask({ ...task, priority: e.target.value })}
+              className={`text-xs cursor-pointer bg-transparent ${getPriorityColor(task.priority)}`}
+            >
+              <option value="low">Basse</option>
+              <option value="medium">Moyenne</option>
+              <option value="high">Haute</option>
+            </select>
+          </td>
+        );
+
+      case 'date':
+        return (
+          <td key={column} className="px-4 py-3" style={{ width: columnWidths[column] }}>
+            <input
+              type="date"
+              value={task.date ? new Date(task.date).toISOString().split('T')[0] : ''}
+              onChange={(e) => updateTask({ ...task, date: e.target.value })}
+              className="text-xs text-white/60 bg-transparent cursor-pointer hover:bg-white/[0.055] px-2 py-1 rounded"
+            />
+          </td>
+        );
+
+      case 'dragHandle':
+        return (
+          <td key={column} className="px-2 py-3 cursor-grab" style={{ width: columnWidths[column] }}>
+            <div
+              draggable
+              onDragStart={(e) => handleRowDragStart(e, task.id, index)}
+              onDragEnd={handleRowDragEnd}
+              onClick={(e) => handleContextMenu(e, task.id)}
+              className="flex items-center justify-center text-white/30 hover:text-white/60 transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M5 3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5 13a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
+              </svg>
+            </div>
+          </td>
+        );
+
+      default:
+        return <td key={column}></td>;
+    }
+  };
+
+  // Rendu du tableau
+  const renderTaskTable = (title, taskList, isActive) => (
+    <div 
+      className={`bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg overflow-hidden transition-opacity duration-150 ${
+        !isActive ? 'opacity-50' : ''
+      }`}
+      style={{ width: tableWidth }}
+    >
+      <div className="px-4 py-3 border-b border-[rgb(47,47,47)] flex items-center justify-between">
+        <h3 className="font-medium text-white/81">{title}</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-white/46">{taskList.length} tâches</span>
+          <div className="relative">
+            <button
+              onClick={() => setShowColumnMenu(!showColumnMenu)}
+              className="p-1 hover:bg-white/[0.055] rounded transition-colors"
+              title="Gérer les colonnes"
+            >
+              <svg className="w-4 h-4 text-white/46" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 2.75a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 8 2.75" />
+              </svg>
+            </button>
+            
+            {showColumnMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-[rgb(37,37,37)] border border-white/10 rounded-lg shadow-xl p-2 min-w-[180px] z-50">
+                {availableColumns.filter(col => col.canHide).map(col => (
+                  <label key={col.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/[0.055] rounded cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.includes(col.id)}
+                      onChange={() => toggleColumn(col.id)}
+                      className="w-4 h-4 rounded border-2 border-white/20"
+                    />
+                    <span className="text-sm text-white/81">{col.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="relative overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-[rgb(37,37,37)] border-b border-[rgb(47,47,47)]">
+              {visibleColumns.map((column, index) => (
+                <th 
+                  key={column} 
+                  className="px-4 py-3 text-left text-[13px] font-medium text-white/46 relative group"
+                  style={{ width: columnWidths[column] }}
+                >
+                  {columnHeaders[column]}
+                  {index < visibleColumns.length - 1 && column !== 'dragHandle' && (
+                    <div
+                      className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onMouseDown={(e) => handleColumnResize(e, column)}
+                    />
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {taskList.map((task, index) => (
+              <tr 
+                key={task.id}
+                className={`border-b border-white/[0.055] hover:bg-white/[0.02] transition-colors ${
+                  dragOverRow === task.id ? 'bg-white/[0.055]' : ''
+                } ${draggedRow === task.id ? 'opacity-50' : ''}`}
+                onDragOver={(e) => handleRowDragOver(e, task.id)}
+                onDrop={(e) => handleRowDrop(e, task.id)}
+              >
+                {visibleColumns.map(column => renderCell(task, column, index))}
+              </tr>
+            ))}
+            
+            {/* Add new task row */}
+            <tr 
+              className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+              onClick={handleAddTask}
+            >
+              <td colSpan={visibleColumns.length} className="px-4 py-3">
+                <div className="flex items-center gap-2 text-white/46 hover:text-white/81 transition-colors">
+                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 2.75a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 8 2.75" />
+                  </svg>
+                  <span>Ajouter une tâche</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Resize handle pour la largeur */}
+      <div
+        className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-white/20"
+        onMouseDown={handleTableResize}
+      />
+    </div>
+  );
+
+  const dailyTasks = getFilteredTasks('day');
+  const weeklyTasks = getFilteredTasks('week');
 
   return (
     <div className="h-full bg-[rgb(25,25,25)]">
@@ -270,168 +741,44 @@ const PlanView = () => {
                     : 'text-white/46 hover:text-white/81'
                 }`}
               >
-                Tout
+                Les deux
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Tasks Table */}
-      <div className="p-6">
-        <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[rgb(37,37,37)] border-b border-[rgb(47,47,47)]">
-                <th className="w-10 px-4 py-3"></th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-white/46">Tâche</th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-white/46 w-[120px]">Statut</th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-white/46 w-[100px]">Priorité</th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-white/46 w-[120px]">Date</th>
-                <th className="px-4 py-3 text-left text-[13px] font-medium text-white/46 w-20">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTasks.map(task => (
-                <tr key={task.id} className="border-b border-white/[0.055] hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={task.completed}
-                      onChange={() => handleToggleTask(task.id)}
-                      className="w-4 h-4 rounded border-2 border-white/20 checked:bg-[rgb(35,131,226)] checked:border-[rgb(35,131,226)] cursor-pointer"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    {editingTaskId === task.id && editingField === 'name' ? (
-                      <div className="relative">
-                        <input
-                          ref={inputRef}
-                          type="text"
-                          value={tempValue}
-                          onChange={(e) => {
-                            setTempValue(e.target.value);
-                            generateAutocompleteOptions(e.target.value);
-                            setShowAutocomplete(true);
-                          }}
-                          onKeyDown={handleKeyDown}
-                          onBlur={() => {
-                            setTimeout(() => {
-                              if (!showAutocomplete) handleSaveEdit();
-                            }, 200);
-                          }}
-                          className="w-full px-2 py-1 bg-white/[0.055] border border-white/20 rounded text-white/81 focus:outline-none focus:border-[rgb(35,131,226)]"
-                          autoFocus
-                        />
-                        
-                        {/* Autocomplete dropdown */}
-                        {showAutocomplete && autocompleteOptions.length > 0 && (
-                          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[rgb(37,37,37)] border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-                            {autocompleteOptions.map((option, index) => (
-                              <button
-                                key={`${option.type}-${option.id}`}
-                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                                  index === selectedOptionIndex
-                                    ? 'bg-white/10 text-white/81'
-                                    : 'text-white/46 hover:bg-white/[0.055] hover:text-white/81'
-                                }`}
-                                onMouseDown={() => handleSelectAutocomplete(option)}
-                                onMouseEnter={() => setSelectedOptionIndex(index)}
-                              >
-                                <span>{option.icon}</span>
-                                <span>{option.name}</span>
-                                <span className="text-xs text-white/30 ml-auto">
-                                  {option.type === 'radar' ? 'Radar' : 'Matière'}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => task.tag?.path && navigate(task.tag.path)}
-                          className={`text-left ${task.completed ? 'line-through opacity-50' : ''} ${
-                            task.tag ? 'hover:text-[rgb(35,131,226)] cursor-pointer' : ''
-                          }`}
-                          disabled={!task.tag}
-                        >
-                          {task.name || <span className="text-white/30">Cliquez pour ajouter une tâche...</span>}
-                        </button>
-                        <button
-                          onClick={() => handleStartEdit(task.id, 'name', task.name)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/[0.055] rounded"
-                        >
-                          <svg className="w-3 h-3 text-white/46" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.226 13.25a.751.751 0 0 1-.154.109l-2.72.906a.75.75 0 0 1-.95-.95l.906-2.72a.751.751 0 0 1 .109-.154l8.596-8.598zm1.414 1.06a.25.25 0 0 0-.353 0L10.53 5.117l.884.884 1.544-1.544a.25.25 0 0 0 0-.354l-.353-.353zM9.822 5.824 4.31 11.337a.751.751 0 0 0-.163.236l-.51 1.53 1.53-.51a.751.751 0 0 0 .236-.163l5.512-5.513-.884-.884z" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={task.status}
-                      onChange={(e) => updateTask({ ...task, status: e.target.value })}
-                      className={`px-2 py-1 rounded-md text-xs cursor-pointer transition-all ${getStatusColor(task.status)}`}
-                    >
-                      <option value="todo">À faire</option>
-                      <option value="in-progress">En cours</option>
-                      <option value="done">Terminé</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={task.priority}
-                      onChange={(e) => updateTask({ ...task, priority: e.target.value })}
-                      className={`text-xs cursor-pointer bg-transparent ${getPriorityColor(task.priority)}`}
-                    >
-                      <option value="low">Basse</option>
-                      <option value="medium">Moyenne</option>
-                      <option value="high">Haute</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="date"
-                      value={task.date ? new Date(task.date).toISOString().split('T')[0] : ''}
-                      onChange={(e) => updateTask({ ...task, date: new Date(e.target.value).toISOString() })}
-                      className="bg-transparent text-white/46 text-xs cursor-pointer hover:text-white/81"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => deleteTask(task.id)}
-                      className="p-1 text-white/46 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M6.5 5.5a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5zm4.25 0a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5z" />
-                        <path d="M12 2.75a.75.75 0 0 1 .75.75v.5h.75a.75.75 0 0 1 0 1.5h-.5v7a2.25 2.25 0 0 1-2.25 2.25h-5.5A2.25 2.25 0 0 1 3 12.5v-7h-.5a.75.75 0 0 1 0-1.5h.75v-.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75h1.5zm-7.5.75v-.25h5v.25h-5zm7 2.5h-7v7a.75.75 0 0 0 .75.75h5.5a.75.75 0 0 0 .75-.75v-7z" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              
-              {/* Add new task row */}
-              <tr>
-                <td colSpan="6" className="px-4 py-3">
-                  <button
-                    onClick={handleAddTask}
-                    className="flex items-center gap-2 text-white/46 hover:text-white/81 transition-colors"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M8 2.75a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 8 2.75" />
-                    </svg>
-                    <span>Ajouter une tâche</span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      {/* Tasks Tables */}
+      <div className="p-6 space-y-6 relative" ref={tableRef}>
+        {(viewMode === 'day' || viewMode === 'both') && 
+          renderTaskTable("Tâches du jour", dailyTasks, viewMode === 'day' || viewMode === 'both')}
+        
+        {(viewMode === 'week' || viewMode === 'both') && 
+          renderTaskTable("Tâches de la semaine", weeklyTasks, viewMode === 'week' || viewMode === 'both')}
       </div>
+
+      {/* Context Menu */}
+      {contextMenu.show && (
+        <div
+          className="fixed bg-[rgb(37,37,37)]/95 backdrop-blur-xl border border-white/10 rounded-lg p-1 shadow-2xl z-[10000]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              deleteTask(contextMenu.taskId);
+              closeContextMenu();
+            }}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-white/81 rounded-md transition-all duration-150 hover:bg-white/[0.08]"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M6.5 5.5a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5zm4.25 0a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5z" />
+              <path d="M12 2.75a.75.75 0 0 1 .75.75v.5h.75a.75.75 0 0 1 0 1.5h-.5v7a2.25 2.25 0 0 1-2.25 2.25h-5.5A2.25 2.25 0 0 1 3 12.5v-7h-.5a.75.75 0 0 1 0-1.5h.75v-.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75h1.5zm-7.5.75v-.25h5v.25h-5zm7 2.5h-7v7a.75.75 0 0 0 .75.75h5.5a.75.75 0 0 0 .75-.75v-7z" />
+            </svg>
+            Supprimer
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,143 +1,111 @@
-import React, { useState, useContext } from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
-import RadarModal from '../components/dashboard/RadarModal';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { radars, addRadar, updateRadar, deleteRadar } = useContext(AppContext);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingRadar, setEditingRadar] = useState(null);
-  const [draggedCard, setDraggedCard] = useState(null);
-  const [draggedIndex, setDraggedIndex] = useState(null);
-  const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  const { radars, tasks } = useContext(AppContext);
+  const canvasRef = useRef(null);
 
-  const handleDragStart = (e, index) => {
-    setDraggedCard(e.target);
-    setDraggedIndex(index);
-    e.target.classList.add('opacity-40');
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  // Calculer les statistiques globales
+  const calculateGlobalStats = () => {
+    if (radars.length === 0) return { total: 0, byRadar: [] };
 
-  const handleDragEnd = (e) => {
-    e.target.classList.remove('opacity-40');
-    document.querySelectorAll('.drag-over').forEach(el => {
-      el.classList.remove('drag-over');
+    const byRadar = radars.map(radar => {
+      const subjects = radar.subjects || [];
+      const progress = subjects.length > 0
+        ? Math.round(subjects.reduce((sum, s) => sum + s.value, 0) / subjects.length)
+        : 0;
+      return {
+        name: radar.name,
+        icon: radar.icon,
+        progress,
+        subjects: subjects.length,
+        color: getRadarColor(radar.id)
+      };
     });
-    document.querySelectorAll('.drop-indicator').forEach(el => {
-      el.classList.remove('active');
+
+    const total = Math.round(
+      byRadar.reduce((sum, r) => sum + r.progress, 0) / byRadar.length
+    );
+
+    return { total, byRadar };
+  };
+
+  const getRadarColor = (id) => {
+    const colors = [
+      'rgb(35, 131, 226)',  // Bleu
+      'rgb(34, 197, 94)',   // Vert
+      'rgb(251, 191, 36)',  // Jaune
+      'rgb(239, 68, 68)',   // Rouge
+      'rgb(168, 85, 247)',  // Violet
+      'rgb(236, 72, 153)',  // Rose
+    ];
+    const index = id.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
+  // Dessiner le diagramme circulaire
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const { byRadar } = calculateGlobalStats();
+    
+    const centerX = 150;
+    const centerY = 150;
+    const radius = 100;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, 300, 300);
+
+    if (byRadar.length === 0) {
+      // Cercle vide
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 20;
+      ctx.stroke();
+      return;
+    }
+
+    // Dessiner les segments
+    let currentAngle = -Math.PI / 2; // Commencer en haut
+
+    byRadar.forEach(radar => {
+      const sliceAngle = (radar.progress / 100) * (2 * Math.PI / byRadar.length);
+      
+      // Segment rempli
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+      ctx.arc(centerX, centerY, radius - 20, currentAngle + sliceAngle, currentAngle, true);
+      ctx.fillStyle = radar.color;
+      ctx.fill();
+
+      // Segment vide
+      const emptyAngle = ((100 - radar.progress) / 100) * (2 * Math.PI / byRadar.length);
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, currentAngle + sliceAngle, currentAngle + sliceAngle + emptyAngle);
+      ctx.arc(centerX, centerY, radius - 20, currentAngle + sliceAngle + emptyAngle, currentAngle + sliceAngle, true);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.fill();
+
+      currentAngle += sliceAngle + emptyAngle;
     });
-    setDraggedCard(null);
-    setDraggedIndex(null);
-    setDropTargetIndex(null);
-  };
+  }, [radars]);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    
-    const card = e.target.closest('.radar-card');
-    if (!card || card === draggedCard) return;
-    
-    const rect = card.getBoundingClientRect();
-    const midpoint = rect.left + rect.width / 2;
-    const currentIndex = parseInt(card.getAttribute('data-index'));
-    
-    // Clear all indicators first
-    document.querySelectorAll('.drop-indicator').forEach(el => {
-      el.classList.remove('active');
-    });
-    
-    // Show appropriate indicator
-    if (e.clientX < midpoint) {
-      card.querySelector('.drop-indicator.left')?.classList.add('active');
-      setDropTargetIndex(currentIndex);
-    } else {
-      card.querySelector('.drop-indicator.right')?.classList.add('active');
-      setDropTargetIndex(currentIndex + 1);
-    }
-  };
+  const stats = calculateGlobalStats();
+  const todayTasks = tasks.filter(task => {
+    const taskDate = new Date(task.date);
+    const today = new Date();
+    return taskDate.toDateString() === today.toDateString();
+  });
 
-  const handleDragEnter = (e) => {
-    const card = e.target.closest('.radar-card');
-    if (card && card !== draggedCard) {
-      card.classList.add('drag-over');
-    }
-  };
-
-  const handleDragLeave = (e) => {
-    const card = e.target.closest('.radar-card');
-    if (card && !card.contains(e.relatedTarget)) {
-      card.classList.remove('drag-over');
-      card.querySelectorAll('.drop-indicator').forEach(el => {
-        el.classList.remove('active');
-      });
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (draggedIndex !== null && dropTargetIndex !== null && draggedIndex !== dropTargetIndex) {
-      const newRadars = [...radars];
-      const draggedRadar = newRadars[draggedIndex];
-      newRadars.splice(draggedIndex, 1);
-      
-      let adjustedIndex = dropTargetIndex;
-      if (draggedIndex < dropTargetIndex) {
-        adjustedIndex--;
-      }
-      
-      newRadars.splice(adjustedIndex, 0, draggedRadar);
-      
-      // Update all radars to trigger re-render
-      newRadars.forEach((radar, index) => {
-        updateRadar({ ...radar, order: index });
-      });
-    }
-  };
-
-  const openModal = (radar = null) => {
-    setEditingRadar(radar);
-    setModalOpen(true);
-  };
-
-  const handleSaveRadar = (radarData) => {
-    if (editingRadar) {
-      updateRadar({ ...editingRadar, ...radarData });
-    } else {
-      addRadar(radarData);
-    }
-    setModalOpen(false);
-    setEditingRadar(null);
-  };
-
-  const handleDeleteRadar = (e, radarId) => {
-    e.stopPropagation();
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce radar ?')) {
-      deleteRadar(radarId);
-    }
-  };
-
-  const handleEditRadar = (e, radar) => {
-    e.stopPropagation();
-    openModal(radar);
-  };
-
-  const navigateToRadar = (radarId) => {
-    navigate(`/radar/${radarId}`);
-  };
-
-  const navigateToPlan = () => {
-    navigate('/plan');
-  };
-
-  const calculateRadarProgress = (radar) => {
-    if (!radar.subjects || radar.subjects.length === 0) return 0;
-    const totalProgress = radar.subjects.reduce((sum, subject) => sum + subject.value, 0);
-    return Math.round(totalProgress / radar.subjects.length);
-  };
+  const completedTasks = tasks.filter(task => task.completed).length;
+  const taskCompletionRate = tasks.length > 0 
+    ? Math.round((completedTasks / tasks.length) * 100)
+    : 0;
 
   return (
     <div className="min-h-screen bg-[rgb(25,25,25)]">
@@ -145,127 +113,133 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-[40px] font-bold text-white/81 mb-2">Tableau de bord</h1>
-          <p className="text-white/46 text-base">Gérez vos différents domaines de vie</p>
+          <p className="text-white/46 text-base">Vue d'ensemble de votre progression</p>
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center mb-6 gap-3">
-          <button
-            onClick={() => openModal()}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-sm font-medium hover:bg-white/[0.08] transition-all duration-150"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
-            </svg>
-            Nouveau radar
-          </button>
-          
-          <button
-            onClick={navigateToPlan}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-sm font-medium hover:bg-white/[0.08] transition-all duration-150"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M4.5 2A1.5 1.5 0 0 0 3 3.5v1h10v-1A1.5 1.5 0 0 0 11.5 2h-7zM13 5.5H3v7A1.5 1.5 0 0 0 4.5 14h7a1.5 1.5 0 0 0 1.5-1.5v-7zM4.5 1A2.5 2.5 0 0 0 2 3.5v9A2.5 2.5 0 0 0 4.5 15h7a2.5 2.5 0 0 0 2.5-2.5v-9A2.5 2.5 0 0 0 11.5 1h-7z" />
-            </svg>
-            Plan
-          </button>
-        </div>
-
-        {/* Radar Grid */}
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4 relative">
-          {radars.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-20">
-              <div className="text-white/30 text-center">
-                <svg className="w-24 h-24 mx-auto mb-4 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
-                  <path d="M12 6v6l4 2" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                <p className="text-lg mb-4">Aucun radar créé pour le moment</p>
-                <button
-                  onClick={() => openModal()}
-                  className="px-4 py-2 bg-[rgb(35,131,226)] text-white rounded-md hover:bg-[rgb(28,104,181)] transition-colors duration-150"
-                >
-                  Créer votre premier radar
-                </button>
-              </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          {/* Progression globale */}
+          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white/81">Progression globale</h3>
+              <span className="text-3xl">📊</span>
             </div>
-          ) : (
-            radars.map((radar, index) => (
-              <div
-                key={radar.id}
-                data-index={index}
-                className="radar-card bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-lg p-6 cursor-move transition-all duration-150 relative hover:bg-[rgb(45,45,45)] hover:translate-y-[-2px] hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
-                draggable
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragEnd={handleDragEnd}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => navigateToRadar(radar.id)}
-              >
-                {/* Drop indicators */}
-                <div className="drop-indicator left absolute top-0 left-[-8px] w-[3px] h-full bg-[rgb(35,131,226)] opacity-0 transition-opacity duration-150 pointer-events-none z-10" />
-                <div className="drop-indicator right absolute top-0 right-[-8px] w-[3px] h-full bg-[rgb(35,131,226)] opacity-0 transition-opacity duration-150 pointer-events-none z-10" />
-                
-                {/* Card Actions */}
-                <div className="card-actions absolute top-3 right-3 flex gap-1 opacity-0 transition-opacity duration-150">
-                  <button
-                    onClick={(e) => handleEditRadar(e, radar)}
-                    className="w-7 h-7 flex items-center justify-center bg-transparent border-none rounded-md text-white/46 cursor-pointer transition-all duration-150 hover:bg-white/[0.055] hover:text-white/81"
-                    title="Modifier"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.226 13.25a4.25 4.25 0 0 1-1.154.734l-2.72.906a.75.75 0 0 1-.95-.95l.906-2.72c.141-.424.415-.81.734-1.154l8.258-8.262zm1.414 1.06a.25.25 0 0 0-.353 0L10.53 5.119l.707.707 1.545-1.545a.25.25 0 0 0 0-.354l-.354-.353zM9.822 5.826 4.31 11.338a2.75 2.75 0 0 0-.475.748l-.51 1.53 1.53-.51a2.75 2.75 0 0 0 .748-.475l5.512-5.512-.707-.707z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteRadar(e, radar.id)}
-                    className="w-7 h-7 flex items-center justify-center bg-transparent border-none rounded-md text-white/46 cursor-pointer transition-all duration-150 hover:bg-white/[0.055] hover:text-white/81"
-                    title="Supprimer"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M6.5 5.5a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5zm4.25 0a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5z" />
-                      <path d="M12 2.75a.75.75 0 0 1 .75.75v.5h.75a.75.75 0 0 1 0 1.5h-.5v7a2.25 2.25 0 0 1-2.25 2.25h-5.5A2.25 2.25 0 0 1 3 12.5v-7h-.5a.75.75 0 0 1 0-1.5h.75v-.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75h1.5zm-7.5.75v-.25h5v.25h-5zm7 2.5h-7v7a.75.75 0 0 0 .75.75h5.5a.75.75 0 0 0 .75-.75v-7z" />
-                    </svg>
-                  </button>
-                </div>
+            <div className="text-4xl font-bold text-[rgb(35,131,226)] mb-2">{stats.total}%</div>
+            <p className="text-sm text-white/46">Moyenne de tous les radars</p>
+          </div>
 
-                {/* Card Content */}
-                <div className="w-12 h-12 mb-4 flex items-center justify-center text-[32px] bg-white/[0.055] rounded-lg">
-                  {radar.icon}
+          {/* Tâches aujourd'hui */}
+          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white/81">Tâches du jour</h3>
+              <span className="text-3xl">📋</span>
+            </div>
+            <div className="text-4xl font-bold text-[rgb(251,191,36)] mb-2">{todayTasks.length}</div>
+            <p className="text-sm text-white/46">À accomplir aujourd'hui</p>
+          </div>
+
+          {/* Taux de complétion */}
+          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white/81">Taux de complétion</h3>
+              <span className="text-3xl">✅</span>
+            </div>
+            <div className="text-4xl font-bold text-[rgb(34,197,94)] mb-2">{taskCompletionRate}%</div>
+            <p className="text-sm text-white/46">{completedTasks} sur {tasks.length} tâches</p>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Diagramme circulaire */}
+          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-white/81 mb-6">Progression par radar</h3>
+            <div className="flex items-center justify-center">
+              <canvas 
+                ref={canvasRef} 
+                width={300} 
+                height={300}
+                className="max-w-full"
+              />
+            </div>
+          </div>
+
+          {/* Liste des radars */}
+          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-white/81 mb-6">Détail par radar</h3>
+            <div className="space-y-4">
+              {stats.byRadar.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-white/46">Aucun radar créé</p>
+                  <button
+                    onClick={() => navigate('/improvements')}
+                    className="mt-4 px-4 py-2 bg-[rgb(35,131,226)] text-white rounded-lg hover:bg-[rgb(28,104,181)] transition-colors"
+                  >
+                    Créer un radar
+                  </button>
                 </div>
-                <h3 className="text-lg font-semibold text-white/81 mb-2">{radar.name}</h3>
-                <p className="text-sm text-white/46 mb-4">{radar.description}</p>
-                
-                <div className="flex gap-6 pt-4 border-t border-white/[0.094]">
-                  <div className="flex-1">
-                    <div className="text-xl font-semibold text-white/81">{calculateRadarProgress(radar)}%</div>
-                    <div className="text-xs text-white/46 mt-0.5">Progression</div>
+              ) : (
+                stats.byRadar.map((radar, index) => (
+                  <div key={index} className="flex items-center gap-4">
+                    <div 
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
+                      style={{ backgroundColor: `${radar.color}20` }}
+                    >
+                      {radar.icon}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-white/81 font-medium">{radar.name}</span>
+                        <span className="text-white/46 text-sm">{radar.progress}%</span>
+                      </div>
+                      <div className="h-2 bg-white/[0.055] rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{ 
+                            width: `${radar.progress}%`,
+                            backgroundColor: radar.color 
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs text-white/46 mt-1">{radar.subjects} matières</span>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-xl font-semibold text-white/81">{radar.subjects?.length || 0}</div>
-                    <div className="text-xs text-white/46 mt-0.5">Catégories</div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions rapides */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
+          <button
+            onClick={() => navigate('/improvements')}
+            className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6 hover:bg-[rgb(37,37,37)] transition-colors text-left"
+          >
+            <span className="text-2xl mb-3 block">🎯</span>
+            <h4 className="text-white/81 font-medium mb-1">Gérer les radars</h4>
+            <p className="text-sm text-white/46">Créer et organiser vos domaines</p>
+          </button>
+
+          <button
+            onClick={() => navigate('/plan')}
+            className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6 hover:bg-[rgb(37,37,37)] transition-colors text-left"
+          >
+            <span className="text-2xl mb-3 block">📝</span>
+            <h4 className="text-white/81 font-medium mb-1">Planifier</h4>
+            <p className="text-sm text-white/46">Organiser vos tâches</p>
+          </button>
+
+          <button
+            onClick={() => navigate('/calendar')}
+            className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6 hover:bg-[rgb(37,37,37)] transition-colors text-left"
+          >
+            <span className="text-2xl mb-3 block">📅</span>
+            <h4 className="text-white/81 font-medium mb-1">Calendrier</h4>
+            <p className="text-sm text-white/46">Vue mensuelle (bientôt)</p>
+          </button>
         </div>
       </div>
-
-      {/* Modal */}
-      {modalOpen && (
-        <RadarModal
-          isOpen={modalOpen}
-          onClose={() => {
-            setModalOpen(false);
-            setEditingRadar(null);
-          }}
-          onSave={handleSaveRadar}
-          editingRadar={editingRadar}
-        />
-      )}
     </div>
   );
 };
