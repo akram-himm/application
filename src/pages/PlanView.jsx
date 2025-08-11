@@ -1,783 +1,1112 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AppContext } from '../contexts/AppContext';
+import CustomOptionsModal from '../components/plan/CustomOptionsModal';
+import ColumnSelectorModal from '../components/plan/ColumnSelectorModal';
 
 const PlanView = () => {
-  const navigate = useNavigate();
-  const { tasks, addTask, updateTask, deleteTask, radars } = useContext(AppContext);
-  const [viewMode, setViewMode] = useState('both'); // 'day', 'week', 'both'
-  const [editingTaskId, setEditingTaskId] = useState(null);
-  const [editingField, setEditingField] = useState(null);
-  const [tempValue, setTempValue] = useState('');
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [autocompleteOptions, setAutocompleteOptions] = useState([]);
-  const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
-  const [tableWidth, setTableWidth] = useState('100%');
-  const [columnWidths, setColumnWidths] = useState({
-    checkbox: 50,
-    name: 400,
-    status: 120,
-    priority: 100,
-    date: 120,
-    dragHandle: 40
+  const { radars } = useContext(AppContext);
+  
+  // États pour les tâches
+  const [dailyTasksList, setDailyTasksList] = useState(() => {
+    const saved = localStorage.getItem('dailyTasks');
+    return saved ? JSON.parse(saved) : [];
   });
-  const [visibleColumns, setVisibleColumns] = useState(['checkbox', 'name', 'status', 'priority', 'date', 'dragHandle']);
-  const [availableColumns] = useState([
-    { id: 'checkbox', name: '', canHide: false },
-    { id: 'name', name: 'Tâche', canHide: false },
-    { id: 'status', name: 'Statut', canHide: true },
-    { id: 'priority', name: 'Priorité', canHide: true },
-    { id: 'date', name: 'Date', canHide: true },
-    { id: 'assignee', name: 'Assigné à', canHide: true },
-    { id: 'tags', name: 'Tags', canHide: true },
-    { id: 'dragHandle', name: '', canHide: false }
-  ]);
-  const [showColumnMenu, setShowColumnMenu] = useState(false);
+  
+  const [weeklyTasksList, setWeeklyTasksList] = useState(() => {
+    const saved = localStorage.getItem('weeklyTasks');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  // États pour les statuts et priorités personnalisés
+  const [customStatuses, setCustomStatuses] = useState(() => {
+    const saved = localStorage.getItem('customStatuses');
+    return saved ? JSON.parse(saved) : [
+      { id: 'not-started', name: 'Pas commencé', color: '#6B7280' },
+      { id: 'in-progress', name: 'En cours', color: '#3B82F6' },
+      { id: 'completed', name: 'Terminé', color: '#10B981' }
+    ];
+  });
+  
+  const [customPriorities, setCustomPriorities] = useState(() => {
+    const saved = localStorage.getItem('customPriorities');
+    return saved ? JSON.parse(saved) : [
+      { id: 'low', name: 'Basse', color: '#10B981' },
+      { id: 'medium', name: 'Moyenne', color: '#F59E0B' },
+      { id: 'high', name: 'Haute', color: '#EF4444' }
+    ];
+  });
+  
+  // États pour les colonnes visibles
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    const saved = localStorage.getItem('visibleColumns');
+    return saved ? JSON.parse(saved) : [
+      'name', 'status', 'priority', 'date', 'time'
+    ];
+  });
+  
+  // État pour les largeurs de colonnes
+  const [columnWidths, setColumnWidths] = useState(() => {
+    const saved = localStorage.getItem('columnWidths');
+    return saved ? JSON.parse(saved) : {
+      name: 300,
+      status: 150,
+      priority: 150,
+      date: 120,
+      endDate: 120,
+      time: 100,
+      assignee: 120,
+      progress: 100
+    };
+  });
+  
+  // États pour les modals
+  const [showCustomOptionsModal, setShowCustomOptionsModal] = useState(false);
+  const [customOptionsType, setCustomOptionsType] = useState(null);
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [columnSelectorTable, setColumnSelectorTable] = useState(null);
+  
+  // États pour le drag & drop
+  const [draggedColumn, setDraggedColumn] = useState(null);
   const [draggedRow, setDraggedRow] = useState(null);
-  const [draggedRowIndex, setDraggedRowIndex] = useState(null);
+  const [draggedFromTable, setDraggedFromTable] = useState(null);
   const [dragOverRow, setDragOverRow] = useState(null);
-  const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0, taskId: null });
-  const inputRef = useRef(null);
-  const tableRef = useRef(null);
-  const autocompleteRef = useRef(null);
-
-  // Colonnes disponibles
+  const [hoveredRowId, setHoveredRowId] = useState(null);
+  // États pour l'édition inline
+  const [newTaskName, setNewTaskName] = useState('');
+  const [isAddingTask, setIsAddingTask] = useState(null); // 'daily' ou 'weekly'
+  const [editingCellId, setEditingCellId] = useState(null);
+  const [editingCellValue, setEditingCellValue] = useState('');
+  
+  // État pour le menu contextuel
+  const [contextMenu, setContextMenu] = useState({
+    show: false,
+    x: 0,
+    y: 0,
+    taskId: null,
+    tableType: null
+  });
+  
+  // État pour le redimensionnement
+  const [resizingColumn, setResizingColumn] = useState(null);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(0);
+  
+  // Headers des colonnes
   const columnHeaders = {
-    checkbox: '',
-    name: 'Tâche',
+    name: 'Nom',
     status: 'Statut',
     priority: 'Priorité',
     date: 'Date',
-    assignee: 'Assigné à',
-    tags: 'Tags',
-    dragHandle: ''
+    endDate: 'Date limite',
+    time: 'Heure',
+    assignee: 'Assigné',
+    progress: 'Progression'
   };
-
-  // Gérer le redimensionnement des colonnes
-  const handleColumnResize = (e, column) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = columnWidths[column] || 100;
-    
-    const handleMouseMove = (e) => {
-      const diff = e.clientX - startX;
-      const newWidth = Math.max(50, startWidth + diff);
-      setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
-    };
-    
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'default';
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.body.style.cursor = 'col-resize';
-  };
-
-  // Gérer le redimensionnement du tableau
-  const handleTableResize = (e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = tableRef.current?.offsetWidth || 800;
-    
-    const handleMouseMove = (e) => {
-      const diff = e.clientX - startX;
-      const newWidth = Math.max(600, Math.min(1200, startWidth + diff));
-      setTableWidth(`${newWidth}px`);
-    };
-    
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'default';
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.body.style.cursor = 'ew-resize';
-  };
-
-  // Gérer le drag & drop des lignes
-  const handleRowDragStart = (e, taskId, index) => {
-    setDraggedRow(taskId);
-    setDraggedRowIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-    e.currentTarget.classList.add('dragging');
-  };
-
-  const handleRowDragEnd = (e) => {
-    e.currentTarget.classList.remove('dragging');
-    setDraggedRow(null);
-    setDraggedRowIndex(null);
-    setDragOverRow(null);
-  };
-
-  const handleRowDragOver = (e, taskId) => {
-    e.preventDefault();
-    if (taskId !== draggedRow) {
-      setDragOverRow(taskId);
-    }
-  };
-
-  const handleRowDrop = (e, targetTaskId) => {
-    e.preventDefault();
-    if (draggedRow && draggedRow !== targetTaskId) {
-      const draggedTask = tasks.find(t => t.id === draggedRow);
-      const targetIndex = tasks.findIndex(t => t.id === targetTaskId);
+  
+  // Colonnes disponibles avec icônes
+  const availableColumns = [
+    { id: 'assignee', label: 'Assigné', icon: '👤' },
+    { id: 'progress', label: 'Progression', icon: '📊' }
+  ];
+  
+  // Sauvegardes localStorage
+  useEffect(() => {
+    localStorage.setItem('dailyTasks', JSON.stringify(dailyTasksList));
+  }, [dailyTasksList]);
+  
+  useEffect(() => {
+    localStorage.setItem('weeklyTasks', JSON.stringify(weeklyTasksList));
+  }, [weeklyTasksList]);
+  
+  useEffect(() => {
+    localStorage.setItem('customStatuses', JSON.stringify(customStatuses));
+  }, [customStatuses]);
+  
+  useEffect(() => {
+    localStorage.setItem('customPriorities', JSON.stringify(customPriorities));
+  }, [customPriorities]);
+  
+  useEffect(() => {
+    localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
+  
+  useEffect(() => {
+    localStorage.setItem('columnWidths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
+  
+  // Déplacement automatique des tâches (UNIQUEMENT pour les tâches qui ont la date d'aujourd'hui)
+  useEffect(() => {
+    const moveTasksToDaily = () => {
+      const today = new Date().toISOString().split('T')[0];
       
-      if (draggedTask && targetIndex !== -1) {
-        // Créer une nouvelle liste de tâches avec l'ordre modifié
-        const newTasks = tasks.filter(t => t.id !== draggedRow);
-        newTasks.splice(targetIndex, 0, draggedTask);
-        
-        // Mettre à jour l'ordre dans le contexte
-        // Note: Vous devrez implémenter reorderTasks dans AppContext
-        if (typeof reorderTasks === 'function') {
-          reorderTasks(newTasks);
-        }
-      }
-    }
-    setDragOverRow(null);
-  };
-
-  // Menu contextuel pour les actions
-  const handleContextMenu = (e, taskId) => {
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const menuHeight = 100; // Estimation de la hauteur du menu
-    
-    // Calculer la position pour éviter le débordement
-    let top = e.clientY;
-    if (top + menuHeight > viewportHeight) {
-      top = viewportHeight - menuHeight - 10;
-    }
-    
-    setContextMenu({
-      show: true,
-      x: e.clientX,
-      y: top,
-      taskId
-    });
-  };
-
-  const closeContextMenu = () => {
-    setContextMenu({ show: false, x: 0, y: 0, taskId: null });
-  };
-
-  // Gérer les colonnes visibles
-  const toggleColumn = (columnId) => {
-    if (visibleColumns.includes(columnId)) {
-      setVisibleColumns(prev => prev.filter(c => c !== columnId));
-    } else {
-      // Ajouter la colonne avant dragHandle
-      const newColumns = [...visibleColumns];
-      const dragHandleIndex = newColumns.indexOf('dragHandle');
-      newColumns.splice(dragHandleIndex, 0, columnId);
-      setVisibleColumns(newColumns);
-      
-      // Définir une largeur par défaut si elle n'existe pas
-      if (!columnWidths[columnId]) {
-        setColumnWidths(prev => ({ ...prev, [columnId]: 120 }));
-      }
-    }
-  };
-
-  // Filtrer les tâches selon le mode de vue
-  const getFilteredTasks = (type) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
-    
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
-
-    if (type === 'day') {
-      return tasks.filter(task => {
-        const taskDate = new Date(task.date);
-        taskDate.setHours(0, 0, 0, 0);
-        return taskDate.getTime() === today.getTime();
-      });
-    } else if (type === 'week') {
-      return tasks.filter(task => {
-        const taskDate = new Date(task.date);
-        return taskDate >= weekStart && taskDate <= weekEnd;
-      });
-    }
-    return tasks;
-  };
-
-  // Générer les options d'autocomplete
-  const generateAutocompleteOptions = (query) => {
-    if (!query || query.length < 2) {
-      setAutocompleteOptions([]);
-      return;
-    }
-
-    const options = [];
-    const lowerQuery = query.toLowerCase();
-
-    // Rechercher dans les radars
-    radars.forEach(radar => {
-      if (radar.name.toLowerCase().includes(lowerQuery)) {
-        options.push({
-          type: 'radar',
-          id: radar.id,
-          name: radar.name,
-          icon: radar.icon,
-          path: `/radar/${radar.id}`
-        });
-      }
-
-      // Rechercher dans les matières
-      radar.subjects?.forEach(subject => {
-        if (subject.name.toLowerCase().includes(lowerQuery) || 
-            radar.name.toLowerCase().includes(lowerQuery)) {
-          options.push({
-            type: 'subject',
-            id: subject.id,
-            radarId: radar.id,
-            radarName: radar.name,
-            name: subject.name,
-            icon: '📚',
-            path: `/radar/${radar.id}/subject/${subject.id}`
-          });
-        }
-      });
-    });
-
-    setAutocompleteOptions(options);
-    setSelectedOptionIndex(0);
-  };
-
-  // Gérer l'édition inline
-  const handleStartEdit = (taskId, field, currentValue) => {
-    setEditingTaskId(taskId);
-    setEditingField(field);
-    setTempValue(currentValue || '');
-    if (field === 'name') {
-      generateAutocompleteOptions(currentValue || '');
-      setShowAutocomplete(true);
-    }
-  };
-
-  const handleSaveEdit = () => {
-    if (editingTaskId && editingField) {
-      const task = tasks.find(t => t.id === editingTaskId);
-      if (task) {
-        if (editingField === 'name') {
-          updateTask({ ...task, name: tempValue });
-        }
-      }
-    }
-    handleCancelEdit();
-  };
-
-  const handleCancelEdit = () => {
-    setEditingTaskId(null);
-    setEditingField(null);
-    setTempValue('');
-    setShowAutocomplete(false);
-    setAutocompleteOptions([]);
-  };
-
-  const handleSelectAutocomplete = (option) => {
-    const task = tasks.find(t => t.id === editingTaskId);
-    if (task) {
-      updateTask({
-        ...task,
-        name: option.name,
-        tag: {
-          type: option.type,
-          radarId: option.radarId || option.id,
-          radarName: option.radarName || option.name,
-          subjectId: option.type === 'subject' ? option.id : null,
-          path: option.path
-        }
-      });
-    }
-    handleCancelEdit();
-  };
-
-  const handleKeyDown = (e) => {
-    if (!showAutocomplete && e.key === 'Enter') {
-      e.preventDefault();
-      handleSaveEdit();
-      return;
-    }
-
-    if (!showAutocomplete) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedOptionIndex(prev => 
-        prev < autocompleteOptions.length - 1 ? prev + 1 : prev
+      // Trouver les tâches hebdomadaires qui ont la date d'aujourd'hui ET qui n'ont pas été déplacées
+      const tasksToMove = weeklyTasksList.filter(task => 
+        task.date === today && 
+        !task.movedToDaily && 
+        !task.disableAutoMove &&
+        task.autoMoveEnabled === true // Nouvelle propriété pour contrôler l'auto-move
       );
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedOptionIndex(prev => prev > 0 ? prev - 1 : 0);
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (autocompleteOptions[selectedOptionIndex]) {
-        handleSelectAutocomplete(autocompleteOptions[selectedOptionIndex]);
-      } else {
-        handleSaveEdit();
+      
+      if (tasksToMove.length > 0) {
+        const existingDailyIds = new Set(dailyTasksList.map(t => t.id));
+        const toAdd = tasksToMove.filter(t => !existingDailyIds.has(t.id));
+        
+        if (toAdd.length > 0) {
+          // Ajouter au daily
+          setDailyTasksList(prev => [...prev, ...toAdd]);
+          // Marquer comme déplacé dans weekly
+          setWeeklyTasksList(prev => prev.map(task => 
+            toAdd.find(t => t.id === task.id) 
+              ? { ...task, movedToDaily: true }
+              : task
+          ));
+        }
       }
-    } else if (e.key === 'Escape') {
-      handleCancelEdit();
-    }
-  };
-
-  const handleAddTask = () => {
-    const newTask = {
-      id: Date.now(),
-      name: '',
-      status: 'todo',
-      priority: 'medium',
-      date: new Date().toISOString(),
-      completed: false
     };
-    addTask(newTask);
-    handleStartEdit(newTask.id, 'name', '');
-  };
-
-  const handleToggleTask = (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-      updateTask({
-        ...task,
-        completed: !task.completed,
-        status: !task.completed ? 'done' : 'todo'
-      });
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'todo': return 'bg-gray-500/10 text-gray-400';
-      case 'in-progress': return 'bg-yellow-500/10 text-yellow-500';
-      case 'done': return 'bg-green-500/10 text-green-500';
-      default: return 'bg-gray-500/10 text-gray-400';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'low': return 'text-green-500';
-      case 'medium': return 'text-yellow-500';
-      case 'high': return 'text-red-500';
-      default: return 'text-gray-400';
-    }
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const taskDate = new Date(date);
-    taskDate.setHours(0, 0, 0, 0);
-
-    if (taskDate.getTime() === today.getTime()) {
-      return "Aujourd'hui";
-    }
     
-    return date.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short'
-    });
-  };
-
-  // Effet pour fermer le menu contextuel
+    // Ne pas exécuter au montage initial pour éviter les déplacements non désirés
+    const timer = setTimeout(() => {
+      moveTasksToDaily();
+    }, 1000);
+    
+    const interval = setInterval(moveTasksToDaily, 60000);
+    
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [weeklyTasksList, dailyTasksList]);
+  
+  // Fermer le menu contextuel
   useEffect(() => {
     const handleClick = () => closeContextMenu();
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
-
-  // Effet pour sauvegarder quand on clique à l'extérieur
+  
+  // Gestion du redimensionnement
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (editingTaskId && !e.target.closest('.editing-input') && !e.target.closest('.autocomplete-dropdown')) {
-        handleSaveEdit();
-      }
+    const handleMouseMove = (e) => {
+      if (!resizingColumn) return;
+      
+      const diff = e.clientX - resizeStartX.current;
+      const newWidth = Math.max(50, resizeStartWidth.current + diff);
+      
+      setColumnWidths(prev => ({
+        ...prev,
+        [resizingColumn]: newWidth
+      }));
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [editingTaskId, tempValue]);
-
-  // Calculer la position de l'autocomplete pour éviter le débordement
-  const calculateAutocompletePosition = () => {
-    if (!inputRef.current) return { top: 0, left: 0 };
     
-    const rect = inputRef.current.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const dropdownWidth = 300;
-    const dropdownHeight = 240; // max-h-60 = 15rem = 240px
+    const handleMouseUp = () => {
+      setResizingColumn(null);
+    };
     
-    let left = rect.left;
-    let top = rect.bottom + 5;
-    
-    // Ajuster si déborde à droite
-    if (left + dropdownWidth > viewportWidth) {
-      left = viewportWidth - dropdownWidth - 10;
+    if (resizingColumn) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
     }
-    
-    // Ajuster si déborde en bas
-    if (top + dropdownHeight > viewportHeight) {
-      top = rect.top - dropdownHeight - 5;
-    }
-    
-    return { top, left };
+  }, [resizingColumn]);
+  
+  // Redimensionnement des colonnes
+  const handleColumnResize = (e, column) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingColumn(column);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = columnWidths[column];
   };
-
-  // Rendu des cellules selon le type
-  const renderCell = (task, column, index) => {
-    switch (column) {
-      case 'checkbox':
-        return (
-          <td key={column} className="px-4 py-3" style={{ width: columnWidths[column] }}>
-            <input
-              type="checkbox"
-              checked={task.completed}
-              onChange={() => handleToggleTask(task.id)}
-              className="w-4 h-4 rounded border-2 border-white/20 checked:bg-[rgb(35,131,226)] checked:border-[rgb(35,131,226)] cursor-pointer"
-            />
-          </td>
-        );
-
-      case 'name':
-        return (
-          <td key={column} className="px-4 py-3 relative group" style={{ width: columnWidths[column] }}>
-            {editingTaskId === task.id && editingField === 'name' ? (
-              <>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={tempValue}
-                  onChange={(e) => {
-                    setTempValue(e.target.value);
-                    generateAutocompleteOptions(e.target.value);
-                    setShowAutocomplete(true);
-                  }}
-                  onKeyDown={handleKeyDown}
-                  className="editing-input w-full px-2 py-1 bg-white/[0.055] border border-white/20 rounded text-white/81 focus:outline-none focus:border-[rgb(35,131,226)]"
-                  autoFocus
-                />
-                
-                {/* Autocomplete dropdown */}
-                {showAutocomplete && autocompleteOptions.length > 0 && (
-                  <div 
-                    ref={autocompleteRef}
-                    className="autocomplete-dropdown fixed bg-[rgb(37,37,37)] border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto min-w-[300px] z-[9999]"
-                    style={calculateAutocompletePosition()}
-                  >
-                    {autocompleteOptions.map((option, index) => (
-                      <button
-                        key={`${option.type}-${option.id}`}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                          index === selectedOptionIndex
-                            ? 'bg-white/10 text-white/81'
-                            : 'text-white/46 hover:bg-white/[0.055] hover:text-white/81'
-                        }`}
-                        onMouseDown={() => handleSelectAutocomplete(option)}
-                        onMouseEnter={() => setSelectedOptionIndex(index)}
-                      >
-                        <span>{option.icon}</span>
-                        <div className="flex-1">
-                          <div className="text-white/81">{option.name}</div>
-                          {option.type === 'subject' && (
-                            <div className="text-xs text-white/40">{option.radarName}</div>
-                          )}
-                        </div>
-                        <span className="text-xs text-white/30">
-                          {option.type === 'radar' ? 'Radar' : 'Matière'}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div>
+  
+  // Drag & Drop des colonnes
+  const handleColumnDragStart = (e, column) => {
+    if (column === 'name') return;
+    setDraggedColumn(column);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  
+  const handleColumnDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  
+  const handleColumnDrop = (e, targetColumn) => {
+    e.preventDefault();
+    if (!draggedColumn || draggedColumn === targetColumn || targetColumn === 'name') return;
+    
+    const draggedIndex = visibleColumns.indexOf(draggedColumn);
+    const targetIndex = visibleColumns.indexOf(targetColumn);
+    
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      const newColumns = [...visibleColumns];
+      newColumns.splice(draggedIndex, 1);
+      newColumns.splice(targetIndex, 0, draggedColumn);
+      setVisibleColumns(newColumns);
+    }
+    
+    setDraggedColumn(null);
+  };
+  
+  // Drag & Drop des lignes - Handlers simplifiés et améliorés
+  const handleRowDragStart = (e, taskId, tableType) => {
+    setDraggedRow(taskId.toString());
+    setDraggedFromTable(tableType);
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Ajouter un effet visuel
+    setTimeout(() => {
+      const row = document.querySelector(`[data-task-id="${taskId}"]`);
+      if (row) {
+        row.style.opacity = '0.4';
+      }
+    }, 0);
+  };
+  
+  const handleRowDragEnd = () => {
+    // Restaurer l'opacité
+    const row = document.querySelector(`[data-task-id="${draggedRow}"]`);
+    if (row) {
+      row.style.opacity = '1';
+    }
+    
+    setDraggedRow(null);
+    setDraggedFromTable(null);
+    setDragOverRow(null);
+  };
+  
+  const handleRowDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Trouver la ligne la plus proche
+    const afterElement = getDragAfterElement(e.currentTarget.parentElement, e.clientY);
+    if (afterElement) {
+      const taskId = afterElement.getAttribute('data-task-id');
+      if (taskId && taskId !== draggedRow) {
+        setDragOverRow(taskId);
+      }
+    }
+  };
+  
+  const handleTableDragOver = (e, tableType) => {
+    e.preventDefault();
+    
+    // Permettre le drop sur tout le tableau
+    const tbody = e.currentTarget;
+    const afterElement = getDragAfterElement(tbody, e.clientY);
+    
+    if (afterElement) {
+      const taskId = afterElement.getAttribute('data-task-id');
+      if (taskId) {
+        setDragOverRow(taskId);
+      }
+    } else {
+      // Si aucun élément après, on est à la fin
+      setDragOverRow('end-' + tableType);
+    }
+  };
+  
+  // Helper pour trouver l'élément après le curseur
+  const getDragAfterElement = (container, y) => {
+    const draggableElements = [...container.querySelectorAll('tr[data-task-id]:not([data-dragging])')];
+    
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  };
+  
+  const handleRowDragLeave = (e) => {
+    // Ne pas effacer si on reste dans le tableau
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverRow(null);
+    }
+  };
+  
+  const handleRowDrop = (e, targetTaskId, targetTableType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedRow) {
+      setDragOverRow(null);
+      return;
+    }
+    
+    const sourceList = draggedFromTable === 'daily' ? dailyTasksList : weeklyTasksList;
+    const draggedTask = sourceList.find(t => t.id.toString() === draggedRow);
+    
+    if (!draggedTask) {
+      setDragOverRow(null);
+      return;
+    }
+    
+    // Créer une copie de la tâche pour éviter les mutations
+    const taskCopy = { ...draggedTask };
+    
+    if (draggedFromTable !== targetTableType) {
+      // Déplacement entre tables - IMPORTANT: retirer de la source d'abord
+      if (draggedFromTable === 'daily') {
+        // Retirer du daily
+        setDailyTasksList(prev => prev.filter(t => t.id.toString() !== draggedRow));
+        
+        // Ajouter au weekly
+        setWeeklyTasksList(prev => {
+          const newList = [...prev];
+          
+          if (targetTaskId && targetTaskId !== 'end-weekly') {
+            const targetIndex = newList.findIndex(t => t.id.toString() === targetTaskId.toString());
+            if (targetIndex !== -1) {
+              newList.splice(targetIndex, 0, { ...taskCopy, movedToDaily: false });
+            } else {
+              newList.push({ ...taskCopy, movedToDaily: false });
+            }
+          } else {
+            newList.push({ ...taskCopy, movedToDaily: false });
+          }
+          
+          return newList;
+        });
+      } else {
+        // Retirer du weekly
+        setWeeklyTasksList(prev => prev.filter(t => t.id.toString() !== draggedRow));
+        
+        // Ajouter au daily
+        setDailyTasksList(prev => {
+          const newList = [...prev];
+          
+          if (targetTaskId && targetTaskId !== 'end-daily') {
+            const targetIndex = newList.findIndex(t => t.id.toString() === targetTaskId.toString());
+            if (targetIndex !== -1) {
+              newList.splice(targetIndex, 0, taskCopy);
+            } else {
+              newList.push(taskCopy);
+            }
+          } else {
+            newList.push(taskCopy);
+          }
+          
+          return newList;
+        });
+      }
+    } else {
+      // Réorganisation dans la même table
+      const setTasksList = targetTableType === 'daily' ? setDailyTasksList : setWeeklyTasksList;
+      
+      setTasksList(prev => {
+        const newList = [...prev];
+        const draggedIndex = newList.findIndex(t => t.id.toString() === draggedRow);
+        
+        if (draggedIndex === -1) return prev;
+        
+        // Retirer l'élément draggé
+        const [removed] = newList.splice(draggedIndex, 1);
+        
+        if (targetTaskId && targetTaskId !== `end-${targetTableType}`) {
+          // Insérer avant la cible
+          const targetIndex = newList.findIndex(t => t.id.toString() === targetTaskId.toString());
+          if (targetIndex !== -1) {
+            newList.splice(targetIndex, 0, removed);
+          } else {
+            newList.push(removed);
+          }
+        } else {
+          // Ajouter à la fin
+          newList.push(removed);
+        }
+        
+        return newList;
+      });
+    }
+    
+    setDragOverRow(null);
+    setDraggedRow(null);
+    setDraggedFromTable(null);
+  };
+  
+  // Menu contextuel
+  const handleDragHandleContextMenu = (e, taskId, tableType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setContextMenu({
+      show: true,
+      x: e.clientX,
+      y: e.clientY,
+      taskId,
+      tableType,
+      isDeleteOnly: true
+    });
+  };
+  
+  const handleTaskContextMenu = (e, taskId, tableType) => {
+    e.preventDefault();
+    
+    setContextMenu({
+      show: true,
+      x: e.clientX,
+      y: e.clientY,
+      taskId,
+      tableType,
+      isDeleteOnly: false
+    });
+  };
+  
+  // Actions sur les tâches
+  const handleDeleteTask = (taskId, tableType) => {
+    if (tableType === 'daily') {
+      setDailyTasksList(prev => prev.filter(t => t.id !== taskId));
+    } else {
+      setWeeklyTasksList(prev => prev.filter(t => t.id !== taskId));
+    }
+    closeContextMenu();
+  };
+  
+  const handleDuplicateTask = (taskId, tableType) => {
+    const tasksList = tableType === 'daily' ? dailyTasksList : weeklyTasksList;
+    const task = tasksList.find(t => t.id === taskId);
+    
+    if (task) {
+      const newTask = { ...task, id: Date.now(), name: `${task.name} (copie)` };
+      if (tableType === 'daily') {
+        setDailyTasksList(prev => [...prev, newTask]);
+      } else {
+        setWeeklyTasksList(prev => [...prev, newTask]);
+      }
+    }
+    closeContextMenu();
+  };
+  
+  const toggleAutoMove = (taskId) => {
+    setWeeklyTasksList(prev => prev.map(task => 
+      task.id === taskId 
+        ? { ...task, disableAutoMove: !task.disableAutoMove }
+        : task
+    ));
+    closeContextMenu();
+  };
+  
+  const closeContextMenu = () => {
+    setContextMenu({ show: false, x: 0, y: 0, taskId: null });
+  };
+  
+  // Gestion des tâches - Ajout direct sans modal (SANS duplication)
+  const handleQuickAddTask = (tableType) => {
+    if (!newTaskName.trim()) {
+      setIsAddingTask(null);
+      setNewTaskName('');
+      return;
+    }
+    
+    const newTask = {
+      id: Date.now(),
+      name: newTaskName.trim(),
+      description: '',
+      status: customStatuses[0]?.id || 'not-started',
+      priority: customPriorities[0]?.id || 'medium',
+      date: new Date().toISOString().split('T')[0],
+      endDate: '',
+      time: '',
+      assignee: '',
+      completed: false,
+      progress: 0,
+      tag: null,
+      autoMoveEnabled: false // Par défaut, pas d'auto-move pour les nouvelles tâches
+    };
+    
+    // Ajouter UNIQUEMENT dans le tableau spécifié
+    if (tableType === 'daily') {
+      setDailyTasksList(prev => [...prev, newTask]);
+    } else if (tableType === 'weekly') {
+      // Pour le weekly, ne PAS ajouter automatiquement au daily
+      setWeeklyTasksList(prev => [...prev, newTask]);
+    }
+    
+    setNewTaskName('');
+    setIsAddingTask(null);
+  };
+  
+  // Gestion des tâches avec tableType explicite
+  const handleUpdateTask = (taskId, taskData, explicitTableType = null) => {
+    const tableType = explicitTableType || 
+      (dailyTasksList.some(t => t.id === taskId) ? 'daily' : 'weekly');
+    
+    if (tableType === 'daily') {
+      setDailyTasksList(prev => prev.map(task => 
+        task.id === taskId ? { ...task, ...taskData } : task
+      ));
+    } else {
+      setWeeklyTasksList(prev => prev.map(task => 
+        task.id === taskId ? { ...task, ...taskData } : task
+      ));
+    }
+  };
+  
+  // Édition inline du nom
+  const handleStartEditingName = (taskId, currentName) => {
+    setEditingCellId(`name-${taskId}`);
+    setEditingCellValue(currentName);
+  };
+  
+  const handleSaveEditingName = (taskId, tableType) => {
+    const tasksList = tableType === 'daily' ? dailyTasksList : weeklyTasksList;
+    const setTasksList = tableType === 'daily' ? setDailyTasksList : setWeeklyTasksList;
+    
+    setTasksList(prev => prev.map(task => 
+      task.id === taskId ? { ...task, name: editingCellValue } : task
+    ));
+    
+    setEditingCellId(null);
+    setEditingCellValue('');
+  };
+  
+  // Gestion des colonnes
+  const handleAddColumn = (columnId) => {
+    if (!visibleColumns.includes(columnId)) {
+      setVisibleColumns(prev => [...prev, columnId]);
+    }
+    
+    if (!columnWidths[columnId]) {
+      setColumnWidths(prev => ({ ...prev, [columnId]: 120 }));
+    }
+    
+    setShowColumnSelector(false);
+  };
+  
+  // Obtenir les colonnes pour chaque tableau
+  const getColumnsForTable = (tableType) => {
+    if (tableType === 'weekly') {
+      const cols = [...visibleColumns];
+      const dateIndex = cols.indexOf('date');
+      if (dateIndex !== -1 && !cols.includes('endDate')) {
+        cols.splice(dateIndex + 1, 0, 'endDate');
+      }
+      return cols;
+    }
+    return visibleColumns;
+  };
+  
+  // Handler pour hover des lignes
+  const handleRowMouseEnter = (taskId) => {
+    setHoveredRowId(taskId);
+  };
+  
+  const handleRowMouseLeave = () => {
+    setHoveredRowId(null);
+  };
+  
+  // Rendu d'une table (avec ajout direct et poignées corrigées)
+  const renderTable = (title, taskList, tableType) => {
+    const columns = getColumnsForTable(tableType);
+    
+    return (
+      <div>
+        <h2 className="text-white/81 font-medium text-lg mb-3">{title}</h2>
+        
+        <div className="flex">
+          {/* Drag handles - VRAIMENT à l'extérieur */}
+          <div className="w-8 mr-2">
+            <div className="h-[41px]"></div>
+            {taskList.map((task) => (
+              <div
+                key={`handle-${task.id}`}
+                className="h-[49px] flex items-center justify-center"
+              >
                 <div
-                  onClick={() => task.tag?.path && navigate(task.tag.path)}
-                  className={`cursor-pointer ${task.completed ? 'line-through opacity-50' : ''} ${
-                    task.tag ? 'hover:text-[rgb(35,131,226)]' : ''
+                  className={`transition-opacity duration-150 ${
+                    hoveredRowId === task.id ? 'opacity-100' : 'opacity-0'
                   }`}
+                  draggable
+                  onDragStart={(e) => handleRowDragStart(e, task.id, tableType)}
+                  onDragEnd={handleRowDragEnd}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDragHandleContextMenu(e, task.id, tableType);
+                  }}
+                  onMouseEnter={() => setHoveredRowId(task.id)}
+                  style={{ cursor: 'grab' }}
                 >
-                  {task.name || (
-                    <span 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartEdit(task.id, 'name', '');
+                  <svg className="w-4 h-4 text-white/30" viewBox="0 0 16 4" fill="currentColor">
+                    <circle cx="2" cy="2" r="1.5"/>
+                    <circle cx="8" cy="2" r="1.5"/>
+                    <circle cx="14" cy="2" r="1.5"/>
+                  </svg>
+                </div>
+              </div>
+            ))}
+            {/* Ligne pour l'ajout - avec hover séparé */}
+            <div 
+              className="h-[49px] flex items-center justify-center"
+              onMouseEnter={() => setHoveredRowId(`add-${tableType}`)}
+              onMouseLeave={() => setHoveredRowId(null)}
+            >
+              <div className={`transition-opacity duration-150 ${
+                hoveredRowId === `add-${tableType}` ? 'opacity-100' : 'opacity-0'
+              }`}>
+                <svg className="w-4 h-4 text-white/20" viewBox="0 0 16 4" fill="currentColor">
+                  <circle cx="2" cy="2" r="1.5"/>
+                  <circle cx="8" cy="2" r="1.5"/>
+                  <circle cx="14" cy="2" r="1.5"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          {/* Table sans colonne de poignées */}
+          <div className="flex-1 bg-[rgb(32,32,32)] rounded-lg overflow-hidden border border-[rgb(47,47,47)]">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[rgb(37,37,37)] border-b border-[rgb(47,47,47)]">
+                    {columns.map((column, index) => (
+                      <th 
+                        key={column}
+                        draggable={column !== 'name'}
+                        onDragStart={(e) => handleColumnDragStart(e, column)}
+                        onDragOver={handleColumnDragOver}
+                        onDrop={(e) => handleColumnDrop(e, column)}
+                        className={`px-4 py-3 text-left text-[13px] font-medium text-white/46 relative group ${
+                          column !== 'name' ? 'cursor-move' : ''
+                        }`}
+                        style={{ 
+                          width: columnWidths[column],
+                          minWidth: columnWidths[column]
+                        }}
+                      >
+                        {columnHeaders[column]}
+                        {index < columns.length - 1 && (
+                          <div className="absolute right-0 top-0 bottom-0 w-px bg-[rgb(47,47,47)]">
+                            <div
+                              className="absolute right-[-2px] top-0 bottom-0 w-1 cursor-col-resize hover:bg-white/20"
+                              onMouseDown={(e) => handleColumnResize(e, column)}
+                            />
+                          </div>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody
+                  onDragOver={(e) => handleTableDragOver(e, tableType)}
+                  onDrop={(e) => {
+                    if (!e.defaultPrevented) {
+                      handleRowDrop(e, dragOverRow, tableType);
+                    }
+                  }}
+                >
+                  {taskList.map((task) => (
+                    <tr 
+                      key={task.id}
+                      data-task-id={task.id}
+                      data-dragging={draggedRow === task.id.toString() ? 'true' : undefined}
+                      className={`border-b border-white/[0.055] hover:bg-white/[0.02] transition-all duration-200 ${
+                        dragOverRow === task.id.toString() ? 'border-t-2 border-t-[rgb(35,131,226)]' : ''
+                      }`}
+                      style={{
+                        opacity: draggedRow === task.id.toString() ? 0.4 : 1,
+                        backgroundColor: draggedRow === task.id.toString() ? 'rgba(255,255,255,0.02)' : ''
                       }}
-                      className="text-white/30 cursor-text"
+                      onDragOver={handleRowDragOver}
+                      onDragLeave={handleRowDragLeave}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleRowDrop(e, task.id, tableType);
+                      }}
+                      onMouseEnter={() => setHoveredRowId(task.id)}
+                      onMouseLeave={() => setHoveredRowId(null)}
+                      onContextMenu={(e) => handleTaskContextMenu(e, task.id, tableType)}
                     >
-                      Cliquez pour ajouter une tâche...
-                    </span>
+                      {columns.map(column => (
+                        <td key={column} className="px-4 py-3" style={{ 
+                          width: columnWidths[column],
+                          minWidth: columnWidths[column]
+                        }}>
+                          {renderCell(task, column, tableType)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  
+                  {/* Ligne d'ajout direct */}
+                  <tr 
+                    className="border-b border-white/[0.055] hover:bg-white/[0.02] transition-colors"
+                    onMouseEnter={() => setHoveredRowId(`add-${tableType}`)}
+                    onMouseLeave={() => setHoveredRowId(null)}
+                  >
+                    {columns.map(column => (
+                      <td key={column} className="px-4 py-3">
+                        {column === 'name' ? (
+                          isAddingTask === tableType ? (
+                            <input
+                              type="text"
+                              value={newTaskName}
+                              onChange={(e) => setNewTaskName(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleQuickAddTask(tableType);
+                                }
+                              }}
+                              onBlur={() => handleQuickAddTask(tableType)}
+                              placeholder="Nom de la tâche..."
+                              className="w-full px-2 py-1 bg-white/[0.055] border border-white/20 rounded text-white/81 text-sm placeholder-white/30 focus:outline-none focus:border-[rgb(35,131,226)]"
+                              autoFocus
+                            />
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setIsAddingTask(tableType);
+                                setNewTaskName('');
+                              }}
+                              className="text-white/30 hover:text-white/60 text-sm transition-colors"
+                            >
+                              + Ajouter une tâche
+                            </button>
+                          )
+                        ) : column === 'status' && isAddingTask === tableType ? (
+                          <div className="px-2 py-1 bg-white/[0.055] rounded text-white/46 text-sm">
+                            {customStatuses[0]?.name || 'À faire'}
+                          </div>
+                        ) : column === 'priority' && isAddingTask === tableType ? (
+                          <div className="px-2 py-1 bg-white/[0.055] rounded text-white/46 text-sm">
+                            {customPriorities[0]?.name || 'Moyenne'}
+                          </div>
+                        ) : column === 'date' && isAddingTask === tableType ? (
+                          <div className="text-white/46 text-sm">
+                            {new Date().toLocaleDateString()}
+                          </div>
+                        ) : (
+                          <div className="h-6"></div>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  
+                  {/* Zone de drop en fin de tableau avec indicateur visuel */}
+                  {draggedRow && (
+                    <tr 
+                      className={`h-2 ${
+                        dragOverRow === `end-${tableType}` ? 'bg-[rgb(35,131,226)] opacity-20' : ''
+                      }`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOverRow(`end-${tableType}`);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleRowDrop(e, null, tableType);
+                      }}
+                    >
+                      <td colSpan={columns.length}></td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Rendu d'une cellule
+  const renderCell = (task, column, tableType) => {
+    switch (column) {
+      case 'name':
+        const isEditing = editingCellId === `name-${task.id}`;
+        return (
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <input
+                type="text"
+                value={editingCellValue}
+                onChange={(e) => setEditingCellValue(e.target.value)}
+                onBlur={() => handleSaveEditingName(task.id, tableType)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveEditingName(task.id, tableType);
+                  }
+                }}
+                className="flex-1 px-2 py-1 bg-white/[0.055] border border-white/20 rounded text-white/81 text-sm focus:outline-none focus:border-[rgb(35,131,226)]"
+                autoFocus
+              />
+            ) : (
+              <>
+                <div 
+                  className="flex-1 cursor-text"
+                  onClick={() => handleStartEditingName(task.id, task.name)}
+                >
+                  {task.tag ? (
+                    <div>
+                      <div className="text-white/81 text-sm">{task.name}</div>
+                      <div className="text-white/46 text-xs mt-0.5">
+                        {task.tag.type === 'radar' ? task.tag.radarName : task.tag.path}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-white/81 text-sm">{task.name}</div>
                   )}
                 </div>
-                {task.tag && (
-                  <div className="text-xs text-white/40 mt-0.5">
-                    {task.tag.radarName}
-                  </div>
-                )}
-              </div>
+                <button
+                  onClick={() => handleStartEditingName(task.id, task.name)}
+                  className="p-1 text-white/30 hover:text-white/60 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.226 13.25a4.25 4.25 0 0 1-1.154.734l-2.72.906a.75.75 0 0 1-.95-.95l.906-2.72c.141-.424.415-.81.734-1.154l8.258-8.262zm1.414 1.06a.25.25 0 0 0-.353 0L10.53 5.119l.707.707 1.545-1.545a.25.25 0 0 0 0-.354l-.354-.353zM9.822 5.826 4.31 11.338a2.75 2.75 0 0 0-.475.748l-.51 1.53 1.53-.51a2.75 2.75 0 0 0 .748-.475l5.512-5.512-.707-.707z"/>
+                  </svg>
+                </button>
+              </>
             )}
-          </td>
+          </div>
         );
-
+        
       case 'status':
+        const allStatuses = [...customStatuses, { id: 'add-status', name: '+ Ajouter', isAddButton: true, color: '#374151' }];
+        const currentStatus = task.status || customStatuses[0]?.id;
+        const statusOption = customStatuses.find(s => s.id === currentStatus) || customStatuses[0];
+        
         return (
-          <td key={column} className="px-4 py-3" style={{ width: columnWidths[column] }}>
-            <select
-              value={task.status}
-              onChange={(e) => updateTask({ ...task, status: e.target.value })}
-              className={`px-2 py-1 rounded-md text-xs cursor-pointer transition-all ${getStatusColor(task.status)}`}
-            >
-              <option value="todo">À faire</option>
-              <option value="in-progress">En cours</option>
-              <option value="done">Terminé</option>
-            </select>
-          </td>
+          <select
+            value={currentStatus}
+            onChange={(e) => {
+              if (e.target.value === 'add-status') {
+                openCustomOptionsModal('status');
+              } else {
+                handleUpdateTask(task.id, { ...task, status: e.target.value }, tableType);
+              }
+            }}
+            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20 transition-all"
+            style={{ 
+              backgroundColor: statusOption ? `${statusOption.color}25` : 'rgba(255,255,255,0.055)',
+              borderColor: statusOption ? `${statusOption.color}40` : 'rgba(255,255,255,0.094)'
+            }}
+          >
+            {allStatuses.map(status => (
+              <option 
+                key={status.id} 
+                value={status.id}
+                className="bg-[rgb(37,37,37)]"
+              >
+                {status.name}
+              </option>
+            ))}
+          </select>
         );
-
+        
       case 'priority':
+        const allPriorities = [...customPriorities, { id: 'add-priority', name: '+ Ajouter', isAddButton: true, color: '#374151' }];
+        const currentPriority = task.priority || customPriorities[0]?.id;
+        const priorityOption = customPriorities.find(p => p.id === currentPriority) || customPriorities[0];
+        
         return (
-          <td key={column} className="px-4 py-3" style={{ width: columnWidths[column] }}>
-            <select
-              value={task.priority}
-              onChange={(e) => updateTask({ ...task, priority: e.target.value })}
-              className={`text-xs cursor-pointer bg-transparent ${getPriorityColor(task.priority)}`}
-            >
-              <option value="low">Basse</option>
-              <option value="medium">Moyenne</option>
-              <option value="high">Haute</option>
-            </select>
-          </td>
+          <select
+            value={currentPriority}
+            onChange={(e) => {
+              if (e.target.value === 'add-priority') {
+                openCustomOptionsModal('priority');
+              } else {
+                handleUpdateTask(task.id, { ...task, priority: e.target.value }, tableType);
+              }
+            }}
+            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20 transition-all"
+            style={{ 
+              backgroundColor: priorityOption ? `${priorityOption.color}25` : 'rgba(255,255,255,0.055)',
+              borderColor: priorityOption ? `${priorityOption.color}40` : 'rgba(255,255,255,0.094)'
+            }}
+          >
+            {allPriorities.map(priority => (
+              <option 
+                key={priority.id} 
+                value={priority.id}
+                className="bg-[rgb(37,37,37)]"
+              >
+                {priority.name}
+              </option>
+            ))}
+          </select>
         );
-
+        
       case 'date':
         return (
-          <td key={column} className="px-4 py-3" style={{ width: columnWidths[column] }}>
-            <input
-              type="date"
-              value={task.date ? new Date(task.date).toISOString().split('T')[0] : ''}
-              onChange={(e) => updateTask({ ...task, date: e.target.value })}
-              className="text-xs text-white/60 bg-transparent cursor-pointer hover:bg-white/[0.055] px-2 py-1 rounded"
-            />
-          </td>
+          <input
+            type="date"
+            value={task.date || ''}
+            onChange={(e) => handleUpdateTask(task.id, { ...task, date: e.target.value }, tableType)}
+            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20"
+          />
         );
-
-      case 'dragHandle':
+        
+      case 'endDate':
         return (
-          <td key={column} className="px-2 py-3 cursor-grab" style={{ width: columnWidths[column] }}>
-            <div
-              draggable
-              onDragStart={(e) => handleRowDragStart(e, task.id, index)}
-              onDragEnd={handleRowDragEnd}
-              onClick={(e) => handleContextMenu(e, task.id)}
-              className="flex items-center justify-center text-white/30 hover:text-white/60 transition-colors"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M5 3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5 13a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
-              </svg>
-            </div>
-          </td>
+          <input
+            type="date"
+            value={task.endDate || ''}
+            onChange={(e) => handleUpdateTask(task.id, { ...task, endDate: e.target.value }, tableType)}
+            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20"
+          />
         );
-
+        
+      case 'time':
+        return (
+          <input
+            type="time"
+            value={task.time || ''}
+            onChange={(e) => handleUpdateTask(task.id, { ...task, time: e.target.value }, tableType)}
+            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20"
+          />
+        );
+        
+      case 'assignee':
+        return (
+          <input
+            type="text"
+            value={task.assignee || ''}
+            onChange={(e) => handleUpdateTask(task.id, { ...task, assignee: e.target.value }, tableType)}
+            placeholder="Non assigné"
+            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm placeholder-white/30 focus:outline-none focus:border-white/20"
+          />
+        );
+        
+      case 'progress':
+        return (
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              value={task.progress || 0}
+              onChange={(e) => handleUpdateTask(task.id, { ...task, progress: parseInt(e.target.value) }, tableType)}
+              min="0"
+              max="100"
+              className="flex-1 h-1.5 bg-white/[0.055] rounded-lg appearance-none cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, rgb(35,131,226) 0%, rgb(35,131,226) ${task.progress || 0}%, rgba(255,255,255,0.055) ${task.progress || 0}%, rgba(255,255,255,0.055) 100%)`
+              }}
+            />
+            <span className="text-white/46 text-xs w-8">{task.progress || 0}%</span>
+          </div>
+        );
+        
       default:
-        return <td key={column}></td>;
+        return null;
     }
   };
-
-  // Rendu du tableau
-  const renderTaskTable = (title, taskList, isActive) => (
-    <div 
-      className={`bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg overflow-hidden transition-opacity duration-150 ${
-        !isActive ? 'opacity-50' : ''
-      }`}
-      style={{ width: tableWidth }}
-    >
-      <div className="px-4 py-3 border-b border-[rgb(47,47,47)] flex items-center justify-between">
-        <h3 className="font-medium text-white/81">{title}</h3>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-white/46">{taskList.length} tâches</span>
-          <div className="relative">
-            <button
-              onClick={() => setShowColumnMenu(!showColumnMenu)}
-              className="p-1 hover:bg-white/[0.055] rounded transition-colors"
-              title="Gérer les colonnes"
-            >
-              <svg className="w-4 h-4 text-white/46" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 2.75a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 8 2.75" />
-              </svg>
-            </button>
-            
-            {showColumnMenu && (
-              <div className="absolute right-0 top-full mt-1 bg-[rgb(37,37,37)] border border-white/10 rounded-lg shadow-xl p-2 min-w-[180px] z-50">
-                {availableColumns.filter(col => col.canHide).map(col => (
-                  <label key={col.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/[0.055] rounded cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={visibleColumns.includes(col.id)}
-                      onChange={() => toggleColumn(col.id)}
-                      className="w-4 h-4 rounded border-2 border-white/20"
-                    />
-                    <span className="text-sm text-white/81">{col.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      <div className="relative overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-[rgb(37,37,37)] border-b border-[rgb(47,47,47)]">
-              {visibleColumns.map((column, index) => (
-                <th 
-                  key={column} 
-                  className="px-4 py-3 text-left text-[13px] font-medium text-white/46 relative group"
-                  style={{ width: columnWidths[column] }}
-                >
-                  {columnHeaders[column]}
-                  {index < visibleColumns.length - 1 && column !== 'dragHandle' && (
-                    <div
-                      className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onMouseDown={(e) => handleColumnResize(e, column)}
-                    />
-                  )}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {taskList.map((task, index) => (
-              <tr 
-                key={task.id}
-                className={`border-b border-white/[0.055] hover:bg-white/[0.02] transition-colors ${
-                  dragOverRow === task.id ? 'bg-white/[0.055]' : ''
-                } ${draggedRow === task.id ? 'opacity-50' : ''}`}
-                onDragOver={(e) => handleRowDragOver(e, task.id)}
-                onDrop={(e) => handleRowDrop(e, task.id)}
-              >
-                {visibleColumns.map(column => renderCell(task, column, index))}
-              </tr>
-            ))}
-            
-            {/* Add new task row */}
-            <tr 
-              className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-              onClick={handleAddTask}
-            >
-              <td colSpan={visibleColumns.length} className="px-4 py-3">
-                <div className="flex items-center gap-2 text-white/46 hover:text-white/81 transition-colors">
-                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 2.75a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 8 2.75" />
-                  </svg>
-                  <span>Ajouter une tâche</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-      {/* Resize handle pour la largeur */}
-      <div
-        className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-white/20"
-        onMouseDown={handleTableResize}
-      />
-    </div>
-  );
-
-  const dailyTasks = getFilteredTasks('day');
-  const weeklyTasks = getFilteredTasks('week');
-
+  
+  // Ouvrir le modal d'options
+  const openCustomOptionsModal = (type) => {
+    setCustomOptionsType(type);
+    setShowCustomOptionsModal(true);
+  };
+  
   return (
-    <div className="h-full bg-[rgb(25,25,25)]">
-      {/* Header */}
-      <header className="border-b border-[rgb(47,47,47)]">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-white/81">Plan</h1>
-            
-            {/* View Mode Selector */}
-            <div className="flex items-center gap-2 bg-white/[0.055] rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('day')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
-                  viewMode === 'day'
-                    ? 'bg-white/10 text-white/81'
-                    : 'text-white/46 hover:text-white/81'
-                }`}
-              >
-                Jour
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
-                  viewMode === 'week'
-                    ? 'bg-white/10 text-white/81'
-                    : 'text-white/46 hover:text-white/81'
-                }`}
-              >
-                Semaine
-              </button>
-              <button
-                onClick={() => setViewMode('both')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
-                  viewMode === 'both'
-                    ? 'bg-white/10 text-white/81'
-                    : 'text-white/46 hover:text-white/81'
-                }`}
-              >
-                Les deux
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Tasks Tables */}
-      <div className="p-6 space-y-6 relative" ref={tableRef}>
-        {(viewMode === 'day' || viewMode === 'both') && 
-          renderTaskTable("Tâches du jour", dailyTasks, viewMode === 'day' || viewMode === 'both')}
-        
-        {(viewMode === 'week' || viewMode === 'both') && 
-          renderTaskTable("Tâches de la semaine", weeklyTasks, viewMode === 'week' || viewMode === 'both')}
+    <div className="p-6 max-w-[1400px] mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white/81 mb-2">To do</h1>
+        <p className="text-white/46">Gérez vos tâches quotidiennes et hebdomadaires</p>
       </div>
-
+      
+      <div className="space-y-8">
+        {renderTable('To do', dailyTasksList, 'daily')}
+        {renderTable('Tâches de la semaine', weeklyTasksList, 'weekly')}
+      </div>
+      
       {/* Context Menu */}
       {contextMenu.show && (
         <div
-          className="fixed bg-[rgb(37,37,37)]/95 backdrop-blur-xl border border-white/10 rounded-lg p-1 shadow-2xl z-[10000]"
+          className="fixed bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-md shadow-lg py-1 z-50"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={() => {
-              deleteTask(contextMenu.taskId);
-              closeContextMenu();
-            }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-white/81 rounded-md transition-all duration-150 hover:bg-white/[0.08]"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M6.5 5.5a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5zm4.25 0a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5z" />
-              <path d="M12 2.75a.75.75 0 0 1 .75.75v.5h.75a.75.75 0 0 1 0 1.5h-.5v7a2.25 2.25 0 0 1-2.25 2.25h-5.5A2.25 2.25 0 0 1 3 12.5v-7h-.5a.75.75 0 0 1 0-1.5h.75v-.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75h1.5zm-7.5.75v-.25h5v.25h-5zm7 2.5h-7v7a.75.75 0 0 0 .75.75h5.5a.75.75 0 0 0 .75-.75v-7z" />
-            </svg>
-            Supprimer
-          </button>
+          {contextMenu.isDeleteOnly ? (
+            <button
+              onClick={() => handleDeleteTask(contextMenu.taskId, contextMenu.tableType)}
+              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/[0.055] transition-colors"
+            >
+              Supprimer
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  const task = contextMenu.tableType === 'daily' 
+                    ? dailyTasksList.find(t => t.id === contextMenu.taskId)
+                    : weeklyTasksList.find(t => t.id === contextMenu.taskId);
+                  if (task) {
+                    handleStartEditingName(task.id, task.name);
+                  }
+                  closeContextMenu();
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-white/81 hover:bg-white/[0.055] transition-colors"
+              >
+                Modifier le nom
+              </button>
+              <button
+                onClick={() => handleDuplicateTask(contextMenu.taskId, contextMenu.tableType)}
+                className="w-full px-4 py-2 text-left text-sm text-white/81 hover:bg-white/[0.055] transition-colors"
+              >
+                Dupliquer
+              </button>
+              {contextMenu.tableType === 'weekly' && (
+                <button
+                  onClick={() => toggleAutoMove(contextMenu.taskId)}
+                  className="w-full px-4 py-2 text-left text-sm text-white/81 hover:bg-white/[0.055] transition-colors"
+                >
+                  {weeklyTasksList.find(t => t.id === contextMenu.taskId)?.disableAutoMove 
+                    ? 'Activer le déplacement auto' 
+                    : 'Désactiver le déplacement auto'}
+                </button>
+              )}
+              <hr className="my-1 border-[rgb(47,47,47)]" />
+              <button
+                onClick={() => handleDeleteTask(contextMenu.taskId, contextMenu.tableType)}
+                className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/[0.055] transition-colors"
+              >
+                Supprimer
+              </button>
+            </>
+          )}
         </div>
+      )}
+      
+      {/* Modals */}      
+      {showCustomOptionsModal && (
+        <CustomOptionsModal
+          type={customOptionsType}
+          options={customOptionsType === 'status' ? customStatuses : customPriorities}
+          onSave={(newOptions) => {
+            if (customOptionsType === 'status') {
+              setCustomStatuses(newOptions);
+            } else {
+              setCustomPriorities(newOptions);
+            }
+            setShowCustomOptionsModal(false);
+            setCustomOptionsType(null);
+          }}
+          onClose={() => {
+            setShowCustomOptionsModal(false);
+            setCustomOptionsType(null);
+          }}
+        />
+      )}
+      
+      {showColumnSelector && (
+        <ColumnSelectorModal
+          availableColumns={availableColumns}
+          onSelect={(columnId) => handleAddColumn(columnId)}
+          onClose={() => {
+            setShowColumnSelector(false);
+            setColumnSelectorTable(null);
+          }}
+        />
       )}
     </div>
   );

@@ -11,8 +11,8 @@ const Sidebar = () => {
 
   const menuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: '🏠', path: '/' },
-    { id: 'improvements', label: 'Améliorations', icon: '🚀', path: '/improvements' },
-    { id: 'plan', label: 'Plan', icon: '📋', path: '/plan' },
+    { id: 'progression', label: 'Progression', icon: '🚀', path: '/improvements' },
+    { id: 'todo', label: 'To do', icon: '📋', path: '/plan' },
     { id: 'calendar', label: 'Calendrier', icon: '📅', path: '/calendar' },
     { id: 'notes', label: 'Notes', icon: '📝', path: '/notes' }
   ];
