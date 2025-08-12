@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef, useLayoutEffect } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import CustomOptionsModal from '../components/plan/CustomOptionsModal';
 import ColumnSelectorModal from '../components/plan/ColumnSelectorModal';
@@ -71,9 +71,10 @@ const PlanView = () => {
   const [draggedFromTable, setDraggedFromTable] = useState(null);
   const [dragOverRow, setDragOverRow] = useState(null);
   const [hoveredRowId, setHoveredRowId] = useState(null);
+  
   // États pour l'édition inline
   const [newTaskName, setNewTaskName] = useState('');
-  const [isAddingTask, setIsAddingTask] = useState(null); // 'daily' ou 'weekly'
+  const [isAddingTask, setIsAddingTask] = useState(null);
   const [editingCellId, setEditingCellId] = useState(null);
   const [editingCellValue, setEditingCellValue] = useState('');
   
@@ -103,7 +104,7 @@ const PlanView = () => {
     progress: 'Progression'
   };
   
-  // Colonnes disponibles avec icônes
+  // Colonnes disponibles
   const availableColumns = [
     { id: 'assignee', label: 'Assigné', icon: '👤' },
     { id: 'progress', label: 'Progression', icon: '📊' }
@@ -134,37 +135,36 @@ const PlanView = () => {
     localStorage.setItem('columnWidths', JSON.stringify(columnWidths));
   }, [columnWidths]);
   
-  // Déplacement automatique des tâches (UNIQUEMENT pour les tâches qui ont la date d'aujourd'hui)
+  // Auto-move des tâches hebdomadaires vers quotidiennes
   useEffect(() => {
     const moveTasksToDaily = () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString();
       
-      // Trouver les tâches hebdomadaires qui ont la date d'aujourd'hui ET qui n'ont pas été déplacées
-      const tasksToMove = weeklyTasksList.filter(task => 
-        task.date === today && 
-        !task.movedToDaily && 
-        !task.disableAutoMove &&
-        task.autoMoveEnabled === true // Nouvelle propriété pour contrôler l'auto-move
-      );
-      
-      if (tasksToMove.length > 0) {
-        const existingDailyIds = new Set(dailyTasksList.map(t => t.id));
-        const toAdd = tasksToMove.filter(t => !existingDailyIds.has(t.id));
-        
-        if (toAdd.length > 0) {
-          // Ajouter au daily
-          setDailyTasksList(prev => [...prev, ...toAdd]);
-          // Marquer comme déplacé dans weekly
-          setWeeklyTasksList(prev => prev.map(task => 
-            toAdd.find(t => t.id === task.id) 
-              ? { ...task, movedToDaily: true }
-              : task
-          ));
+      for (const task of weeklyTasksList) {
+        if (task.autoMoveEnabled && !task.disableAutoMove && !task.movedToDaily) {
+          const taskDate = new Date(task.date).toLocaleDateString();
+          
+          if (taskDate === today) {
+            const existsInDaily = dailyTasksList.some(t => 
+              t.name === task.name && 
+              new Date(t.date).toLocaleDateString() === today
+            );
+            
+            if (!existsInDaily) {
+              const dailyTask = { ...task, id: Date.now() + Math.random() };
+              setDailyTasksList(prev => [...prev, dailyTask]);
+            }
+            
+            setWeeklyTasksList(prev => prev.map(t => 
+              t.id === task.id 
+                ? { ...task, movedToDaily: true }
+                : t
+            ));
+          }
         }
       }
     };
     
-    // Ne pas exécuter au montage initial pour éviter les déplacements non désirés
     const timer = setTimeout(() => {
       moveTasksToDaily();
     }, 1000);
@@ -213,7 +213,7 @@ const PlanView = () => {
     }
   }, [resizingColumn]);
   
-  // Redimensionnement des colonnes
+  // Handlers
   const handleColumnResize = (e, column) => {
     e.preventDefault();
     e.stopPropagation();
@@ -222,7 +222,6 @@ const PlanView = () => {
     resizeStartWidth.current = columnWidths[column];
   };
   
-  // Drag & Drop des colonnes
   const handleColumnDragStart = (e, column) => {
     if (column === 'name') return;
     setDraggedColumn(column);
@@ -251,28 +250,42 @@ const PlanView = () => {
     setDraggedColumn(null);
   };
   
-  // Drag & Drop des lignes - Handlers simplifiés et améliorés
   const handleRowDragStart = (e, taskId, tableType) => {
     setDraggedRow(taskId.toString());
     setDraggedFromTable(tableType);
     e.dataTransfer.effectAllowed = 'move';
     
-    // Ajouter un effet visuel
-    setTimeout(() => {
-      const row = document.querySelector(`[data-task-id="${taskId}"]`);
-      if (row) {
-        row.style.opacity = '0.4';
-      }
-    }, 0);
+    // Créer une image de prévisualisation personnalisée
+    const dragPreview = document.createElement('div');
+    dragPreview.style.cssText = `
+      position: absolute;
+      top: -1000px;
+      background: rgba(35, 131, 226, 0.1);
+      border: 1px solid rgb(35, 131, 226);
+      border-radius: 4px;
+      padding: 8px 12px;
+      color: white;
+      font-size: 14px;
+      pointer-events: none;
+    `;
+    
+    const task = tableType === 'daily' 
+      ? dailyTasksList.find(t => t.id === taskId)
+      : weeklyTasksList.find(t => t.id === taskId);
+    
+    if (task) {
+      dragPreview.textContent = task.name;
+      document.body.appendChild(dragPreview);
+      e.dataTransfer.setDragImage(dragPreview, 0, 0);
+      
+      // Nettoyer après un court délai
+      setTimeout(() => {
+        document.body.removeChild(dragPreview);
+      }, 0);
+    }
   };
   
   const handleRowDragEnd = () => {
-    // Restaurer l'opacité
-    const row = document.querySelector(`[data-task-id="${draggedRow}"]`);
-    if (row) {
-      row.style.opacity = '1';
-    }
-    
     setDraggedRow(null);
     setDraggedFromTable(null);
     setDragOverRow(null);
@@ -281,55 +294,32 @@ const PlanView = () => {
   const handleRowDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Trouver la ligne la plus proche
-    const afterElement = getDragAfterElement(e.currentTarget.parentElement, e.clientY);
-    if (afterElement) {
-      const taskId = afterElement.getAttribute('data-task-id');
-      if (taskId && taskId !== draggedRow) {
-        setDragOverRow(taskId);
-      }
+    e.dataTransfer.dropEffect = 'move';
+  };
+  
+  const handleRowDragEnter = (e, taskId) => {
+    if (draggedRow && draggedRow !== taskId.toString()) {
+      setDragOverRow(taskId.toString());
+    }
+  };
+  
+  const handleRowDragLeave = (e) => {
+    // Vérifier si on quitte vraiment la ligne
+    const relatedTarget = e.relatedTarget;
+    if (!e.currentTarget.contains(relatedTarget)) {
+      setDragOverRow(null);
     }
   };
   
   const handleTableDragOver = (e, tableType) => {
     e.preventDefault();
     
-    // Permettre le drop sur tout le tableau
     const tbody = e.currentTarget;
-    const afterElement = getDragAfterElement(tbody, e.clientY);
+    const rect = tbody.getBoundingClientRect();
+    const relativeY = e.clientY - rect.top;
     
-    if (afterElement) {
-      const taskId = afterElement.getAttribute('data-task-id');
-      if (taskId) {
-        setDragOverRow(taskId);
-      }
-    } else {
-      // Si aucun élément après, on est à la fin
-      setDragOverRow('end-' + tableType);
-    }
-  };
-  
-  // Helper pour trouver l'élément après le curseur
-  const getDragAfterElement = (container, y) => {
-    const draggableElements = [...container.querySelectorAll('tr[data-task-id]:not([data-dragging])')];
-    
-    return draggableElements.reduce((closest, child) => {
-      const box = child.getBoundingClientRect();
-      const offset = y - box.top - box.height / 2;
-      
-      if (offset < 0 && offset > closest.offset) {
-        return { offset: offset, element: child };
-      } else {
-        return closest;
-      }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-  };
-  
-  const handleRowDragLeave = (e) => {
-    // Ne pas effacer si on reste dans le tableau
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setDragOverRow(null);
+    if (relativeY > rect.height - 50) {
+      setDragOverRow(`end-${tableType}`);
     }
   };
   
@@ -337,69 +327,36 @@ const PlanView = () => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!draggedRow) {
-      setDragOverRow(null);
-      return;
-    }
-    
-    const sourceList = draggedFromTable === 'daily' ? dailyTasksList : weeklyTasksList;
-    const draggedTask = sourceList.find(t => t.id.toString() === draggedRow);
-    
-    if (!draggedTask) {
-      setDragOverRow(null);
-      return;
-    }
-    
-    // Créer une copie de la tâche pour éviter les mutations
-    const taskCopy = { ...draggedTask };
+    if (!draggedRow || !draggedFromTable) return;
     
     if (draggedFromTable !== targetTableType) {
-      // Déplacement entre tables - IMPORTANT: retirer de la source d'abord
-      if (draggedFromTable === 'daily') {
-        // Retirer du daily
-        setDailyTasksList(prev => prev.filter(t => t.id.toString() !== draggedRow));
+      const sourceList = draggedFromTable === 'daily' ? dailyTasksList : weeklyTasksList;
+      const setSourceList = draggedFromTable === 'daily' ? setDailyTasksList : setWeeklyTasksList;
+      const setTargetList = targetTableType === 'daily' ? setDailyTasksList : setWeeklyTasksList;
+      
+      const taskToMove = sourceList.find(t => t.id.toString() === draggedRow);
+      
+      if (taskToMove) {
+        setSourceList(prev => prev.filter(t => t.id.toString() !== draggedRow));
         
-        // Ajouter au weekly
-        setWeeklyTasksList(prev => {
+        setTargetList(prev => {
           const newList = [...prev];
           
-          if (targetTaskId && targetTaskId !== 'end-weekly') {
+          if (targetTaskId && targetTaskId !== `end-${targetTableType}`) {
             const targetIndex = newList.findIndex(t => t.id.toString() === targetTaskId.toString());
             if (targetIndex !== -1) {
-              newList.splice(targetIndex, 0, { ...taskCopy, movedToDaily: false });
+              newList.splice(targetIndex, 0, { ...taskToMove, id: Date.now() });
             } else {
-              newList.push({ ...taskCopy, movedToDaily: false });
+              newList.push({ ...taskToMove, id: Date.now() });
             }
           } else {
-            newList.push({ ...taskCopy, movedToDaily: false });
-          }
-          
-          return newList;
-        });
-      } else {
-        // Retirer du weekly
-        setWeeklyTasksList(prev => prev.filter(t => t.id.toString() !== draggedRow));
-        
-        // Ajouter au daily
-        setDailyTasksList(prev => {
-          const newList = [...prev];
-          
-          if (targetTaskId && targetTaskId !== 'end-daily') {
-            const targetIndex = newList.findIndex(t => t.id.toString() === targetTaskId.toString());
-            if (targetIndex !== -1) {
-              newList.splice(targetIndex, 0, taskCopy);
-            } else {
-              newList.push(taskCopy);
-            }
-          } else {
-            newList.push(taskCopy);
+            newList.push({ ...taskToMove, id: Date.now() });
           }
           
           return newList;
         });
       }
     } else {
-      // Réorganisation dans la même table
       const setTasksList = targetTableType === 'daily' ? setDailyTasksList : setWeeklyTasksList;
       
       setTasksList(prev => {
@@ -408,11 +365,9 @@ const PlanView = () => {
         
         if (draggedIndex === -1) return prev;
         
-        // Retirer l'élément draggé
         const [removed] = newList.splice(draggedIndex, 1);
         
         if (targetTaskId && targetTaskId !== `end-${targetTableType}`) {
-          // Insérer avant la cible
           const targetIndex = newList.findIndex(t => t.id.toString() === targetTaskId.toString());
           if (targetIndex !== -1) {
             newList.splice(targetIndex, 0, removed);
@@ -420,7 +375,6 @@ const PlanView = () => {
             newList.push(removed);
           }
         } else {
-          // Ajouter à la fin
           newList.push(removed);
         }
         
@@ -433,7 +387,6 @@ const PlanView = () => {
     setDraggedFromTable(null);
   };
   
-  // Menu contextuel
   const handleDragHandleContextMenu = (e, taskId, tableType) => {
     e.preventDefault();
     e.stopPropagation();
@@ -461,7 +414,6 @@ const PlanView = () => {
     });
   };
   
-  // Actions sur les tâches
   const handleDeleteTask = (taskId, tableType) => {
     if (tableType === 'daily') {
       setDailyTasksList(prev => prev.filter(t => t.id !== taskId));
@@ -499,7 +451,6 @@ const PlanView = () => {
     setContextMenu({ show: false, x: 0, y: 0, taskId: null });
   };
   
-  // Gestion des tâches - Ajout direct sans modal (SANS duplication)
   const handleQuickAddTask = (tableType) => {
     if (!newTaskName.trim()) {
       setIsAddingTask(null);
@@ -520,14 +471,12 @@ const PlanView = () => {
       completed: false,
       progress: 0,
       tag: null,
-      autoMoveEnabled: false // Par défaut, pas d'auto-move pour les nouvelles tâches
+      autoMoveEnabled: false
     };
     
-    // Ajouter UNIQUEMENT dans le tableau spécifié
     if (tableType === 'daily') {
       setDailyTasksList(prev => [...prev, newTask]);
     } else if (tableType === 'weekly') {
-      // Pour le weekly, ne PAS ajouter automatiquement au daily
       setWeeklyTasksList(prev => [...prev, newTask]);
     }
     
@@ -535,7 +484,6 @@ const PlanView = () => {
     setIsAddingTask(null);
   };
   
-  // Gestion des tâches avec tableType explicite
   const handleUpdateTask = (taskId, taskData, explicitTableType = null) => {
     const tableType = explicitTableType || 
       (dailyTasksList.some(t => t.id === taskId) ? 'daily' : 'weekly');
@@ -551,14 +499,12 @@ const PlanView = () => {
     }
   };
   
-  // Édition inline du nom
   const handleStartEditingName = (taskId, currentName) => {
     setEditingCellId(`name-${taskId}`);
     setEditingCellValue(currentName);
   };
   
   const handleSaveEditingName = (taskId, tableType) => {
-    const tasksList = tableType === 'daily' ? dailyTasksList : weeklyTasksList;
     const setTasksList = tableType === 'daily' ? setDailyTasksList : setWeeklyTasksList;
     
     setTasksList(prev => prev.map(task => 
@@ -569,7 +515,6 @@ const PlanView = () => {
     setEditingCellValue('');
   };
   
-  // Gestion des colonnes
   const handleAddColumn = (columnId) => {
     if (!visibleColumns.includes(columnId)) {
       setVisibleColumns(prev => [...prev, columnId]);
@@ -582,7 +527,6 @@ const PlanView = () => {
     setShowColumnSelector(false);
   };
   
-  // Obtenir les colonnes pour chaque tableau
   const getColumnsForTable = (tableType) => {
     if (tableType === 'weekly') {
       const cols = [...visibleColumns];
@@ -595,78 +539,141 @@ const PlanView = () => {
     return visibleColumns;
   };
   
-  // Handler pour hover des lignes
-  const handleRowMouseEnter = (taskId) => {
-    setHoveredRowId(taskId);
-  };
-  
-  const handleRowMouseLeave = () => {
-    setHoveredRowId(null);
-  };
-  
-  // Rendu d'une table (avec ajout direct et poignées corrigées)
-  const renderTable = (title, taskList, tableType) => {
+  // Composant de table avec synchronisation des handles
+  const TableWithHandles = ({ title, taskList, tableType }) => {
+    const wrapperRef = useRef(null);
+    const theadRef = useRef(null);
+    const tbodyRef = useRef(null);
+    const [handleSlots, setHandleSlots] = useState([]);
+    const [headerHeight, setHeaderHeight] = useState(0);
+    
     const columns = getColumnsForTable(tableType);
+    
+    // Mesurer les positions des lignes
+    const measureRows = () => {
+      if (!tbodyRef.current || !theadRef.current) return;
+      
+      const thead = theadRef.current;
+      const tbody = tbodyRef.current;
+      const theadRect = thead.getBoundingClientRect();
+      const tbodyRect = tbody.getBoundingClientRect();
+      
+      // Hauteur du header
+      setHeaderHeight(theadRect.height);
+      
+      // Récupérer toutes les lignes avec data-row-id
+      const rows = Array.from(tbody.querySelectorAll('tr[data-row-id]'));
+      const slots = rows.map(row => {
+        const rect = row.getBoundingClientRect();
+        return {
+          id: row.getAttribute('data-row-id'),
+          top: rect.top - tbodyRect.top,
+          height: rect.height
+        };
+      });
+      
+      setHandleSlots(slots);
+    };
+    
+    // Observer les changements de taille et re-mesurer
+    useLayoutEffect(() => {
+      measureRows();
+      
+      const resizeObserver = new ResizeObserver(() => {
+        measureRows();
+      });
+      
+      if (tbodyRef.current) {
+        resizeObserver.observe(tbodyRef.current);
+      }
+      if (theadRef.current) {
+        resizeObserver.observe(theadRef.current);
+      }
+      
+      window.addEventListener('resize', measureRows);
+      
+      return () => {
+        resizeObserver.disconnect();
+        window.removeEventListener('resize', measureRows);
+      };
+    }, []); // Dépendances vides pour ne s'exécuter qu'au mount
+    
+    // Re-mesurer quand les données changent
+    useEffect(() => {
+      // Petit délai pour laisser le DOM se mettre à jour
+      const timer = setTimeout(() => {
+        measureRows();
+      }, 0);
+      
+      return () => clearTimeout(timer);
+    }, [taskList.length, hoveredRowId, draggedRow, dragOverRow, isAddingTask]);
     
     return (
       <div>
         <h2 className="text-white/81 font-medium text-lg mb-3">{title}</h2>
         
-        <div className="flex">
-          {/* Drag handles - VRAIMENT à l'extérieur */}
-          <div className="w-8 mr-2">
-            <div className="h-[41px]"></div>
-            {taskList.map((task) => (
-              <div
-                key={`handle-${task.id}`}
-                className="h-[49px] flex items-center justify-center"
-              >
-                <div
-                  className={`transition-opacity duration-150 ${
-                    hoveredRowId === task.id ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  draggable
-                  onDragStart={(e) => handleRowDragStart(e, task.id, tableType)}
-                  onDragEnd={handleRowDragEnd}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDragHandleContextMenu(e, task.id, tableType);
-                  }}
-                  onMouseEnter={() => setHoveredRowId(task.id)}
-                  style={{ cursor: 'grab' }}
-                >
-                  <svg className="w-4 h-4 text-white/30" viewBox="0 0 16 4" fill="currentColor">
-                    <circle cx="2" cy="2" r="1.5"/>
-                    <circle cx="8" cy="2" r="1.5"/>
-                    <circle cx="14" cy="2" r="1.5"/>
-                  </svg>
-                </div>
-              </div>
-            ))}
-            {/* Ligne pour l'ajout - avec hover séparé */}
-            <div 
-              className="h-[49px] flex items-center justify-center"
-              onMouseEnter={() => setHoveredRowId(`add-${tableType}`)}
-              onMouseLeave={() => setHoveredRowId(null)}
-            >
-              <div className={`transition-opacity duration-150 ${
-                hoveredRowId === `add-${tableType}` ? 'opacity-100' : 'opacity-0'
-              }`}>
-                <svg className="w-4 h-4 text-white/20" viewBox="0 0 16 4" fill="currentColor">
-                  <circle cx="2" cy="2" r="1.5"/>
-                  <circle cx="8" cy="2" r="1.5"/>
-                  <circle cx="14" cy="2" r="1.5"/>
-                </svg>
-              </div>
+        <div ref={wrapperRef} className="relative flex">
+          {/* Gouttière des handles - position absolue synchronisée */}
+          <div className="relative w-8 mr-2">
+            {/* Espace pour le header */}
+            <div style={{ height: headerHeight }}></div>
+            
+            {/* Container pour les handles positionnés absolument */}
+            <div className="relative">
+              {handleSlots.map(slot => {
+                const taskId = slot.id === 'add-row' ? `add-${tableType}` : parseInt(slot.id);
+                const isAddRow = slot.id === 'add-row';
+                
+                return (
+                  <div
+                    key={slot.id}
+                    className="absolute inset-x-0 flex items-center justify-center"
+                    style={{
+                      top: slot.top,
+                      height: slot.height
+                    }}
+                    onMouseEnter={() => !isAddRow && setHoveredRowId(taskId)}
+                    onMouseLeave={() => !isAddRow && setHoveredRowId(null)}
+                  >
+                    {!isAddRow && (
+                      <div
+                        className={`transition-opacity duration-150 cursor-grab select-none ${
+                          hoveredRowId === taskId ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        draggable
+                        onDragStart={(e) => handleRowDragStart(e, taskId, tableType)}
+                        onDragEnd={handleRowDragEnd}
+                        onContextMenu={(e) => handleDragHandleContextMenu(e, taskId, tableType)}
+                      >
+                        <svg className="w-4 h-4 text-white/30" viewBox="0 0 16 4" fill="currentColor">
+                          <circle cx="2" cy="2" r="1.5"/>
+                          <circle cx="8" cy="2" r="1.5"/>
+                          <circle cx="14" cy="2" r="1.5"/>
+                        </svg>
+                      </div>
+                    )}
+                    {isAddRow && (
+                      <div className={`transition-opacity duration-150 ${
+                        hoveredRowId === `add-${tableType}` ? 'opacity-100' : 'opacity-0'
+                      }`}>
+                        <svg className="w-4 h-4 text-white/20" viewBox="0 0 16 4" fill="currentColor">
+                          <circle cx="2" cy="2" r="1.5"/>
+                          <circle cx="8" cy="2" r="1.5"/>
+                          <circle cx="14" cy="2" r="1.5"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
           
-          {/* Table sans colonne de poignées */}
+          {/* Table */}
           <div className="flex-1 bg-[rgb(32,32,32)] rounded-lg overflow-hidden border border-[rgb(47,47,47)]">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
+              <table className="w-full table-fixed border-collapse">
+                <thead ref={theadRef}>
                   <tr className="bg-[rgb(37,37,37)] border-b border-[rgb(47,47,47)]">
                     {columns.map((column, index) => (
                       <th 
@@ -696,7 +703,8 @@ const PlanView = () => {
                     ))}
                   </tr>
                 </thead>
-                <tbody
+                <tbody 
+                  ref={tbodyRef}
                   onDragOver={(e) => handleTableDragOver(e, tableType)}
                   onDrop={(e) => {
                     if (!e.defaultPrevented) {
@@ -707,17 +715,22 @@ const PlanView = () => {
                   {taskList.map((task) => (
                     <tr 
                       key={task.id}
-                      data-task-id={task.id}
+                      data-row-id={task.id}
                       data-dragging={draggedRow === task.id.toString() ? 'true' : undefined}
-                      className={`border-b border-white/[0.055] hover:bg-white/[0.02] transition-all duration-200 ${
-                        dragOverRow === task.id.toString() ? 'border-t-2 border-t-[rgb(35,131,226)]' : ''
-                      }`}
+                      className={`
+                        border-b border-white/[0.055] border-t-2 hover:bg-white/[0.02] 
+                        transition-all duration-200 relative
+                        ${draggedRow === task.id.toString() ? 'opacity-40' : ''}
+                        ${dragOverRow === task.id.toString() ? 'bg-blue-500/10' : ''}
+                      `}
                       style={{
-                        opacity: draggedRow === task.id.toString() ? 0.4 : 1,
-                        backgroundColor: draggedRow === task.id.toString() ? 'rgba(255,255,255,0.02)' : ''
+                        borderTopColor: dragOverRow === task.id.toString() ? 'rgb(35,131,226)' : 'transparent',
+                        transform: dragOverRow === task.id.toString() ? 'scale(1.02)' : 'scale(1)',
+                        boxShadow: dragOverRow === task.id.toString() ? '0 0 20px rgba(35,131,226,0.3)' : 'none'
                       }}
                       onDragOver={handleRowDragOver}
                       onDragLeave={handleRowDragLeave}
+                      onDragEnter={() => handleRowDragEnter(null, task.id)}
                       onDrop={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -728,19 +741,24 @@ const PlanView = () => {
                       onContextMenu={(e) => handleTaskContextMenu(e, task.id, tableType)}
                     >
                       {columns.map(column => (
-                        <td key={column} className="px-4 py-3" style={{ 
-                          width: columnWidths[column],
-                          minWidth: columnWidths[column]
-                        }}>
+                        <td 
+                          key={column} 
+                          className="px-4 py-3"
+                          style={{ 
+                            width: columnWidths[column],
+                            minWidth: columnWidths[column]
+                          }}
+                        >
                           {renderCell(task, column, tableType)}
                         </td>
                       ))}
                     </tr>
                   ))}
                   
-                  {/* Ligne d'ajout direct */}
+                  {/* Ligne d'ajout */}
                   <tr 
-                    className="border-b border-white/[0.055] hover:bg-white/[0.02] transition-colors"
+                    data-row-id="add-row"
+                    className="border-b border-white/[0.055] border-t-2 border-t-transparent hover:bg-white/[0.02] transition-colors"
                     onMouseEnter={() => setHoveredRowId(`add-${tableType}`)}
                     onMouseLeave={() => setHoveredRowId(null)}
                   >
@@ -792,12 +810,14 @@ const PlanView = () => {
                     ))}
                   </tr>
                   
-                  {/* Zone de drop en fin de tableau avec indicateur visuel */}
+                  {/* Zone de drop finale */}
                   {draggedRow && (
                     <tr 
-                      className={`h-2 ${
-                        dragOverRow === `end-${tableType}` ? 'bg-[rgb(35,131,226)] opacity-20' : ''
-                      }`}
+                      className="h-2 border-t-2 border-t-transparent"
+                      style={{
+                        borderTopColor: dragOverRow === `end-${tableType}` ? 'rgb(35,131,226)' : 'transparent',
+                        backgroundColor: dragOverRow === `end-${tableType}` ? 'rgba(35,131,226,0.1)' : 'transparent'
+                      }}
                       onDragOver={(e) => {
                         e.preventDefault();
                         setDragOverRow(`end-${tableType}`);
@@ -851,87 +871,77 @@ const PlanView = () => {
                     <div>
                       <div className="text-white/81 text-sm">{task.name}</div>
                       <div className="text-white/46 text-xs mt-0.5">
-                        {task.tag.type === 'radar' ? task.tag.radarName : task.tag.path}
+                        {task.tag.type === 'radar' ? 
+                          `${task.tag.radar} > ${task.tag.subject}` :
+                          task.tag.text
+                        }
                       </div>
                     </div>
                   ) : (
-                    <div className="text-white/81 text-sm">{task.name}</div>
+                    <span className="text-white/81 text-sm">{task.name}</span>
                   )}
                 </div>
-                <button
-                  onClick={() => handleStartEditingName(task.id, task.name)}
-                  className="p-1 text-white/30 hover:text-white/60 transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.226 13.25a4.25 4.25 0 0 1-1.154.734l-2.72.906a.75.75 0 0 1-.95-.95l.906-2.72c.141-.424.415-.81.734-1.154l8.258-8.262zm1.414 1.06a.25.25 0 0 0-.353 0L10.53 5.119l.707.707 1.545-1.545a.25.25 0 0 0 0-.354l-.354-.353zM9.822 5.826 4.31 11.338a2.75 2.75 0 0 0-.475.748l-.51 1.53 1.53-.51a2.75 2.75 0 0 0 .748-.475l5.512-5.512-.707-.707z"/>
-                  </svg>
-                </button>
+                {task.autoMoveEnabled && tableType === 'weekly' && (
+                  <span className="px-1.5 py-0.5 bg-[rgb(35,131,226)]/10 text-[rgb(35,131,226)] text-[11px] rounded">
+                    Auto
+                  </span>
+                )}
               </>
             )}
           </div>
         );
         
       case 'status':
-        const allStatuses = [...customStatuses, { id: 'add-status', name: '+ Ajouter', isAddButton: true, color: '#374151' }];
-        const currentStatus = task.status || customStatuses[0]?.id;
-        const statusOption = customStatuses.find(s => s.id === currentStatus) || customStatuses[0];
-        
+        const status = customStatuses.find(s => s.id === task.status) || customStatuses[0];
         return (
           <select
-            value={currentStatus}
-            onChange={(e) => {
-              if (e.target.value === 'add-status') {
-                openCustomOptionsModal('status');
-              } else {
-                handleUpdateTask(task.id, { ...task, status: e.target.value }, tableType);
-              }
-            }}
-            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20 transition-all"
-            style={{ 
-              backgroundColor: statusOption ? `${statusOption.color}25` : 'rgba(255,255,255,0.055)',
-              borderColor: statusOption ? `${statusOption.color}40` : 'rgba(255,255,255,0.094)'
+            value={task.status}
+            onChange={(e) => handleUpdateTask(task.id, { status: e.target.value }, tableType)}
+            className="px-2 py-1 rounded text-sm cursor-pointer transition-all duration-150 focus:outline-none"
+            style={{
+              border: `1px solid ${status?.color}33`,
+              backgroundColor: status?.color + '1A',
+              color: status?.color || '#ffffff'
             }}
           >
-            {allStatuses.map(status => (
+            {customStatuses.map(s => (
               <option 
-                key={status.id} 
-                value={status.id}
-                className="bg-[rgb(37,37,37)]"
+                key={s.id} 
+                value={s.id}
+                style={{
+                  backgroundColor: '#252525',
+                  color: s.color || '#ffffff'
+                }}
               >
-                {status.name}
+                {s.name}
               </option>
             ))}
           </select>
         );
         
       case 'priority':
-        const allPriorities = [...customPriorities, { id: 'add-priority', name: '+ Ajouter', isAddButton: true, color: '#374151' }];
-        const currentPriority = task.priority || customPriorities[0]?.id;
-        const priorityOption = customPriorities.find(p => p.id === currentPriority) || customPriorities[0];
-        
+        const priority = customPriorities.find(p => p.id === task.priority) || customPriorities[1];
         return (
           <select
-            value={currentPriority}
-            onChange={(e) => {
-              if (e.target.value === 'add-priority') {
-                openCustomOptionsModal('priority');
-              } else {
-                handleUpdateTask(task.id, { ...task, priority: e.target.value }, tableType);
-              }
-            }}
-            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20 transition-all"
-            style={{ 
-              backgroundColor: priorityOption ? `${priorityOption.color}25` : 'rgba(255,255,255,0.055)',
-              borderColor: priorityOption ? `${priorityOption.color}40` : 'rgba(255,255,255,0.094)'
+            value={task.priority}
+            onChange={(e) => handleUpdateTask(task.id, { priority: e.target.value }, tableType)}
+            className="px-2 py-1 rounded text-sm cursor-pointer transition-all duration-150 focus:outline-none"
+            style={{
+              border: `1px solid ${priority?.color}33`,
+              backgroundColor: priority?.color + '1A',
+              color: priority?.color || '#ffffff'
             }}
           >
-            {allPriorities.map(priority => (
+            {customPriorities.map(p => (
               <option 
-                key={priority.id} 
-                value={priority.id}
-                className="bg-[rgb(37,37,37)]"
+                key={p.id} 
+                value={p.id}
+                style={{
+                  backgroundColor: '#252525',
+                  color: p.color || '#ffffff'
+                }}
               >
-                {priority.name}
+                {p.name}
               </option>
             ))}
           </select>
@@ -942,8 +952,8 @@ const PlanView = () => {
           <input
             type="date"
             value={task.date || ''}
-            onChange={(e) => handleUpdateTask(task.id, { ...task, date: e.target.value }, tableType)}
-            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20"
+            onChange={(e) => handleUpdateTask(task.id, { date: e.target.value }, tableType)}
+            className="bg-transparent border-none text-white/81 text-sm cursor-pointer"
           />
         );
         
@@ -952,8 +962,8 @@ const PlanView = () => {
           <input
             type="date"
             value={task.endDate || ''}
-            onChange={(e) => handleUpdateTask(task.id, { ...task, endDate: e.target.value }, tableType)}
-            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20"
+            onChange={(e) => handleUpdateTask(task.id, { endDate: e.target.value }, tableType)}
+            className="bg-transparent border-none text-white/81 text-sm cursor-pointer"
           />
         );
         
@@ -962,8 +972,8 @@ const PlanView = () => {
           <input
             type="time"
             value={task.time || ''}
-            onChange={(e) => handleUpdateTask(task.id, { ...task, time: e.target.value }, tableType)}
-            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm focus:outline-none focus:border-white/20"
+            onChange={(e) => handleUpdateTask(task.id, { time: e.target.value }, tableType)}
+            className="bg-transparent border-none text-white/81 text-sm cursor-pointer"
           />
         );
         
@@ -972,27 +982,24 @@ const PlanView = () => {
           <input
             type="text"
             value={task.assignee || ''}
-            onChange={(e) => handleUpdateTask(task.id, { ...task, assignee: e.target.value }, tableType)}
-            placeholder="Non assigné"
-            className="w-full px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded text-white/81 text-sm placeholder-white/30 focus:outline-none focus:border-white/20"
+            onChange={(e) => handleUpdateTask(task.id, { assignee: e.target.value }, tableType)}
+            placeholder="-"
+            className="bg-transparent border-none text-white/81 text-sm w-full focus:outline-none focus:bg-white/[0.055] px-1 py-0.5 rounded"
           />
         );
         
       case 'progress':
         return (
           <div className="flex items-center gap-2">
-            <input
-              type="range"
-              value={task.progress || 0}
-              onChange={(e) => handleUpdateTask(task.id, { ...task, progress: parseInt(e.target.value) }, tableType)}
-              min="0"
-              max="100"
-              className="flex-1 h-1.5 bg-white/[0.055] rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, rgb(35,131,226) 0%, rgb(35,131,226) ${task.progress || 0}%, rgba(255,255,255,0.055) ${task.progress || 0}%, rgba(255,255,255,0.055) 100%)`
-              }}
-            />
-            <span className="text-white/46 text-xs w-8">{task.progress || 0}%</span>
+            <div className="flex-1 h-1.5 bg-white/[0.055] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[rgb(35,131,226)] transition-all duration-300"
+                style={{ width: `${task.progress || 0}%` }}
+              />
+            </div>
+            <span className="text-xs text-white/46 min-w-[35px] text-right">
+              {task.progress || 0}%
+            </span>
           </div>
         );
         
@@ -1001,28 +1008,49 @@ const PlanView = () => {
     }
   };
   
-  // Ouvrir le modal d'options
-  const openCustomOptionsModal = (type) => {
-    setCustomOptionsType(type);
-    setShowCustomOptionsModal(true);
-  };
-  
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white/81 mb-2">To do</h1>
-        <p className="text-white/46">Gérez vos tâches quotidiennes et hebdomadaires</p>
-      </div>
-      
-      <div className="space-y-8">
-        {renderTable('To do', dailyTasksList, 'daily')}
-        {renderTable('Tâches de la semaine', weeklyTasksList, 'weekly')}
+    <div className="min-h-screen bg-[rgb(25,25,25)]">
+      <div className="max-w-[1400px] mx-auto px-5 py-10">
+        {/* Header */}
+        <div className="mb-10 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white/81 mb-2">To do</h1>
+            <p className="text-white/46">Gérez vos tâches quotidiennes et hebdomadaires</p>
+          </div>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setCustomOptionsType('status');
+                setShowCustomOptionsModal(true);
+              }}
+              className="px-4 py-2 bg-white/[0.055] text-white/81 rounded-lg hover:bg-white/[0.08] transition-colors text-sm"
+            >
+              Statuts
+            </button>
+            <button
+              onClick={() => {
+                setCustomOptionsType('priority');
+                setShowCustomOptionsModal(true);
+              }}
+              className="px-4 py-2 bg-white/[0.055] text-white/81 rounded-lg hover:bg-white/[0.08] transition-colors text-sm"
+            >
+              Priorités
+            </button>
+          </div>
+        </div>
+        
+        {/* Tables avec handles synchronisés */}
+        <div className="space-y-8">
+          <TableWithHandles title="Tâches quotidiennes" taskList={dailyTasksList} tableType="daily" />
+          <TableWithHandles title="Tâches hebdomadaires" taskList={weeklyTasksList} tableType="weekly" />
+        </div>
       </div>
       
       {/* Context Menu */}
       {contextMenu.show && (
         <div
-          className="fixed bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-md shadow-lg py-1 z-50"
+          className="fixed bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-lg py-1 shadow-xl z-50 min-w-[180px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -1089,23 +1117,17 @@ const PlanView = () => {
               setCustomPriorities(newOptions);
             }
             setShowCustomOptionsModal(false);
-            setCustomOptionsType(null);
           }}
-          onClose={() => {
-            setShowCustomOptionsModal(false);
-            setCustomOptionsType(null);
-          }}
+          onClose={() => setShowCustomOptionsModal(false)}
         />
       )}
       
       {showColumnSelector && (
         <ColumnSelectorModal
           availableColumns={availableColumns}
-          onSelect={(columnId) => handleAddColumn(columnId)}
-          onClose={() => {
-            setShowColumnSelector(false);
-            setColumnSelectorTable(null);
-          }}
+          visibleColumns={visibleColumns}
+          onAddColumn={handleAddColumn}
+          onClose={() => setShowColumnSelector(false)}
         />
       )}
     </div>
