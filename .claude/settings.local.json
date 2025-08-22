@@ -5,6 +5,7 @@
       "Bash(tree:*)",
       "mcp__ide__getDiagnostics"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

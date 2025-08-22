@@ -1,1137 +1,365 @@
-import React, { useState, useContext, useEffect, useRef, useLayoutEffect } from 'react';
-import { AppContext } from '../contexts/AppContext';
-import CustomOptionsModal from '../components/plan/CustomOptionsModal';
-import ColumnSelectorModal from '../components/plan/ColumnSelectorModal';
+import React, { useState, useRef, useEffect } from 'react';
 
-const PlanView = () => {
-  const { radars } = useContext(AppContext);
-  
-  // États pour les tâches
-  const [dailyTasksList, setDailyTasksList] = useState(() => {
-    const saved = localStorage.getItem('dailyTasks');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [weeklyTasksList, setWeeklyTasksList] = useState(() => {
-    const saved = localStorage.getItem('weeklyTasks');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  // États pour les statuts et priorités personnalisés
-  const [customStatuses, setCustomStatuses] = useState(() => {
-    const saved = localStorage.getItem('customStatuses');
-    return saved ? JSON.parse(saved) : [
-      { id: 'not-started', name: 'Pas commencé', color: '#6B7280' },
-      { id: 'in-progress', name: 'En cours', color: '#3B82F6' },
-      { id: 'completed', name: 'Terminé', color: '#10B981' }
-    ];
-  });
-  
-  const [customPriorities, setCustomPriorities] = useState(() => {
-    const saved = localStorage.getItem('customPriorities');
-    return saved ? JSON.parse(saved) : [
-      { id: 'low', name: 'Basse', color: '#10B981' },
-      { id: 'medium', name: 'Moyenne', color: '#F59E0B' },
-      { id: 'high', name: 'Haute', color: '#EF4444' }
-    ];
-  });
-  
-  // États pour les colonnes visibles
-  const [visibleColumns, setVisibleColumns] = useState(() => {
-    const saved = localStorage.getItem('visibleColumns');
-    return saved ? JSON.parse(saved) : [
-      'name', 'status', 'priority', 'date', 'time'
-    ];
-  });
-  
-  // État pour les largeurs de colonnes
-  const [columnWidths, setColumnWidths] = useState(() => {
-    const saved = localStorage.getItem('columnWidths');
-    return saved ? JSON.parse(saved) : {
-      name: 300,
-      status: 150,
-      priority: 150,
-      date: 120,
-      endDate: 120,
-      time: 100,
-      assignee: 120,
-      progress: 100
-    };
-  });
-  
-  // États pour les modals
-  const [showCustomOptionsModal, setShowCustomOptionsModal] = useState(false);
-  const [customOptionsType, setCustomOptionsType] = useState(null);
-  const [showColumnSelector, setShowColumnSelector] = useState(false);
-  const [columnSelectorTable, setColumnSelectorTable] = useState(null);
+const MondayDragDropTable = () => {
+  // Données simples pour tester
+  const [tasks, setTasks] = useState([
+    { id: 1, name: 'Tâche 1', status: 'En cours', priority: 'Haute' },
+    { id: 2, name: 'Tâche 2', status: 'Terminé', priority: 'Moyenne' },
+    { id: 3, name: 'Tâche 3', status: 'À faire', priority: 'Basse' },
+    { id: 4, name: 'Tâche 4', status: 'En cours', priority: 'Haute' },
+    { id: 5, name: 'Tâche 5', status: 'À faire', priority: 'Moyenne' }
+  ]);
   
   // États pour le drag & drop
-  const [draggedColumn, setDraggedColumn] = useState(null);
-  const [draggedRow, setDraggedRow] = useState(null);
-  const [draggedFromTable, setDraggedFromTable] = useState(null);
-  const [dragOverRow, setDragOverRow] = useState(null);
-  const [hoveredRowId, setHoveredRowId] = useState(null);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [hoverIndex, setHoverIndex] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   
-  // États pour l'édition inline
-  const [newTaskName, setNewTaskName] = useState('');
-  const [isAddingTask, setIsAddingTask] = useState(null);
-  const [editingCellId, setEditingCellId] = useState(null);
-  const [editingCellValue, setEditingCellValue] = useState('');
+  // Refs pour éviter les problèmes de closure
+  const draggedIndexRef = useRef(null);
+  const hoverIndexRef = useRef(null);
   
-  // État pour le menu contextuel
-  const [contextMenu, setContextMenu] = useState({
-    show: false,
-    x: 0,
-    y: 0,
-    taskId: null,
-    tableType: null
-  });
+  // Ref pour l'élément qui suit la souris
+  const floatingElementRef = useRef(null);
   
-  // État pour le redimensionnement
-  const [resizingColumn, setResizingColumn] = useState(null);
-  const resizeStartX = useRef(0);
-  const resizeStartWidth = useRef(0);
-  
-  // Headers des colonnes
-  const columnHeaders = {
-    name: 'Nom',
-    status: 'Statut',
-    priority: 'Priorité',
-    date: 'Date',
-    endDate: 'Date limite',
-    time: 'Heure',
-    assignee: 'Assigné',
-    progress: 'Progression'
-  };
-  
-  // Colonnes disponibles
-  const availableColumns = [
-    { id: 'assignee', label: 'Assigné', icon: '👤' },
-    { id: 'progress', label: 'Progression', icon: '📊' }
-  ];
-  
-  // Sauvegardes localStorage
+  // Nettoyer quand on arrête le drag (si on lâche en dehors)
   useEffect(() => {
-    localStorage.setItem('dailyTasks', JSON.stringify(dailyTasksList));
-  }, [dailyTasksList]);
-  
-  useEffect(() => {
-    localStorage.setItem('weeklyTasks', JSON.stringify(weeklyTasksList));
-  }, [weeklyTasksList]);
-  
-  useEffect(() => {
-    localStorage.setItem('customStatuses', JSON.stringify(customStatuses));
-  }, [customStatuses]);
-  
-  useEffect(() => {
-    localStorage.setItem('customPriorities', JSON.stringify(customPriorities));
-  }, [customPriorities]);
-  
-  useEffect(() => {
-    localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns));
-  }, [visibleColumns]);
-  
-  useEffect(() => {
-    localStorage.setItem('columnWidths', JSON.stringify(columnWidths));
-  }, [columnWidths]);
-  
-  // Auto-move des tâches hebdomadaires vers quotidiennes
-  useEffect(() => {
-    const moveTasksToDaily = () => {
-      const today = new Date().toLocaleDateString();
-      
-      for (const task of weeklyTasksList) {
-        if (task.autoMoveEnabled && !task.disableAutoMove && !task.movedToDaily) {
-          const taskDate = new Date(task.date).toLocaleDateString();
-          
-          if (taskDate === today) {
-            const existsInDaily = dailyTasksList.some(t => 
-              t.name === task.name && 
-              new Date(t.date).toLocaleDateString() === today
-            );
-            
-            if (!existsInDaily) {
-              const dailyTask = { ...task, id: Date.now() + Math.random() };
-              setDailyTasksList(prev => [...prev, dailyTask]);
-            }
-            
-            setWeeklyTasksList(prev => prev.map(t => 
-              t.id === task.id 
-                ? { ...task, movedToDaily: true }
-                : t
-            ));
-          }
-        }
-      }
+    if (!isDragging) return;
+    
+    const handleGlobalMouseUp = () => {
+      endDrag();
     };
     
-    const timer = setTimeout(() => {
-      moveTasksToDaily();
-    }, 1000);
-    
-    const interval = setInterval(moveTasksToDaily, 60000);
-    
+    document.addEventListener('mouseup', handleGlobalMouseUp);
     return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [weeklyTasksList, dailyTasksList]);
+  }, [isDragging, tasks]); // Ajouter tasks pour avoir la dernière version
   
-  // Fermer le menu contextuel
-  useEffect(() => {
-    const handleClick = () => closeContextMenu();
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
-  
-  // Gestion du redimensionnement
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!resizingColumn) return;
-      
-      const diff = e.clientX - resizeStartX.current;
-      const newWidth = Math.max(50, resizeStartWidth.current + diff);
-      
-      setColumnWidths(prev => ({
-        ...prev,
-        [resizingColumn]: newWidth
-      }));
-    };
-    
-    const handleMouseUp = () => {
-      setResizingColumn(null);
-    };
-    
-    if (resizingColumn) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [resizingColumn]);
-  
-  // Handlers
-  const handleColumnResize = (e, column) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setResizingColumn(column);
-    resizeStartX.current = e.clientX;
-    resizeStartWidth.current = columnWidths[column];
-  };
-  
-  const handleColumnDragStart = (e, column) => {
-    if (column === 'name') return;
-    setDraggedColumn(column);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-  
-  const handleColumnDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-  
-  const handleColumnDrop = (e, targetColumn) => {
-    e.preventDefault();
-    if (!draggedColumn || draggedColumn === targetColumn || targetColumn === 'name') return;
-    
-    const draggedIndex = visibleColumns.indexOf(draggedColumn);
-    const targetIndex = visibleColumns.indexOf(targetColumn);
-    
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      const newColumns = [...visibleColumns];
-      newColumns.splice(draggedIndex, 1);
-      newColumns.splice(targetIndex, 0, draggedColumn);
-      setVisibleColumns(newColumns);
+  // Calculer où chaque ligne doit être visuellement
+  const getRowTransform = (index) => {
+    if (!isDragging || draggedIndex === null || hoverIndex === null) {
+      return '';
     }
     
-    setDraggedColumn(null);
+    // Pas de transform pour la ligne draggée
+    if (index === draggedIndex) {
+      return '';
+    }
+    
+    // Si on survole la position originale, pas de mouvement
+    if (hoverIndex === draggedIndex || hoverIndex === draggedIndex + 1) {
+      return '';
+    }
+    
+    // Calculer le décalage
+    if (draggedIndex < hoverIndex) {
+      // Drag vers le bas : les lignes entre montent
+      if (index > draggedIndex && index < hoverIndex) {
+        return 'translateY(-48px)';
+      }
+    } else {
+      // Drag vers le haut : les lignes entre descendent
+      if (index < draggedIndex && index >= hoverIndex) {
+        return 'translateY(48px)';
+      }
+    }
+    
+    return '';
   };
   
-  const handleRowDragStart = (e, taskId, tableType) => {
-    setDraggedRow(taskId.toString());
-    setDraggedFromTable(tableType);
-    e.dataTransfer.effectAllowed = 'move';
+  // Commencer le drag
+  const startDrag = (e, index) => {
+    e.preventDefault();
     
-    // Créer une image de prévisualisation personnalisée
-    const dragPreview = document.createElement('div');
-    dragPreview.style.cssText = `
-      position: absolute;
-      top: -1000px;
-      background: rgba(35, 131, 226, 0.1);
-      border: 1px solid rgb(35, 131, 226);
-      border-radius: 4px;
-      padding: 8px 12px;
-      color: white;
-      font-size: 14px;
+    setDraggedIndex(index);
+    setHoverIndex(index);
+    setIsDragging(true);
+    
+    // Mettre à jour les refs
+    draggedIndexRef.current = index;
+    hoverIndexRef.current = index;
+    
+    // Créer l'élément flottant
+    const row = e.currentTarget;
+    const rect = row.getBoundingClientRect();
+    
+    const floatingElement = document.createElement('div');
+    floatingElement.style.cssText = `
+      position: fixed;
+      z-index: 999999;
       pointer-events: none;
+      width: ${rect.width}px;
+      background: rgb(37, 37, 37);
+      border: 2px solid rgb(35, 131, 226);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      opacity: 0.95;
+      transform: rotate(-2deg);
+      left: ${e.clientX + 10}px;
+      top: ${e.clientY - 20}px;
     `;
     
-    const task = tableType === 'daily' 
-      ? dailyTasksList.find(t => t.id === taskId)
-      : weeklyTasksList.find(t => t.id === taskId);
+    floatingElement.innerHTML = `
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr style="color: rgba(255, 255, 255, 0.9);">
+          ${row.innerHTML}
+        </tr>
+      </table>
+    `;
     
-    if (task) {
-      dragPreview.textContent = task.name;
-      document.body.appendChild(dragPreview);
-      e.dataTransfer.setDragImage(dragPreview, 0, 0);
-      
-      // Nettoyer après un court délai
-      setTimeout(() => {
-        document.body.removeChild(dragPreview);
-      }, 0);
-    }
-  };
-  
-  const handleRowDragEnd = () => {
-    setDraggedRow(null);
-    setDraggedFromTable(null);
-    setDragOverRow(null);
-  };
-  
-  const handleRowDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-  };
-  
-  const handleRowDragEnter = (e, taskId) => {
-    if (draggedRow && draggedRow !== taskId.toString()) {
-      setDragOverRow(taskId.toString());
-    }
-  };
-  
-  const handleRowDragLeave = (e) => {
-    // Vérifier si on quitte vraiment la ligne
-    const relatedTarget = e.relatedTarget;
-    if (!e.currentTarget.contains(relatedTarget)) {
-      setDragOverRow(null);
-    }
-  };
-  
-  const handleTableDragOver = (e, tableType) => {
-    e.preventDefault();
+    document.body.appendChild(floatingElement);
+    floatingElementRef.current = floatingElement;
     
-    const tbody = e.currentTarget;
-    const rect = tbody.getBoundingClientRect();
-    const relativeY = e.clientY - rect.top;
-    
-    if (relativeY > rect.height - 50) {
-      setDragOverRow(`end-${tableType}`);
-    }
-  };
-  
-  const handleRowDrop = (e, targetTaskId, targetTableType) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!draggedRow || !draggedFromTable) return;
-    
-    if (draggedFromTable !== targetTableType) {
-      const sourceList = draggedFromTable === 'daily' ? dailyTasksList : weeklyTasksList;
-      const setSourceList = draggedFromTable === 'daily' ? setDailyTasksList : setWeeklyTasksList;
-      const setTargetList = targetTableType === 'daily' ? setDailyTasksList : setWeeklyTasksList;
-      
-      const taskToMove = sourceList.find(t => t.id.toString() === draggedRow);
-      
-      if (taskToMove) {
-        setSourceList(prev => prev.filter(t => t.id.toString() !== draggedRow));
-        
-        setTargetList(prev => {
-          const newList = [...prev];
-          
-          if (targetTaskId && targetTaskId !== `end-${targetTableType}`) {
-            const targetIndex = newList.findIndex(t => t.id.toString() === targetTaskId.toString());
-            if (targetIndex !== -1) {
-              newList.splice(targetIndex, 0, { ...taskToMove, id: Date.now() });
-            } else {
-              newList.push({ ...taskToMove, id: Date.now() });
-            }
-          } else {
-            newList.push({ ...taskToMove, id: Date.now() });
-          }
-          
-          return newList;
-        });
+    // Suivre la souris
+    const handleMouseMove = (e) => {
+      if (floatingElementRef.current) {
+        floatingElementRef.current.style.left = `${e.clientX + 10}px`;
+        floatingElementRef.current.style.top = `${e.clientY - 20}px`;
       }
-    } else {
-      const setTasksList = targetTableType === 'daily' ? setDailyTasksList : setWeeklyTasksList;
-      
-      setTasksList(prev => {
-        const newList = [...prev];
-        const draggedIndex = newList.findIndex(t => t.id.toString() === draggedRow);
-        
-        if (draggedIndex === -1) return prev;
-        
-        const [removed] = newList.splice(draggedIndex, 1);
-        
-        if (targetTaskId && targetTaskId !== `end-${targetTableType}`) {
-          const targetIndex = newList.findIndex(t => t.id.toString() === targetTaskId.toString());
-          if (targetIndex !== -1) {
-            newList.splice(targetIndex, 0, removed);
-          } else {
-            newList.push(removed);
-          }
-        } else {
-          newList.push(removed);
-        }
-        
-        return newList;
-      });
-    }
-    
-    setDragOverRow(null);
-    setDraggedRow(null);
-    setDraggedFromTable(null);
-  };
-  
-  const handleDragHandleContextMenu = (e, taskId, tableType) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    setContextMenu({
-      show: true,
-      x: e.clientX,
-      y: e.clientY,
-      taskId,
-      tableType,
-      isDeleteOnly: true
-    });
-  };
-  
-  const handleTaskContextMenu = (e, taskId, tableType) => {
-    e.preventDefault();
-    
-    setContextMenu({
-      show: true,
-      x: e.clientX,
-      y: e.clientY,
-      taskId,
-      tableType,
-      isDeleteOnly: false
-    });
-  };
-  
-  const handleDeleteTask = (taskId, tableType) => {
-    if (tableType === 'daily') {
-      setDailyTasksList(prev => prev.filter(t => t.id !== taskId));
-    } else {
-      setWeeklyTasksList(prev => prev.filter(t => t.id !== taskId));
-    }
-    closeContextMenu();
-  };
-  
-  const handleDuplicateTask = (taskId, tableType) => {
-    const tasksList = tableType === 'daily' ? dailyTasksList : weeklyTasksList;
-    const task = tasksList.find(t => t.id === taskId);
-    
-    if (task) {
-      const newTask = { ...task, id: Date.now(), name: `${task.name} (copie)` };
-      if (tableType === 'daily') {
-        setDailyTasksList(prev => [...prev, newTask]);
-      } else {
-        setWeeklyTasksList(prev => [...prev, newTask]);
-      }
-    }
-    closeContextMenu();
-  };
-  
-  const toggleAutoMove = (taskId) => {
-    setWeeklyTasksList(prev => prev.map(task => 
-      task.id === taskId 
-        ? { ...task, disableAutoMove: !task.disableAutoMove }
-        : task
-    ));
-    closeContextMenu();
-  };
-  
-  const closeContextMenu = () => {
-    setContextMenu({ show: false, x: 0, y: 0, taskId: null });
-  };
-  
-  const handleQuickAddTask = (tableType) => {
-    if (!newTaskName.trim()) {
-      setIsAddingTask(null);
-      setNewTaskName('');
-      return;
-    }
-    
-    const newTask = {
-      id: Date.now(),
-      name: newTaskName.trim(),
-      description: '',
-      status: customStatuses[0]?.id || 'not-started',
-      priority: customPriorities[0]?.id || 'medium',
-      date: new Date().toISOString().split('T')[0],
-      endDate: '',
-      time: '',
-      assignee: '',
-      completed: false,
-      progress: 0,
-      tag: null,
-      autoMoveEnabled: false
     };
     
-    if (tableType === 'daily') {
-      setDailyTasksList(prev => [...prev, newTask]);
-    } else if (tableType === 'weekly') {
-      setWeeklyTasksList(prev => [...prev, newTask]);
-    }
-    
-    setNewTaskName('');
-    setIsAddingTask(null);
+    document.addEventListener('mousemove', handleMouseMove);
+    floatingElementRef.current._mouseMoveHandler = handleMouseMove;
   };
   
-  const handleUpdateTask = (taskId, taskData, explicitTableType = null) => {
-    const tableType = explicitTableType || 
-      (dailyTasksList.some(t => t.id === taskId) ? 'daily' : 'weekly');
+  // Survoler une ligne
+  const handleMouseEnter = (e, index) => {
+    if (isDragging && draggedIndexRef.current !== null) {
+      // Calculer si on est dans la moitié haute ou basse de la ligne
+      const rect = e.currentTarget.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const middle = rect.height / 2;
+      
+      let targetIndex = index;
+      
+      // Si on survole la moitié basse, on veut insérer APRÈS cette ligne
+      if (y > middle) {
+        targetIndex = index + 1;
+      }
+      
+      // Ne pas dépasser les limites du tableau
+      if (targetIndex > tasks.length) {
+        targetIndex = tasks.length;
+      }
+      
+      setHoverIndex(targetIndex);
+      hoverIndexRef.current = targetIndex;
+    }
+  };
+  
+  // Terminer le drag (drop)
+  const endDrag = () => {
+    // Nettoyer l'élément flottant
+    if (floatingElementRef.current) {
+      if (floatingElementRef.current._mouseMoveHandler) {
+        document.removeEventListener('mousemove', floatingElementRef.current._mouseMoveHandler);
+      }
+      floatingElementRef.current.remove();
+      floatingElementRef.current = null;
+    }
     
-    if (tableType === 'daily') {
-      setDailyTasksList(prev => prev.map(task => 
-        task.id === taskId ? { ...task, ...taskData } : task
-      ));
+    // Utiliser les refs pour éviter les problèmes de closure
+    const finalDraggedIndex = draggedIndexRef.current;
+    const finalHoverIndex = hoverIndexRef.current;
+    
+    // Appliquer le changement si nécessaire
+    if (finalDraggedIndex !== null && finalHoverIndex !== null && finalDraggedIndex !== finalHoverIndex) {
+      const newTasks = [...tasks];
+      const [draggedItem] = newTasks.splice(finalDraggedIndex, 1);
+      
+      // L'index d'insertion dépend de la direction du drag
+      let insertIndex = finalHoverIndex;
+      if (finalDraggedIndex < finalHoverIndex) {
+        // Si on drag vers le bas, ajuster l'index après suppression
+        insertIndex = finalHoverIndex - 1;
+      }
+      
+      newTasks.splice(insertIndex, 0, draggedItem);
+      setTasks(newTasks);
+    }
+    
+    // Réinitialiser tous les états et refs
+    setDraggedIndex(null);
+    setHoverIndex(null);
+    setIsDragging(false);
+    draggedIndexRef.current = null;
+    hoverIndexRef.current = null;
+  };
+  
+
+  
+  // Calculer si on doit afficher le placeholder
+  const shouldShowPlaceholder = isDragging && 
+                                hoverIndex !== null && 
+                                draggedIndex !== null &&
+                                hoverIndex !== draggedIndex && 
+                                hoverIndex !== draggedIndex + 1;
+  
+  // Calculer la position du placeholder
+  const getPlaceholderPosition = () => {
+    if (!shouldShowPlaceholder) return null;
+    
+    // Position Y basée sur où les lignes ont bougé
+    let position;
+    if (draggedIndex < hoverIndex) {
+      // Drag vers le bas
+      position = (hoverIndex - 1) * 48;
     } else {
-      setWeeklyTasksList(prev => prev.map(task => 
-        task.id === taskId ? { ...task, ...taskData } : task
-      ));
-    }
-  };
-  
-  const handleStartEditingName = (taskId, currentName) => {
-    setEditingCellId(`name-${taskId}`);
-    setEditingCellValue(currentName);
-  };
-  
-  const handleSaveEditingName = (taskId, tableType) => {
-    const setTasksList = tableType === 'daily' ? setDailyTasksList : setWeeklyTasksList;
-    
-    setTasksList(prev => prev.map(task => 
-      task.id === taskId ? { ...task, name: editingCellValue } : task
-    ));
-    
-    setEditingCellId(null);
-    setEditingCellValue('');
-  };
-  
-  const handleAddColumn = (columnId) => {
-    if (!visibleColumns.includes(columnId)) {
-      setVisibleColumns(prev => [...prev, columnId]);
+      // Drag vers le haut
+      position = hoverIndex * 48;
     }
     
-    if (!columnWidths[columnId]) {
-      setColumnWidths(prev => ({ ...prev, [columnId]: 120 }));
-    }
-    
-    setShowColumnSelector(false);
+    // Ajouter la hauteur du header (environ 45px)
+    return position + 45;
   };
-  
-  const getColumnsForTable = (tableType) => {
-    if (tableType === 'weekly') {
-      const cols = [...visibleColumns];
-      const dateIndex = cols.indexOf('date');
-      if (dateIndex !== -1 && !cols.includes('endDate')) {
-        cols.splice(dateIndex + 1, 0, 'endDate');
-      }
-      return cols;
-    }
-    return visibleColumns;
-  };
-  
-  // Composant de table avec synchronisation des handles
-  const TableWithHandles = ({ title, taskList, tableType }) => {
-    const wrapperRef = useRef(null);
-    const theadRef = useRef(null);
-    const tbodyRef = useRef(null);
-    const [handleSlots, setHandleSlots] = useState([]);
-    const [headerHeight, setHeaderHeight] = useState(0);
-    
-    const columns = getColumnsForTable(tableType);
-    
-    // Mesurer les positions des lignes
-    const measureRows = () => {
-      if (!tbodyRef.current || !theadRef.current) return;
+
+  return (
+    <div style={{ padding: '40px', background: 'rgb(25, 25, 25)', minHeight: '100vh' }}>
+      <h1 style={{ color: 'white', marginBottom: '30px' }}>Drag & Drop Monday.com - Corrigé</h1>
       
-      const thead = theadRef.current;
-      const tbody = tbodyRef.current;
-      const theadRect = thead.getBoundingClientRect();
-      const tbodyRect = tbody.getBoundingClientRect();
-      
-      // Hauteur du header
-      setHeaderHeight(theadRect.height);
-      
-      // Récupérer toutes les lignes avec data-row-id
-      const rows = Array.from(tbody.querySelectorAll('tr[data-row-id]'));
-      const slots = rows.map(row => {
-        const rect = row.getBoundingClientRect();
-        return {
-          id: row.getAttribute('data-row-id'),
-          top: rect.top - tbodyRect.top,
-          height: rect.height
-        };
-      });
-      
-      setHandleSlots(slots);
-    };
-    
-    // Observer les changements de taille et re-mesurer
-    useLayoutEffect(() => {
-      measureRows();
-      
-      const resizeObserver = new ResizeObserver(() => {
-        measureRows();
-      });
-      
-      if (tbodyRef.current) {
-        resizeObserver.observe(tbodyRef.current);
-      }
-      if (theadRef.current) {
-        resizeObserver.observe(theadRef.current);
-      }
-      
-      window.addEventListener('resize', measureRows);
-      
-      return () => {
-        resizeObserver.disconnect();
-        window.removeEventListener('resize', measureRows);
-      };
-    }, []); // Dépendances vides pour ne s'exécuter qu'au mount
-    
-    // Re-mesurer quand les données changent
-    useEffect(() => {
-      // Petit délai pour laisser le DOM se mettre à jour
-      const timer = setTimeout(() => {
-        measureRows();
-      }, 0);
-      
-      return () => clearTimeout(timer);
-    }, [taskList.length, hoveredRowId, draggedRow, dragOverRow, isAddingTask]);
-    
-    return (
-      <div>
-        <h2 className="text-white/81 font-medium text-lg mb-3">{title}</h2>
-        
-        <div ref={wrapperRef} className="relative flex">
-          {/* Gouttière des handles - position absolue synchronisée */}
-          <div className="relative w-8 mr-2">
-            {/* Espace pour le header */}
-            <div style={{ height: headerHeight }}></div>
-            
-            {/* Container pour les handles positionnés absolument */}
-            <div className="relative">
-              {handleSlots.map(slot => {
-                const taskId = slot.id === 'add-row' ? `add-${tableType}` : parseInt(slot.id);
-                const isAddRow = slot.id === 'add-row';
-                
-                return (
-                  <div
-                    key={slot.id}
-                    className="absolute inset-x-0 flex items-center justify-center"
-                    style={{
-                      top: slot.top,
-                      height: slot.height
-                    }}
-                    onMouseEnter={() => !isAddRow && setHoveredRowId(taskId)}
-                    onMouseLeave={() => !isAddRow && setHoveredRowId(null)}
-                  >
-                    {!isAddRow && (
-                      <div
-                        className={`transition-opacity duration-150 cursor-grab select-none ${
-                          hoveredRowId === taskId ? 'opacity-100' : 'opacity-0'
-                        }`}
-                        draggable
-                        onDragStart={(e) => handleRowDragStart(e, taskId, tableType)}
-                        onDragEnd={handleRowDragEnd}
-                        onContextMenu={(e) => handleDragHandleContextMenu(e, taskId, tableType)}
-                      >
-                        <svg className="w-4 h-4 text-white/30" viewBox="0 0 16 4" fill="currentColor">
-                          <circle cx="2" cy="2" r="1.5"/>
-                          <circle cx="8" cy="2" r="1.5"/>
-                          <circle cx="14" cy="2" r="1.5"/>
-                        </svg>
-                      </div>
-                    )}
-                    {isAddRow && (
-                      <div className={`transition-opacity duration-150 ${
-                        hoveredRowId === `add-${tableType}` ? 'opacity-100' : 'opacity-0'
-                      }`}>
-                        <svg className="w-4 h-4 text-white/20" viewBox="0 0 16 4" fill="currentColor">
-                          <circle cx="2" cy="2" r="1.5"/>
-                          <circle cx="8" cy="2" r="1.5"/>
-                          <circle cx="14" cy="2" r="1.5"/>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          
-          {/* Table */}
-          <div className="flex-1 bg-[rgb(32,32,32)] rounded-lg overflow-hidden border border-[rgb(47,47,47)]">
-            <div className="overflow-x-auto">
-              <table className="w-full table-fixed border-collapse">
-                <thead ref={theadRef}>
-                  <tr className="bg-[rgb(37,37,37)] border-b border-[rgb(47,47,47)]">
-                    {columns.map((column, index) => (
-                      <th 
-                        key={column}
-                        draggable={column !== 'name'}
-                        onDragStart={(e) => handleColumnDragStart(e, column)}
-                        onDragOver={handleColumnDragOver}
-                        onDrop={(e) => handleColumnDrop(e, column)}
-                        className={`px-4 py-3 text-left text-[13px] font-medium text-white/46 relative group ${
-                          column !== 'name' ? 'cursor-move' : ''
-                        }`}
-                        style={{ 
-                          width: columnWidths[column],
-                          minWidth: columnWidths[column]
-                        }}
-                      >
-                        {columnHeaders[column]}
-                        {index < columns.length - 1 && (
-                          <div className="absolute right-0 top-0 bottom-0 w-px bg-[rgb(47,47,47)]">
-                            <div
-                              className="absolute right-[-2px] top-0 bottom-0 w-1 cursor-col-resize hover:bg-white/20"
-                              onMouseDown={(e) => handleColumnResize(e, column)}
-                            />
-                          </div>
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody 
-                  ref={tbodyRef}
-                  onDragOver={(e) => handleTableDragOver(e, tableType)}
-                  onDrop={(e) => {
-                    if (!e.defaultPrevented) {
-                      handleRowDrop(e, dragOverRow, tableType);
+      <div style={{ 
+        background: 'rgb(32, 32, 32)', 
+        borderRadius: '8px', 
+        overflow: 'hidden',
+        border: '1px solid rgb(47, 47, 47)',
+        position: 'relative'
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: 'rgb(37, 37, 37)' }}>
+              <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', width: '40%' }}>Nom</th>
+              <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', width: '30%' }}>Statut</th>
+              <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', width: '30%' }}>Priorité</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.map((task, index) => {
+              const isDraggedRow = index === draggedIndex && isDragging;
+              
+              return (
+                <tr
+                  key={task.id}
+                  onMouseDown={(e) => startDrag(e, index)}
+                  onMouseEnter={(e) => handleMouseEnter(e, index)}
+                  onMouseMove={(e) => {
+                    if (isDragging) {
+                      handleMouseEnter(e, index);
+                    }
+                  }}
+                  style={{
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    height: '48px',
+                    transform: getRowTransform(index),
+                    transition: isDragging ? 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.055)',
+                    background: 'transparent',
+                    userSelect: 'none',
+                    opacity: isDraggedRow ? 0.3 : 1
+                  }}
+                  onMouseOver={(e) => {
+                    if (!isDragging) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isDragging) {
+                      e.currentTarget.style.background = 'transparent';
                     }
                   }}
                 >
-                  {taskList.map((task) => (
-                    <tr 
-                      key={task.id}
-                      data-row-id={task.id}
-                      data-dragging={draggedRow === task.id.toString() ? 'true' : undefined}
-                      className={`
-                        border-b border-white/[0.055] border-t-2 hover:bg-white/[0.02] 
-                        transition-all duration-200 relative
-                        ${draggedRow === task.id.toString() ? 'opacity-40' : ''}
-                        ${dragOverRow === task.id.toString() ? 'bg-blue-500/10' : ''}
-                      `}
-                      style={{
-                        borderTopColor: dragOverRow === task.id.toString() ? 'rgb(35,131,226)' : 'transparent',
-                        transform: dragOverRow === task.id.toString() ? 'scale(1.02)' : 'scale(1)',
-                        boxShadow: dragOverRow === task.id.toString() ? '0 0 20px rgba(35,131,226,0.3)' : 'none'
-                      }}
-                      onDragOver={handleRowDragOver}
-                      onDragLeave={handleRowDragLeave}
-                      onDragEnter={() => handleRowDragEnter(null, task.id)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleRowDrop(e, task.id, tableType);
-                      }}
-                      onMouseEnter={() => setHoveredRowId(task.id)}
-                      onMouseLeave={() => setHoveredRowId(null)}
-                      onContextMenu={(e) => handleTaskContextMenu(e, task.id, tableType)}
-                    >
-                      {columns.map(column => (
-                        <td 
-                          key={column} 
-                          className="px-4 py-3"
-                          style={{ 
-                            width: columnWidths[column],
-                            minWidth: columnWidths[column]
-                          }}
-                        >
-                          {renderCell(task, column, tableType)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                  
-                  {/* Ligne d'ajout */}
-                  <tr 
-                    data-row-id="add-row"
-                    className="border-b border-white/[0.055] border-t-2 border-t-transparent hover:bg-white/[0.02] transition-colors"
-                    onMouseEnter={() => setHoveredRowId(`add-${tableType}`)}
-                    onMouseLeave={() => setHoveredRowId(null)}
-                  >
-                    {columns.map(column => (
-                      <td key={column} className="px-4 py-3">
-                        {column === 'name' ? (
-                          isAddingTask === tableType ? (
-                            <input
-                              type="text"
-                              value={newTaskName}
-                              onChange={(e) => setNewTaskName(e.target.value)}
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleQuickAddTask(tableType);
-                                }
-                              }}
-                              onBlur={() => handleQuickAddTask(tableType)}
-                              placeholder="Nom de la tâche..."
-                              className="w-full px-2 py-1 bg-white/[0.055] border border-white/20 rounded text-white/81 text-sm placeholder-white/30 focus:outline-none focus:border-[rgb(35,131,226)]"
-                              autoFocus
-                            />
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setIsAddingTask(tableType);
-                                setNewTaskName('');
-                              }}
-                              className="text-white/30 hover:text-white/60 text-sm transition-colors"
-                            >
-                              + Ajouter une tâche
-                            </button>
-                          )
-                        ) : column === 'status' && isAddingTask === tableType ? (
-                          <div className="px-2 py-1 bg-white/[0.055] rounded text-white/46 text-sm">
-                            {customStatuses[0]?.name || 'À faire'}
-                          </div>
-                        ) : column === 'priority' && isAddingTask === tableType ? (
-                          <div className="px-2 py-1 bg-white/[0.055] rounded text-white/46 text-sm">
-                            {customPriorities[0]?.name || 'Moyenne'}
-                          </div>
-                        ) : column === 'date' && isAddingTask === tableType ? (
-                          <div className="text-white/46 text-sm">
-                            {new Date().toLocaleDateString()}
-                          </div>
-                        ) : (
-                          <div className="h-6"></div>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                  
-                  {/* Zone de drop finale */}
-                  {draggedRow && (
-                    <tr 
-                      className="h-2 border-t-2 border-t-transparent"
-                      style={{
-                        borderTopColor: dragOverRow === `end-${tableType}` ? 'rgb(35,131,226)' : 'transparent',
-                        backgroundColor: dragOverRow === `end-${tableType}` ? 'rgba(35,131,226,0.1)' : 'transparent'
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setDragOverRow(`end-${tableType}`);
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleRowDrop(e, null, tableType);
-                      }}
-                    >
-                      <td colSpan={columns.length}></td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  <td style={{ padding: '12px', color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px' }}>
+                    {task.name}
+                  </td>
+                  <td style={{ padding: '12px', color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      background: task.status === 'Terminé' ? 'rgba(16, 185, 129, 0.2)' : 
+                                 task.status === 'En cours' ? 'rgba(59, 130, 246, 0.2)' : 
+                                 'rgba(107, 114, 128, 0.2)',
+                      color: task.status === 'Terminé' ? 'rgb(16, 185, 129)' : 
+                             task.status === 'En cours' ? 'rgb(59, 130, 246)' : 
+                             'rgb(107, 114, 128)'
+                    }}>
+                      {task.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px', color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      background: task.priority === 'Haute' ? 'rgba(239, 68, 68, 0.2)' : 
+                                 task.priority === 'Moyenne' ? 'rgba(245, 158, 11, 0.2)' : 
+                                 'rgba(16, 185, 129, 0.2)',
+                      color: task.priority === 'Haute' ? 'rgb(239, 68, 68)' : 
+                             task.priority === 'Moyenne' ? 'rgb(245, 158, 11)' : 
+                             'rgb(16, 185, 129)'
+                    }}>
+                      {task.priority}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        
+        {/* Placeholder flottant dans l'espace vide */}
+        {shouldShowPlaceholder && (
+          <div style={{
+            position: 'absolute',
+            top: `${getPlaceholderPosition()}px`,
+            left: '12px',
+            right: '12px',
+            height: '44px',
+            background: 'rgba(35, 131, 226, 0.05)',
+            border: '2px dashed rgb(35, 131, 226)',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'rgb(35, 131, 226)',
+            fontSize: '12px',
+            fontWeight: '500',
+            pointerEvents: 'none',
+            zIndex: 10,
+            transition: 'top 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+          }}>
+            Déposer ici
           </div>
-        </div>
-      </div>
-    );
-  };
-  
-  // Rendu d'une cellule
-  const renderCell = (task, column, tableType) => {
-    switch (column) {
-      case 'name':
-        const isEditing = editingCellId === `name-${task.id}`;
-        return (
-          <div className="flex items-center gap-2">
-            {isEditing ? (
-              <input
-                type="text"
-                value={editingCellValue}
-                onChange={(e) => setEditingCellValue(e.target.value)}
-                onBlur={() => handleSaveEditingName(task.id, tableType)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSaveEditingName(task.id, tableType);
-                  }
-                }}
-                className="flex-1 px-2 py-1 bg-white/[0.055] border border-white/20 rounded text-white/81 text-sm focus:outline-none focus:border-[rgb(35,131,226)]"
-                autoFocus
-              />
-            ) : (
-              <>
-                <div 
-                  className="flex-1 cursor-text"
-                  onClick={() => handleStartEditingName(task.id, task.name)}
-                >
-                  {task.tag ? (
-                    <div>
-                      <div className="text-white/81 text-sm">{task.name}</div>
-                      <div className="text-white/46 text-xs mt-0.5">
-                        {task.tag.type === 'radar' ? 
-                          `${task.tag.radar} > ${task.tag.subject}` :
-                          task.tag.text
-                        }
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-white/81 text-sm">{task.name}</span>
-                  )}
-                </div>
-                {task.autoMoveEnabled && tableType === 'weekly' && (
-                  <span className="px-1.5 py-0.5 bg-[rgb(35,131,226)]/10 text-[rgb(35,131,226)] text-[11px] rounded">
-                    Auto
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-        );
-        
-      case 'status':
-        const status = customStatuses.find(s => s.id === task.status) || customStatuses[0];
-        return (
-          <select
-            value={task.status}
-            onChange={(e) => handleUpdateTask(task.id, { status: e.target.value }, tableType)}
-            className="px-2 py-1 rounded text-sm cursor-pointer transition-all duration-150 focus:outline-none"
-            style={{
-              border: `1px solid ${status?.color}33`,
-              backgroundColor: status?.color + '1A',
-              color: status?.color || '#ffffff'
-            }}
-          >
-            {customStatuses.map(s => (
-              <option 
-                key={s.id} 
-                value={s.id}
-                style={{
-                  backgroundColor: '#252525',
-                  color: s.color || '#ffffff'
-                }}
-              >
-                {s.name}
-              </option>
-            ))}
-          </select>
-        );
-        
-      case 'priority':
-        const priority = customPriorities.find(p => p.id === task.priority) || customPriorities[1];
-        return (
-          <select
-            value={task.priority}
-            onChange={(e) => handleUpdateTask(task.id, { priority: e.target.value }, tableType)}
-            className="px-2 py-1 rounded text-sm cursor-pointer transition-all duration-150 focus:outline-none"
-            style={{
-              border: `1px solid ${priority?.color}33`,
-              backgroundColor: priority?.color + '1A',
-              color: priority?.color || '#ffffff'
-            }}
-          >
-            {customPriorities.map(p => (
-              <option 
-                key={p.id} 
-                value={p.id}
-                style={{
-                  backgroundColor: '#252525',
-                  color: p.color || '#ffffff'
-                }}
-              >
-                {p.name}
-              </option>
-            ))}
-          </select>
-        );
-        
-      case 'date':
-        return (
-          <input
-            type="date"
-            value={task.date || ''}
-            onChange={(e) => handleUpdateTask(task.id, { date: e.target.value }, tableType)}
-            className="bg-transparent border-none text-white/81 text-sm cursor-pointer"
-          />
-        );
-        
-      case 'endDate':
-        return (
-          <input
-            type="date"
-            value={task.endDate || ''}
-            onChange={(e) => handleUpdateTask(task.id, { endDate: e.target.value }, tableType)}
-            className="bg-transparent border-none text-white/81 text-sm cursor-pointer"
-          />
-        );
-        
-      case 'time':
-        return (
-          <input
-            type="time"
-            value={task.time || ''}
-            onChange={(e) => handleUpdateTask(task.id, { time: e.target.value }, tableType)}
-            className="bg-transparent border-none text-white/81 text-sm cursor-pointer"
-          />
-        );
-        
-      case 'assignee':
-        return (
-          <input
-            type="text"
-            value={task.assignee || ''}
-            onChange={(e) => handleUpdateTask(task.id, { assignee: e.target.value }, tableType)}
-            placeholder="-"
-            className="bg-transparent border-none text-white/81 text-sm w-full focus:outline-none focus:bg-white/[0.055] px-1 py-0.5 rounded"
-          />
-        );
-        
-      case 'progress':
-        return (
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-white/[0.055] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[rgb(35,131,226)] transition-all duration-300"
-                style={{ width: `${task.progress || 0}%` }}
-              />
-            </div>
-            <span className="text-xs text-white/46 min-w-[35px] text-right">
-              {task.progress || 0}%
-            </span>
-          </div>
-        );
-        
-      default:
-        return null;
-    }
-  };
-  
-  return (
-    <div className="min-h-screen bg-[rgb(25,25,25)]">
-      <div className="max-w-[1400px] mx-auto px-5 py-10">
-        {/* Header */}
-        <div className="mb-10 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white/81 mb-2">To do</h1>
-            <p className="text-white/46">Gérez vos tâches quotidiennes et hebdomadaires</p>
-          </div>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setCustomOptionsType('status');
-                setShowCustomOptionsModal(true);
-              }}
-              className="px-4 py-2 bg-white/[0.055] text-white/81 rounded-lg hover:bg-white/[0.08] transition-colors text-sm"
-            >
-              Statuts
-            </button>
-            <button
-              onClick={() => {
-                setCustomOptionsType('priority');
-                setShowCustomOptionsModal(true);
-              }}
-              className="px-4 py-2 bg-white/[0.055] text-white/81 rounded-lg hover:bg-white/[0.08] transition-colors text-sm"
-            >
-              Priorités
-            </button>
-          </div>
-        </div>
-        
-        {/* Tables avec handles synchronisés */}
-        <div className="space-y-8">
-          <TableWithHandles title="Tâches quotidiennes" taskList={dailyTasksList} tableType="daily" />
-          <TableWithHandles title="Tâches hebdomadaires" taskList={weeklyTasksList} tableType="weekly" />
-        </div>
+        )}
       </div>
       
-      {/* Context Menu */}
-      {contextMenu.show && (
-        <div
-          className="fixed bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-lg py-1 shadow-xl z-50 min-w-[180px]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.isDeleteOnly ? (
-            <button
-              onClick={() => handleDeleteTask(contextMenu.taskId, contextMenu.tableType)}
-              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/[0.055] transition-colors"
-            >
-              Supprimer
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={() => {
-                  const task = contextMenu.tableType === 'daily' 
-                    ? dailyTasksList.find(t => t.id === contextMenu.taskId)
-                    : weeklyTasksList.find(t => t.id === contextMenu.taskId);
-                  if (task) {
-                    handleStartEditingName(task.id, task.name);
-                  }
-                  closeContextMenu();
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-white/81 hover:bg-white/[0.055] transition-colors"
-              >
-                Modifier le nom
-              </button>
-              <button
-                onClick={() => handleDuplicateTask(contextMenu.taskId, contextMenu.tableType)}
-                className="w-full px-4 py-2 text-left text-sm text-white/81 hover:bg-white/[0.055] transition-colors"
-              >
-                Dupliquer
-              </button>
-              {contextMenu.tableType === 'weekly' && (
-                <button
-                  onClick={() => toggleAutoMove(contextMenu.taskId)}
-                  className="w-full px-4 py-2 text-left text-sm text-white/81 hover:bg-white/[0.055] transition-colors"
-                >
-                  {weeklyTasksList.find(t => t.id === contextMenu.taskId)?.disableAutoMove 
-                    ? 'Activer le déplacement auto' 
-                    : 'Désactiver le déplacement auto'}
-                </button>
-              )}
-              <hr className="my-1 border-[rgb(47,47,47)]" />
-              <button
-                onClick={() => handleDeleteTask(contextMenu.taskId, contextMenu.tableType)}
-                className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/[0.055] transition-colors"
-              >
-                Supprimer
-              </button>
-            </>
-          )}
-        </div>
-      )}
-      
-      {/* Modals */}      
-      {showCustomOptionsModal && (
-        <CustomOptionsModal
-          type={customOptionsType}
-          options={customOptionsType === 'status' ? customStatuses : customPriorities}
-          onSave={(newOptions) => {
-            if (customOptionsType === 'status') {
-              setCustomStatuses(newOptions);
-            } else {
-              setCustomPriorities(newOptions);
-            }
-            setShowCustomOptionsModal(false);
-          }}
-          onClose={() => setShowCustomOptionsModal(false)}
-        />
-      )}
-      
-      {showColumnSelector && (
-        <ColumnSelectorModal
-          availableColumns={availableColumns}
-          visibleColumns={visibleColumns}
-          onAddColumn={handleAddColumn}
-          onClose={() => setShowColumnSelector(false)}
-        />
-      )}
+      {/* État actuel pour debug */}
+      <div style={{ marginTop: '30px', color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>
+        <p>📊 <strong>État actuel (debug) :</strong></p>
+        <ul style={{ lineHeight: '26px' }}>
+          <li>Ligne draggée : {draggedIndex !== null ? `${tasks[draggedIndex]?.name} (index ${draggedIndex})` : 'Aucune'}</li>
+          <li>Va s'insérer : {
+            hoverIndex !== null && draggedIndex !== null ? 
+              (hoverIndex > draggedIndex ? 
+                `Après ${tasks[hoverIndex - 1]?.name || 'début'}` : 
+                `Avant ${tasks[hoverIndex]?.name || 'fin'}`) 
+              : 'Nulle part'
+          }</li>
+          <li>En cours de drag : {isDragging ? 'Oui' : 'Non'}</li>
+        </ul>
+        
+        <p style={{ marginTop: '20px' }}>✅ <strong>Corrections appliquées :</strong></p>
+        <ul style={{ lineHeight: '26px' }}>
+          <li>TranslateY à 48px pour les mouvements</li>
+          <li>Calcul précis de la position d'insertion (moitié haute/basse)</li>
+          <li>Drop fonctionne avec mouseup global + refs</li>
+          <li>Suppression complète des placeholders DOM</li>
+          <li>Ligne draggée reste visible avec opacité 0.3</li>
+          <li>Rectangle gris pointillé dans l'espace vide (position absolute)</li>
+        </ul>
+      </div>
     </div>
   );
 };
 
-export default PlanView;
+export default MondayDragDropTable;

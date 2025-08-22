@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Drag & Drop</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #191919;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .table-container {
+            background: #202020;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #2f2f2f;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+        }
+        th {
+            background: #252525;
+            color: rgba(255, 255, 255, 0.46);
+            font-weight: 500;
+        }
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .drag-handle {
+            cursor: grab;
+            opacity: 0;
+            transition: opacity 150ms ease;
+            color: rgba(255, 255, 255, 0.3);
+        }
+        tr:hover .drag-handle {
+            opacity: 1;
+        }
+        .drag-handle:hover {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+        .dragging {
+            opacity: 0.7;
+        }
+        .log {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 20px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Drag & Drop - Debug</h1>
+    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40px;"></th>
+                    <th>Nom</th>
+                    <th>Statut</th>
+                    <th>Priorité</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr data-id="1">
+                    <td>
+                        <div class="drag-handle" draggable="true">⋮⋮</div>
+                    </td>
+                    <td>Tâche 1</td>
+                    <td>À faire</td>
+                    <td>Haute</td>
+                </tr>
+                <tr data-id="2">
+                    <td>
+                        <div class="drag-handle" draggable="true">⋮⋮</div>
+                    </td>
+                    <td>Tâche 2</td>
+                    <td>En cours</td>
+                    <td>Moyenne</td>
+                </tr>
+                <tr data-id="3">
+                    <td>
+                        <div class="drag-handle" draggable="true">⋮⋮</div>
+                    </td>
+                    <td>Tâche 3</td>
+                    <td>Fait</td>
+                    <td>Basse</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="log" id="log">
+        <div>Journal des événements drag & drop :</div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        let draggedElement = null;
+        
+        function addLog(message) {
+            const div = document.createElement('div');
+            div.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // Event listeners pour chaque poignée de drag
+        document.querySelectorAll('.drag-handle').forEach(handle => {
+            handle.addEventListener('dragstart', (e) => {
+                draggedElement = e.target.closest('tr');
+                addLog(`DRAGSTART: Élément ${draggedElement.dataset.id}`);
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => {
+                    if (draggedElement) {
+                        draggedElement.classList.add('dragging');
+                    }
+                }, 0);
+            });
+            
+            handle.addEventListener('dragend', (e) => {
+                addLog(`DRAGEND: Élément ${draggedElement?.dataset.id || 'inconnu'}`);
+                if (draggedElement) {
+                    draggedElement.classList.remove('dragging');
+                    draggedElement = null;
+                }
+            });
+        });
+        
+        // Event listeners pour les lignes
+        document.querySelectorAll('tr[data-id]').forEach(row => {
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                addLog(`DRAGOVER: Sur élément ${row.dataset.id}`);
+            });
+            
+            row.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                addLog(`DRAGENTER: Dans élément ${row.dataset.id}`);
+            });
+            
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                addLog(`DROP: Sur élément ${row.dataset.id} depuis ${draggedElement?.dataset.id || 'inconnu'}`);
+            });
+        });
+        
+        // Event listeners globaux pour debug
+        document.addEventListener('dragstart', (e) => {
+            addLog(`GLOBAL DRAGSTART: ${e.target.tagName} ${e.target.className}`);
+        });
+        
+        document.addEventListener('dragover', (e) => {
+            // Commenté pour éviter le spam
+            // addLog(`GLOBAL DRAGOVER: ${e.target.tagName} ${e.target.className}`);
+        });
+        
+        document.addEventListener('drop', (e) => {
+            addLog(`GLOBAL DROP: ${e.target.tagName} ${e.target.className}`);
+        });
+        
+        addLog('Script de test chargé - Essayez de faire glisser les poignées ⋮⋮');
+    </script>
+</body>
+</html>
