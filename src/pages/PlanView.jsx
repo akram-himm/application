@@ -160,6 +160,7 @@ const PlanViewMinimalDark = () => {
     const [isDropping, setIsDropping] = useState(false);
     const [focusedRowIndex, setFocusedRowIndex] = useState(null);
     const [isMovingMode, setIsMovingMode] = useState(false);
+    const [newTaskName, setNewTaskName] = useState('');
     
     const draggedIndexRef = useRef(null);
     const hoverIndexRef = useRef(null);
@@ -231,7 +232,7 @@ const PlanViewMinimalDark = () => {
       if (isDropping && index === draggedIndex) {
         const targetPosition = hoverIndexRef.current;
         if (targetPosition !== null && targetPosition !== draggedIndex) {
-          const offset = (targetPosition - draggedIndex) * 48;
+          const offset = (targetPosition - draggedIndex) * 56;
           return `translateY(${offset}px)`;
         }
         return '';
@@ -251,11 +252,11 @@ const PlanViewMinimalDark = () => {
       
       if (draggedIndex < hoverIndex) {
         if (index > draggedIndex && index < hoverIndex) {
-          return 'translateY(-48px)';
+          return 'translateY(-56px)';
         }
       } else {
         if (index < draggedIndex && index >= hoverIndex) {
-          return 'translateY(48px)';
+          return 'translateY(56px)';
         }
       }
       
@@ -282,13 +283,13 @@ const PlanViewMinimalDark = () => {
         z-index: 999999;
         pointer-events: none;
         width: ${rect.width}px;
-        background: rgba(20, 20, 20, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
         box-shadow: 
-          0 10px 30px rgba(0, 0, 0, 0.6),
-          inset 0 0 20px rgba(255, 255, 255, 0.02);
+          0 20px 40px rgba(0, 0, 0, 0.4),
+          inset 0 2px 8px rgba(255, 255, 255, 0.1);
         opacity: 0.95;
         left: ${e.clientX + 10}px;
         top: ${e.clientY - 20}px;
@@ -390,50 +391,51 @@ const PlanViewMinimalDark = () => {
       
       let position;
       if (draggedIndex < hoverIndex) {
-        position = (hoverIndex - 1) * 48;
+        position = (hoverIndex - 1) * 56;
       } else {
-        position = hoverIndex * 48;
+        position = hoverIndex * 56;
       }
       
-      return position + 45;
+      return position + 53;
     };
     
     const getPriorityColor = (priority) => {
       switch(priority) {
-        case 'high': return '#dc2626';
-        case 'medium': return '#f59e0b';
-        case 'low': return '#22c55e';
-        default: return '#6b7280';
+        case 'high': return 'linear-gradient(135deg, #ff6b6b, #ff8787)';
+        case 'medium': return 'linear-gradient(135deg, #ffd93d, #ffed4e)';
+        case 'low': return 'linear-gradient(135deg, #6bcf7f, #8be59e)';
+        default: return 'linear-gradient(135deg, #6c757d, #909aa3)';
       }
     };
     
     const getStatusColor = (status) => {
       switch(status) {
-        case 'Terminé': return '#22c55e';
-        case 'En cours': return '#3b82f6';
-        case 'À faire': return '#6b7280';
-        case 'Bloqué': return '#dc2626';
-        default: return '#6b7280';
+        case 'Terminé': return { bg: 'linear-gradient(135deg, #6bcf7f, #8be59e)', color: '#ffffff' };
+        case 'En cours': return { bg: 'linear-gradient(135deg, #4a9ff5, #6fb3f7)', color: '#ffffff' };
+        case 'À faire': return { bg: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.5)' };
+        case 'Bloqué': return { bg: 'linear-gradient(135deg, #ff6b6b, #ff8787)', color: '#ffffff' };
+        default: return { bg: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.5)' };
       }
     };
     
     const renderCell = (task, column) => {
       const cellStyle = {
-        padding: '12px 16px',
-        color: 'rgba(255, 255, 255, 0.9)',
-        fontSize: '13px'
+        padding: '14px 20px',
+        color: 'rgba(255, 255, 255, 0.8)',
+        fontSize: '14px'
       };
       
       switch (column) {
         case 'name':
           return (
             <td style={{ ...cellStyle, fontWeight: '500' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   width: '4px',
-                  height: '24px',
+                  height: '28px',
                   background: getPriorityColor(task.priority),
-                  borderRadius: '2px'
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
                 }} />
                 {task.name}
               </div>
@@ -441,16 +443,18 @@ const PlanViewMinimalDark = () => {
           );
           
         case 'status':
+          const statusStyle = getStatusColor(task.status);
           return (
             <td style={cellStyle}>
               <span style={{ 
-                background: `${getStatusColor(task.status)}15`,
-                color: getStatusColor(task.status),
-                padding: '5px 10px',
-                borderRadius: '6px',
+                background: statusStyle.bg,
+                color: statusStyle.color,
+                padding: '6px 14px',
+                borderRadius: '20px',
                 fontSize: '12px',
-                fontWeight: '500',
-                border: `1px solid ${getStatusColor(task.status)}30`
+                fontWeight: '600',
+                display: 'inline-block',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
               }}>
                 {task.status}
               </span>
@@ -461,7 +465,7 @@ const PlanViewMinimalDark = () => {
           return (
             <td style={cellStyle}>
               <span style={{ 
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(255, 255, 255, 0.6)',
                 fontSize: '13px'
               }}>
                 {task.date}
@@ -473,7 +477,7 @@ const PlanViewMinimalDark = () => {
           return (
             <td style={cellStyle}>
               <span style={{ 
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(255, 255, 255, 0.6)',
                 fontSize: '13px'
               }}>
                 {task.time}
@@ -485,7 +489,7 @@ const PlanViewMinimalDark = () => {
           return (
             <td style={cellStyle}>
               <span style={{ 
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(255, 255, 255, 0.6)',
                 fontSize: '13px'
               }}>
                 {task.startDate}
@@ -497,7 +501,7 @@ const PlanViewMinimalDark = () => {
           return (
             <td style={cellStyle}>
               <span style={{ 
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(255, 255, 255, 0.6)',
                 fontSize: '13px'
               }}>
                 {task.endDate}
@@ -511,24 +515,29 @@ const PlanViewMinimalDark = () => {
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '10px'
               }}>
                 <div style={{
-                  width: '24px',
-                  height: '24px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '50%',
-                  background: task.assignee ? '#1e293b' : '#0f172a',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: task.assignee ? 
+                    'linear-gradient(135deg, #667eea, #764ba2)' : 
+                    'rgba(255, 255, 255, 0.05)',
+                  border: '2px solid rgba(255, 255, 255, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontWeight: '600',
-                  color: 'rgba(255, 255, 255, 0.7)'
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  boxShadow: task.assignee ? 
+                    '0 8px 16px rgba(102, 126, 234, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)' : 
+                    'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
                 }}>
                   {task.assignee ? task.assignee[0].toUpperCase() : '?'}
                 </div>
-                <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px' }}>
+                <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}>
                   {task.assignee || 'Non assigné'}
                 </span>
               </div>
@@ -536,32 +545,39 @@ const PlanViewMinimalDark = () => {
           );
           
         case 'progress':
-          const progressColor = task.progress >= 75 ? '#22c55e' : 
-                               task.progress >= 50 ? '#3b82f6' : 
-                               task.progress >= 25 ? '#f59e0b' : '#dc2626';
+          const progressGradient = task.progress >= 75 ? 
+            'linear-gradient(90deg, #6bcf7f, #8be59e)' : 
+            task.progress >= 50 ? 
+            'linear-gradient(90deg, #4a9ff5, #6fb3f7)' : 
+            task.progress >= 25 ? 
+            'linear-gradient(90deg, #ffd93d, #ffed4e)' : 
+            'linear-gradient(90deg, #ff6b6b, #ff8787)';
+          
           return (
-            <td style={{ ...cellStyle, width: '140px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <td style={{ ...cellStyle, width: '160px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   flex: 1,
-                  height: '4px',
+                  height: '8px',
                   background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   overflow: 'hidden',
-                  boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.5)'
+                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)'
                 }}>
                   <div style={{
                     width: `${task.progress}%`,
                     height: '100%',
-                    background: progressColor,
-                    transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)'
+                    background: progressGradient,
+                    transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(255, 255, 255, 0.2)'
                   }} />
                 </div>
                 <span style={{ 
-                  fontSize: '11px', 
-                  color: progressColor,
+                  fontSize: '12px', 
+                  color: 'rgba(255, 255, 255, 0.9)',
                   fontWeight: '600',
-                  minWidth: '35px',
+                  minWidth: '40px',
                   textAlign: 'right'
                 }}>
                   {task.progress}%
@@ -575,82 +591,47 @@ const PlanViewMinimalDark = () => {
       }
     };
     
+    const handleAddNewTask = (e) => {
+      if (e.key === 'Enter' || e.type === 'blur') {
+        if (newTaskName.trim()) {
+          const newTask = tableType === 'daily' ? {
+            id: Date.now(),
+            name: newTaskName.trim(),
+            date: new Date().toISOString().split('T')[0],
+            time: '09:00',
+            assignee: '',
+            progress: 0,
+            priority: 'medium',
+            status: 'À faire'
+          } : {
+            id: Date.now(),
+            name: newTaskName.trim(),
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0],
+            assignee: '',
+            progress: 0,
+            priority: 'medium',
+            status: 'À faire'
+          };
+          setTasks([...tasks, newTask]);
+          setNewTaskName('');
+        }
+      }
+    };
+    
     return (
-      <div style={{ marginBottom: '40px' }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          marginBottom: '16px'
-        }}>
-          <h2 style={{ 
-            fontSize: '16px', 
-            fontWeight: '600',
-            color: 'rgba(255, 255, 255, 0.9)',
-            letterSpacing: '-0.01em'
-          }}>
-            {title}
-          </h2>
-          <button
-            onClick={() => {
-              const newTask = tableType === 'daily' ? {
-                id: Date.now(),
-                name: 'Nouvelle tâche',
-                date: new Date().toISOString().split('T')[0],
-                time: '09:00',
-                assignee: '',
-                progress: 0,
-                priority: 'medium',
-                status: 'À faire'
-              } : {
-                id: Date.now(),
-                name: 'Nouvelle tâche',
-                startDate: new Date().toISOString().split('T')[0],
-                endDate: new Date().toISOString().split('T')[0],
-                assignee: '',
-                progress: 0,
-                priority: 'medium',
-                status: 'À faire'
-              };
-              setTasks([...tasks, newTask]);
-            }}
-            style={{
-              padding: '8px 16px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '8px',
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 200ms ease',
-              backdropFilter: 'blur(10px)'
-            }}
-            onMouseEnter={e => {
-              e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-              e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-              e.target.style.color = 'rgba(255, 255, 255, 0.9)';
-            }}
-            onMouseLeave={e => {
-              e.target.style.background = 'rgba(255, 255, 255, 0.03)';
-              e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-              e.target.style.color = 'rgba(255, 255, 255, 0.6)';
-            }}
-          >
-            + Nouvelle tâche
-          </button>
-        </div>
-        
+      <div style={{ marginBottom: '48px' }}>
         {focusedRowIndex !== null && (
           <div style={{
-            marginBottom: '16px',
-            padding: '10px 14px',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '8px',
+            marginBottom: '20px',
+            padding: '12px 18px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '16px',
             fontSize: '12px',
-            color: 'rgba(255, 255, 255, 0.5)',
-            backdropFilter: 'blur(10px)'
+            color: 'rgba(255, 255, 255, 0.7)',
+            boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.2)'
           }}>
             {isMovingMode ? 
               'Mode déplacement • ↑↓ pour déplacer • Entrée pour désactiver' :
@@ -660,32 +641,32 @@ const PlanViewMinimalDark = () => {
         )}
         
         <div style={{
-          background: 'rgba(255, 255, 255, 0.02)',
+          background: 'rgba(255, 255, 255, 0.05)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
-          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '24px',
           overflow: 'hidden',
           position: 'relative',
           boxShadow: `
-            0 4px 24px rgba(0, 0, 0, 0.4),
-            inset 0 0 40px rgba(255, 255, 255, 0.01)
+            0 20px 40px rgba(0, 0, 0, 0.3),
+            inset 0 2px 8px rgba(255, 255, 255, 0.05)
           `
         }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ 
-                background: 'rgba(0, 0, 0, 0.3)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
               }}>
                 {columns.map(col => (
                   <th key={col.key} style={{
-                    padding: '12px 16px',
+                    padding: '16px 20px',
                     textAlign: 'left',
                     color: 'rgba(255, 255, 255, 0.5)',
                     fontSize: '11px',
                     fontWeight: '600',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.06em'
+                    letterSpacing: '0.8px'
                   }}>
                     {col.label}
                   </th>
@@ -707,19 +688,19 @@ const PlanViewMinimalDark = () => {
                     onMouseEnter={(e) => handleMouseEnter(e, index)}
                     style={{
                       cursor: isMovingMode ? 'default' : (isDragging ? 'grabbing' : 'grab'),
-                      height: '48px',
+                      height: '56px',
                       transform: getRowTransform(index),
                       transition: isDropping && index === draggedIndex 
                         ? 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)' 
                         : isDragging 
                           ? 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)' 
                           : 'background 200ms ease',
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                       background: isFocused ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
                       userSelect: 'none',
                       opacity: isDraggedRow && !isDropping ? 0 : 1,
-                      outline: isBeingMoved ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
-                      outlineOffset: '-1px',
+                      outline: isBeingMoved ? '2px solid rgba(255, 255, 255, 0.2)' : 'none',
+                      outlineOffset: '-2px',
                       position: 'relative'
                     }}
                     onMouseOver={(e) => {
@@ -737,6 +718,55 @@ const PlanViewMinimalDark = () => {
                   </tr>
                 );
               })}
+              
+              {/* Ligne pour ajouter une nouvelle tâche */}
+              <tr style={{
+                height: '56px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                background: 'transparent'
+              }}>
+                <td style={{
+                  padding: '14px 20px',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '4px',
+                      height: '28px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      borderRadius: '12px'
+                    }} />
+                    <input
+                      type="text"
+                      value={newTaskName}
+                      onChange={(e) => setNewTaskName(e.target.value)}
+                      onKeyPress={handleAddNewTask}
+                      onBlur={handleAddNewTask}
+                      placeholder="Ajouter une nouvelle tâche..."
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        fontSize: '14px',
+                        width: '100%',
+                        padding: '4px 0'
+                      }}
+                    />
+                  </div>
+                </td>
+                {columns.slice(1).map(col => (
+                  <td key={col.key} style={{
+                    padding: '14px 20px',
+                    color: 'rgba(255, 255, 255, 0.3)',
+                    fontSize: '13px'
+                  }}>
+                    -
+                  </td>
+                ))}
+              </tr>
             </tbody>
           </table>
           
@@ -744,21 +774,22 @@ const PlanViewMinimalDark = () => {
             <div style={{
               position: 'absolute',
               top: `${getPlaceholderPosition()}px`,
-              left: '12px',
-              right: '12px',
-              height: '44px',
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px dashed rgba(255, 255, 255, 0.15)',
-              borderRadius: '6px',
+              left: '16px',
+              right: '16px',
+              height: '52px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '2px dashed rgba(255, 255, 255, 0.2)',
+              borderRadius: '16px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'rgba(255, 255, 255, 0.3)',
-              fontSize: '11px',
-              fontWeight: '500',
+              color: 'rgba(255, 255, 255, 0.4)',
+              fontSize: '12px',
+              fontWeight: '600',
               pointerEvents: 'none',
               zIndex: 10,
-              transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+              transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+              backdropFilter: 'blur(10px)'
             }}>
               Déposer ici
             </div>
@@ -771,21 +802,19 @@ const PlanViewMinimalDark = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0a0a0a',
+      background: 'linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #1a1a1a 100%)',
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Effet de fond très subtil */}
+      {/* Effet de lumière douce */}
       <div style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: `
-          radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
-          radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 50%)
-        `,
+        top: '-50%',
+        left: '-50%',
+        width: '200%',
+        height: '200%',
+        background: `radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+                     radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 50%)`,
         pointerEvents: 'none'
       }} />
       
@@ -793,29 +822,8 @@ const PlanViewMinimalDark = () => {
         position: 'relative',
         maxWidth: '1400px', 
         margin: '0 auto',
-        padding: '32px'
+        padding: '48px 32px'
       }}>
-        <div style={{ marginBottom: '40px' }}>
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: '700',
-            color: 'rgba(255, 255, 255, 0.95)',
-            marginBottom: '12px',
-            letterSpacing: '-0.03em'
-          }}>
-            Tableau de bord
-          </h1>
-          <p style={{
-            fontSize: '14px',
-            color: 'rgba(255, 255, 255, 0.4)',
-            display: 'flex',
-            gap: '20px'
-          }}>
-            <span>Ctrl+Enter pour ajouter</span>
-            <span>Clic droit pour le menu</span>
-            <span>Glisser pour réorganiser</span>
-          </p>
-        </div>
         
         <DraggableTable
           title="Tâches quotidiennes"
@@ -848,21 +856,21 @@ const PlanViewMinimalDark = () => {
         />
       </div>
       
-      {/* Menu contextuel avec glassmorphisme */}
+      {/* Menu contextuel glassmorphism */}
       {contextMenu.show && (
         <div
           style={{
             position: 'fixed',
             left: contextMenu.x,
             top: contextMenu.y,
-            background: 'rgba(20, 20, 20, 0.95)',
+            background: 'rgba(255, 255, 255, 0.1)',
             backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '16px',
             overflow: 'hidden',
             boxShadow: `
-              0 8px 32px rgba(0, 0, 0, 0.6),
-              inset 0 0 20px rgba(255, 255, 255, 0.02)
+              0 16px 32px rgba(0, 0, 0, 0.4),
+              inset 0 2px 8px rgba(255, 255, 255, 0.1)
             `,
             zIndex: 1000
           }}
@@ -873,37 +881,38 @@ const PlanViewMinimalDark = () => {
             style={{
               display: 'block',
               width: '100%',
-              padding: '10px 16px',
+              padding: '12px 20px',
               background: 'transparent',
               border: 'none',
               color: 'rgba(255, 255, 255, 0.9)',
               fontSize: '13px',
               textAlign: 'left',
               cursor: 'pointer',
-              transition: 'all 150ms ease'
+              transition: 'all 200ms ease'
             }}
             onMouseEnter={e => e.target.style.background = 'rgba(255, 255, 255, 0.05)'}
             onMouseLeave={e => e.target.style.background = 'transparent'}
           >
             Éditer
           </button>
+          <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
           <button
             onClick={handleDelete}
             style={{
               display: 'block',
               width: '100%',
-              padding: '10px 16px',
+              padding: '12px 20px',
               background: 'transparent',
               border: 'none',
               color: 'rgba(255, 255, 255, 0.9)',
               fontSize: '13px',
               textAlign: 'left',
               cursor: 'pointer',
-              transition: 'all 150ms ease'
+              transition: 'all 200ms ease'
             }}
             onMouseEnter={e => {
-              e.target.style.background = 'rgba(220, 38, 38, 0.1)';
-              e.target.style.color = '#dc2626';
+              e.target.style.background = 'rgba(255, 107, 107, 0.1)';
+              e.target.style.color = '#ff6b6b';
             }}
             onMouseLeave={e => {
               e.target.style.background = 'transparent';
@@ -912,19 +921,20 @@ const PlanViewMinimalDark = () => {
           >
             Supprimer
           </button>
+          <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
           <button
             onClick={handleMoveToOtherTable}
             style={{
               display: 'block',
               width: '100%',
-              padding: '10px 16px',
+              padding: '12px 20px',
               background: 'transparent',
               border: 'none',
               color: 'rgba(255, 255, 255, 0.9)',
               fontSize: '13px',
               textAlign: 'left',
               cursor: 'pointer',
-              transition: 'all 150ms ease'
+              transition: 'all 200ms ease'
             }}
             onMouseEnter={e => e.target.style.background = 'rgba(255, 255, 255, 0.05)'}
             onMouseLeave={e => e.target.style.background = 'transparent'}
@@ -934,7 +944,7 @@ const PlanViewMinimalDark = () => {
         </div>
       )}
       
-      {/* Modal d'édition avec glassmorphisme et neumorphisme */}
+      {/* Modal d'édition glassmorphism */}
       {editModal.show && (
         <div
           style={{
@@ -943,7 +953,7 @@ const PlanViewMinimalDark = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
+            background: 'rgba(0, 0, 0, 0.7)',
             backdropFilter: 'blur(10px)',
             display: 'flex',
             alignItems: 'center',
@@ -954,37 +964,37 @@ const PlanViewMinimalDark = () => {
         >
           <div
             style={{
-              background: 'rgba(20, 20, 20, 0.98)',
+              background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '16px',
-              padding: '28px',
-              width: '480px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '24px',
+              padding: '32px',
+              width: '520px',
               maxWidth: '90%',
               boxShadow: `
-                0 20px 60px rgba(0, 0, 0, 0.8),
-                inset 0 0 40px rgba(255, 255, 255, 0.02)
+                0 24px 48px rgba(0, 0, 0, 0.5),
+                inset 0 2px 8px rgba(255, 255, 255, 0.1)
               `
             }}
             onClick={e => e.stopPropagation()}
           >
             <h3 style={{
-              fontSize: '18px',
+              fontSize: '20px',
               fontWeight: '600',
               color: 'rgba(255, 255, 255, 0.95)',
-              marginBottom: '24px'
+              marginBottom: '28px'
             }}>
               Éditer la tâche
             </h3>
             
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '11px',
-                color: 'rgba(255, 255, 255, 0.5)',
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.6)',
                 marginBottom: '8px',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.5px'
               }}>
                 Nom de la tâche
               </label>
@@ -994,37 +1004,38 @@ const PlanViewMinimalDark = () => {
                 onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
                   color: 'rgba(255, 255, 255, 0.95)',
                   fontSize: '14px',
                   outline: 'none',
-                  transition: 'all 200ms ease'
+                  transition: 'all 200ms ease',
+                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
                 }}
                 onFocus={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                  e.target.style.background = 'rgba(0, 0, 0, 0.6)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
                 }}
                 onBlur={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                  e.target.style.background = 'rgba(0, 0, 0, 0.4)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
                 }}
               />
             </div>
             
             {editModal.tableType === 'daily' ? (
               <>
-                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
                   <div style={{ flex: 1 }}>
                     <label style={{
                       display: 'block',
                       fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.5)',
+                      color: 'rgba(255, 255, 255, 0.6)',
                       marginBottom: '8px',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
+                      letterSpacing: '0.5px'
                     }}>
                       Date
                     </label>
@@ -1035,9 +1046,9 @@ const PlanViewMinimalDark = () => {
                       style={{
                         width: '100%',
                         padding: '12px 16px',
-                        background: 'rgba(0, 0, 0, 0.3)',
+                        background: 'rgba(255, 255, 255, 0.05)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '10px',
+                        borderRadius: '12px',
                         color: 'rgba(255, 255, 255, 0.95)',
                         fontSize: '14px',
                         outline: 'none',
@@ -1049,10 +1060,10 @@ const PlanViewMinimalDark = () => {
                     <label style={{
                       display: 'block',
                       fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.5)',
+                      color: 'rgba(255, 255, 255, 0.6)',
                       marginBottom: '8px',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
+                      letterSpacing: '0.5px'
                     }}>
                       Heure
                     </label>
@@ -1063,9 +1074,9 @@ const PlanViewMinimalDark = () => {
                       style={{
                         width: '100%',
                         padding: '12px 16px',
-                        background: 'rgba(0, 0, 0, 0.3)',
+                        background: 'rgba(255, 255, 255, 0.05)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '10px',
+                        borderRadius: '12px',
                         color: 'rgba(255, 255, 255, 0.95)',
                         fontSize: '14px',
                         outline: 'none',
@@ -1076,15 +1087,15 @@ const PlanViewMinimalDark = () => {
                 </div>
               </>
             ) : (
-              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{
                     display: 'block',
                     fontSize: '12px',
-                    color: 'rgba(255, 255, 255, 0.5)',
+                    color: 'rgba(255, 255, 255, 0.6)',
                     marginBottom: '8px',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
+                    letterSpacing: '0.5px'
                   }}>
                     Date début
                   </label>
@@ -1095,9 +1106,9 @@ const PlanViewMinimalDark = () => {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '10px',
+                      borderRadius: '12px',
                       color: 'rgba(255, 255, 255, 0.95)',
                       fontSize: '14px',
                       outline: 'none',
@@ -1109,10 +1120,10 @@ const PlanViewMinimalDark = () => {
                   <label style={{
                     display: 'block',
                     fontSize: '12px',
-                    color: 'rgba(255, 255, 255, 0.5)',
+                    color: 'rgba(255, 255, 255, 0.6)',
                     marginBottom: '8px',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
+                    letterSpacing: '0.5px'
                   }}>
                     Date fin
                   </label>
@@ -1123,9 +1134,9 @@ const PlanViewMinimalDark = () => {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '10px',
+                      borderRadius: '12px',
                       color: 'rgba(255, 255, 255, 0.95)',
                       fontSize: '14px',
                       outline: 'none',
@@ -1136,15 +1147,15 @@ const PlanViewMinimalDark = () => {
               </div>
             )}
             
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
               <div style={{ flex: 1 }}>
                 <label style={{
                   display: 'block',
-                  fontSize: '11px',
-                  color: 'rgba(255, 255, 255, 0.5)',
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.6)',
                   marginBottom: '8px',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
+                  letterSpacing: '0.5px'
                 }}>
                   Statut
                 </label>
@@ -1153,14 +1164,15 @@ const PlanViewMinimalDark = () => {
                   onChange={e => setEditForm({ ...editForm, status: e.target.value })}
                   style={{
                     width: '100%',
-                    padding: '10px 14px',
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
                     color: 'rgba(255, 255, 255, 0.95)',
                     fontSize: '14px',
                     outline: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
                   }}
                 >
                   <option value="À faire" style={{ background: '#141414' }}>À faire</option>
@@ -1172,11 +1184,11 @@ const PlanViewMinimalDark = () => {
               <div style={{ flex: 1 }}>
                 <label style={{
                   display: 'block',
-                  fontSize: '11px',
-                  color: 'rgba(255, 255, 255, 0.5)',
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.6)',
                   marginBottom: '8px',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
+                  letterSpacing: '0.5px'
                 }}>
                   Priorité
                 </label>
@@ -1185,14 +1197,15 @@ const PlanViewMinimalDark = () => {
                   onChange={e => setEditForm({ ...editForm, priority: e.target.value })}
                   style={{
                     width: '100%',
-                    padding: '10px 14px',
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
                     color: 'rgba(255, 255, 255, 0.95)',
                     fontSize: '14px',
                     outline: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
                   }}
                 >
                   <option value="high" style={{ background: '#141414' }}>Haute</option>
@@ -1202,14 +1215,14 @@ const PlanViewMinimalDark = () => {
               </div>
             </div>
             
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '11px',
-                color: 'rgba(255, 255, 255, 0.5)',
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.6)',
                 marginBottom: '8px',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.5px'
               }}>
                 Responsable
               </label>
@@ -1219,39 +1232,40 @@ const PlanViewMinimalDark = () => {
                 onChange={e => setEditForm({ ...editForm, assignee: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
                   color: 'rgba(255, 255, 255, 0.95)',
                   fontSize: '14px',
                   outline: 'none',
-                  transition: 'all 200ms ease'
+                  transition: 'all 200ms ease',
+                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
                 }}
                 onFocus={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                  e.target.style.background = 'rgba(0, 0, 0, 0.6)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
                 }}
                 onBlur={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                  e.target.style.background = 'rgba(0, 0, 0, 0.4)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
                 }}
               />
             </div>
             
-            <div style={{ marginBottom: '28px' }}>
+            <div style={{ marginBottom: '32px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '11px',
-                color: 'rgba(255, 255, 255, 0.5)',
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.6)',
                 marginBottom: '12px',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.5px'
               }}>
                 Progression: <span style={{ 
-                  color: editForm.progress >= 75 ? '#22c55e' : 
-                         editForm.progress >= 50 ? '#3b82f6' : 
-                         editForm.progress >= 25 ? '#f59e0b' : '#dc2626',
+                  color: editForm.progress >= 75 ? '#6bcf7f' : 
+                         editForm.progress >= 50 ? '#4a9ff5' : 
+                         editForm.progress >= 25 ? '#ffd93d' : '#ff6b6b',
                   fontWeight: '600'
                 }}>{editForm.progress || 0}%</span>
               </label>
@@ -1263,21 +1277,22 @@ const PlanViewMinimalDark = () => {
                 onChange={e => setEditForm({ ...editForm, progress: parseInt(e.target.value) })}
                 style={{
                   width: '100%',
-                  height: '6px',
+                  height: '8px',
                   WebkitAppearance: 'none',
                   appearance: 'none',
                   background: `linear-gradient(to right, 
-                    ${editForm.progress >= 75 ? '#22c55e' : 
-                      editForm.progress >= 50 ? '#3b82f6' :
-                      editForm.progress >= 25 ? '#f59e0b' : '#dc2626'} 0%, 
-                    ${editForm.progress >= 75 ? '#22c55e' : 
-                      editForm.progress >= 50 ? '#3b82f6' :
-                      editForm.progress >= 25 ? '#f59e0b' : '#dc2626'} ${editForm.progress || 0}%, 
+                    ${editForm.progress >= 75 ? '#6bcf7f' : 
+                      editForm.progress >= 50 ? '#4a9ff5' :
+                      editForm.progress >= 25 ? '#ffd93d' : '#ff6b6b'} 0%, 
+                    ${editForm.progress >= 75 ? '#6bcf7f' : 
+                      editForm.progress >= 50 ? '#4a9ff5' :
+                      editForm.progress >= 25 ? '#ffd93d' : '#ff6b6b'} ${editForm.progress || 0}%, 
                     rgba(255, 255, 255, 0.05) ${editForm.progress || 0}%, 
                     rgba(255, 255, 255, 0.05) 100%)`,
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   outline: 'none',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)'
                 }}
               />
             </div>
@@ -1286,23 +1301,25 @@ const PlanViewMinimalDark = () => {
               <button
                 onClick={() => setEditModal({ show: false, task: null, tableType: null })}
                 style={{
-                  padding: '10px 20px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '8px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  fontSize: '13px',
+                  padding: '12px 24px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '14px',
                   fontWeight: '500',
                   cursor: 'pointer',
-                  transition: 'all 200ms ease'
+                  transition: 'all 200ms ease',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
                 }}
                 onMouseEnter={e => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                 }}
                 onMouseLeave={e => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.03)';
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
                 }}
               >
                 Annuler
@@ -1310,24 +1327,24 @@ const PlanViewMinimalDark = () => {
               <button
                 onClick={handleSaveEdit}
                 style={{
-                  padding: '10px 24px',
-                  background: '#3b82f6',
+                  padding: '12px 28px',
+                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   color: 'white',
-                  fontSize: '13px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 200ms ease',
-                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)'
+                  boxShadow: '0 8px 20px rgba(102, 126, 234, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
                 }}
                 onMouseEnter={e => {
-                  e.target.style.background = '#2563eb';
-                  e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.5)';
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 12px 28px rgba(102, 126, 234, 0.5), inset 0 2px 8px rgba(255, 255, 255, 0.3)';
                 }}
                 onMouseLeave={e => {
-                  e.target.style.background = '#3b82f6';
-                  e.target.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 8px 20px rgba(102, 126, 234, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2)';
                 }}
               >
                 Sauvegarder
