@@ -160,7 +160,18 @@ const PlanViewMinimalDark = () => {
     const [isDropping, setIsDropping] = useState(false);
     const [focusedRowIndex, setFocusedRowIndex] = useState(null);
     const [isMovingMode, setIsMovingMode] = useState(false);
-    const [newTaskName, setNewTaskName] = useState('');
+    const [newTask, setNewTask] = useState({
+      name: '',
+      status: 'À faire',
+      date: new Date().toISOString().split('T')[0],
+      time: '09:00',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0],
+      assignee: '',
+      progress: 0,
+      priority: 'medium'
+    });
+    const [editingCell, setEditingCell] = useState(null);
     
     const draggedIndexRef = useRef(null);
     const hoverIndexRef = useRef(null);
@@ -284,7 +295,7 @@ const PlanViewMinimalDark = () => {
         pointer-events: none;
         width: ${rect.width}px;
         background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(20px);
+        backdrop-filter: blur(7px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 16px;
         box-shadow: 
@@ -418,17 +429,198 @@ const PlanViewMinimalDark = () => {
       }
     };
     
-    const renderCell = (task, column) => {
+    const renderCell = (task, column, index) => {
       const cellStyle = {
         padding: '14px 20px',
         color: 'rgba(255, 255, 255, 0.8)',
         fontSize: '14px'
       };
       
+      const isEditing = editingCell?.taskId === task.id && editingCell?.column === column;
+      
+      // Pour l'édition directe
+      if (isEditing) {
+        if (column === 'status') {
+          return (
+            <td style={cellStyle}>
+              <select
+                autoFocus
+                value={editingCell.value}
+                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                onBlur={() => {
+                  const updatedTasks = tasks.map((t, i) => 
+                    i === index ? { ...t, [column]: editingCell.value } : t
+                  );
+                  setTasks(updatedTasks);
+                  setEditingCell(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const updatedTasks = tasks.map((t, i) => 
+                      i === index ? { ...t, [column]: editingCell.value } : t
+                    );
+                    setTasks(updatedTasks);
+                    setEditingCell(null);
+                  }
+                  if (e.key === 'Escape') {
+                    setEditingCell(null);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 12px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '8px',
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              >
+                <option value="À faire">À faire</option>
+                <option value="En cours">En cours</option>
+                <option value="Terminé">Terminé</option>
+                <option value="Bloqué">Bloqué</option>
+              </select>
+            </td>
+          );
+        } else if (column === 'priority') {
+          return (
+            <td style={cellStyle}>
+              <select
+                autoFocus
+                value={editingCell.value}
+                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                onBlur={() => {
+                  const updatedTasks = tasks.map((t, i) => 
+                    i === index ? { ...t, [column]: editingCell.value } : t
+                  );
+                  setTasks(updatedTasks);
+                  setEditingCell(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const updatedTasks = tasks.map((t, i) => 
+                      i === index ? { ...t, [column]: editingCell.value } : t
+                    );
+                    setTasks(updatedTasks);
+                    setEditingCell(null);
+                  }
+                  if (e.key === 'Escape') {
+                    setEditingCell(null);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 12px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '8px',
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              >
+                <option value="high">Haute</option>
+                <option value="medium">Moyenne</option>
+                <option value="low">Basse</option>
+              </select>
+            </td>
+          );
+        } else if (column === 'progress') {
+          return (
+            <td style={cellStyle}>
+              <input
+                type="number"
+                autoFocus
+                min="0"
+                max="100"
+                value={editingCell.value}
+                onChange={(e) => setEditingCell({ ...editingCell, value: parseInt(e.target.value) || 0 })}
+                onBlur={() => {
+                  const updatedTasks = tasks.map((t, i) => 
+                    i === index ? { ...t, [column]: editingCell.value } : t
+                  );
+                  setTasks(updatedTasks);
+                  setEditingCell(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const updatedTasks = tasks.map((t, i) => 
+                      i === index ? { ...t, [column]: editingCell.value } : t
+                    );
+                    setTasks(updatedTasks);
+                    setEditingCell(null);
+                  }
+                  if (e.key === 'Escape') {
+                    setEditingCell(null);
+                  }
+                }}
+                style={{
+                  width: '80px',
+                  padding: '6px 12px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '8px',
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+            </td>
+          );
+        } else {
+          return (
+            <td style={cellStyle}>
+              <input
+                type={column === 'date' || column === 'startDate' || column === 'endDate' ? 'date' : 
+                      column === 'time' ? 'time' : 'text'}
+                autoFocus
+                value={editingCell.value}
+                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                onBlur={() => {
+                  const updatedTasks = tasks.map((t, i) => 
+                    i === index ? { ...t, [column]: editingCell.value } : t
+                  );
+                  setTasks(updatedTasks);
+                  setEditingCell(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const updatedTasks = tasks.map((t, i) => 
+                      i === index ? { ...t, [column]: editingCell.value } : t
+                    );
+                    setTasks(updatedTasks);
+                    setEditingCell(null);
+                  }
+                  if (e.key === 'Escape') {
+                    setEditingCell(null);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 12px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '8px',
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+            </td>
+          );
+        }
+      }
+      
+      // Affichage normal avec double-clic pour éditer
       switch (column) {
         case 'name':
           return (
-            <td style={{ ...cellStyle, fontWeight: '500' }}>
+            <td 
+              style={{ ...cellStyle, fontWeight: '500', cursor: 'pointer' }}
+              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] })}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   width: '4px',
@@ -445,7 +637,10 @@ const PlanViewMinimalDark = () => {
         case 'status':
           const statusStyle = getStatusColor(task.status);
           return (
-            <td style={cellStyle}>
+            <td 
+              style={{ ...cellStyle, cursor: 'pointer' }}
+              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] })}
+            >
               <span style={{ 
                 background: statusStyle.bg,
                 color: statusStyle.color,
@@ -462,56 +657,29 @@ const PlanViewMinimalDark = () => {
           );
           
         case 'date':
-          return (
-            <td style={cellStyle}>
-              <span style={{ 
-                color: 'rgba(255, 255, 255, 0.6)',
-                fontSize: '13px'
-              }}>
-                {task.date}
-              </span>
-            </td>
-          );
-          
         case 'time':
-          return (
-            <td style={cellStyle}>
-              <span style={{ 
-                color: 'rgba(255, 255, 255, 0.6)',
-                fontSize: '13px'
-              }}>
-                {task.time}
-              </span>
-            </td>
-          );
-          
         case 'startDate':
-          return (
-            <td style={cellStyle}>
-              <span style={{ 
-                color: 'rgba(255, 255, 255, 0.6)',
-                fontSize: '13px'
-              }}>
-                {task.startDate}
-              </span>
-            </td>
-          );
-          
         case 'endDate':
           return (
-            <td style={cellStyle}>
+            <td 
+              style={{ ...cellStyle, cursor: 'pointer' }}
+              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] })}
+            >
               <span style={{ 
                 color: 'rgba(255, 255, 255, 0.6)',
                 fontSize: '13px'
               }}>
-                {task.endDate}
+                {task[column]}
               </span>
             </td>
           );
           
         case 'assignee':
           return (
-            <td style={cellStyle}>
+            <td 
+              style={{ ...cellStyle, cursor: 'pointer' }}
+              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] || '' })}
+            >
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -554,7 +722,10 @@ const PlanViewMinimalDark = () => {
             'linear-gradient(90deg, #ff6b6b, #ff8787)';
           
           return (
-            <td style={{ ...cellStyle, width: '160px' }}>
+            <td 
+              style={{ ...cellStyle, width: '160px', cursor: 'pointer' }}
+              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] })}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   flex: 1,
@@ -587,35 +758,46 @@ const PlanViewMinimalDark = () => {
           );
           
         default:
-          return null;
+          return (
+            <td 
+              style={{ ...cellStyle, cursor: 'pointer' }}
+              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] || '' })}
+            >
+              {task[column] || '-'}
+            </td>
+          );
       }
     };
     
-    const handleAddNewTask = (e) => {
-      if (e.key === 'Enter' || e.type === 'blur') {
-        if (newTaskName.trim()) {
-          const newTask = tableType === 'daily' ? {
-            id: Date.now(),
-            name: newTaskName.trim(),
-            date: new Date().toISOString().split('T')[0],
-            time: '09:00',
-            assignee: '',
-            progress: 0,
-            priority: 'medium',
-            status: 'À faire'
-          } : {
-            id: Date.now(),
-            name: newTaskName.trim(),
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: new Date().toISOString().split('T')[0],
-            assignee: '',
-            progress: 0,
-            priority: 'medium',
-            status: 'À faire'
-          };
-          setTasks([...tasks, newTask]);
-          setNewTaskName('');
-        }
+    const handleAddNewTask = () => {
+      if (newTask.name.trim()) {
+        const taskToAdd = tableType === 'daily' ? {
+          id: Date.now(),
+          name: newTask.name.trim(),
+          date: newTask.date,
+          time: newTask.time,
+          assignee: newTask.assignee,
+          progress: newTask.progress,
+          priority: newTask.priority,
+          status: newTask.status
+        } : {
+          id: Date.now(),
+          name: newTask.name.trim(),
+          startDate: newTask.startDate,
+          endDate: newTask.endDate,
+          assignee: newTask.assignee,
+          progress: newTask.progress,
+          priority: newTask.priority,
+          status: newTask.status
+        };
+        
+        setTasks([...tasks, taskToAdd]);
+        
+        // Réinitialiser seulement le nom, garder les autres valeurs par défaut
+        setNewTask({
+          ...newTask,
+          name: ''
+        });
       }
     };
     
@@ -626,7 +808,7 @@ const PlanViewMinimalDark = () => {
             marginBottom: '20px',
             padding: '12px 18px',
             background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
+            backdropFilter: 'blur(7px)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '16px',
             fontSize: '12px',
@@ -640,9 +822,31 @@ const PlanViewMinimalDark = () => {
           </div>
         )}
         
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '16px'
+        }}>
+          <h2 style={{ 
+            fontSize: '20px',
+            fontWeight: '600',
+            color: 'rgba(255, 255, 255, 0.9)'
+          }}>
+            {title}
+          </h2>
+          <span style={{
+            fontSize: '11px',
+            color: 'rgba(255, 255, 255, 0.4)',
+            fontStyle: 'italic'
+          }}>
+            💡 Double-cliquez sur une cellule pour l'éditer
+          </span>
+        </div>
+        
         <div style={{
           background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(20px)',
+          backdropFilter: 'blur(7px)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: '24px',
           overflow: 'hidden',
@@ -714,7 +918,7 @@ const PlanViewMinimalDark = () => {
                       }
                     }}
                   >
-                    {columns.map(col => renderCell(task, col.key))}
+                    {columns.map(col => renderCell(task, col.key, index))}
                   </tr>
                 );
               })}
@@ -723,7 +927,8 @@ const PlanViewMinimalDark = () => {
               <tr style={{
                 height: '56px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                background: 'transparent'
+                background: 'rgba(255, 255, 255, 0.02)',
+                cursor: 'pointer'
               }}>
                 <td style={{
                   padding: '14px 20px',
@@ -735,16 +940,19 @@ const PlanViewMinimalDark = () => {
                     <div style={{
                       width: '4px',
                       height: '28px',
-                      background: 'rgba(255, 255, 255, 0.1)',
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))',
                       borderRadius: '12px'
                     }} />
                     <input
                       type="text"
-                      value={newTaskName}
-                      onChange={(e) => setNewTaskName(e.target.value)}
-                      onKeyPress={handleAddNewTask}
-                      onBlur={handleAddNewTask}
-                      placeholder="Ajouter une nouvelle tâche..."
+                      value={newTask.name}
+                      onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddNewTask();
+                        }
+                      }}
+                      placeholder="➕ Ajouter une nouvelle tâche..."
                       style={{
                         background: 'transparent',
                         border: 'none',
@@ -757,15 +965,155 @@ const PlanViewMinimalDark = () => {
                     />
                   </div>
                 </td>
-                {columns.slice(1).map(col => (
-                  <td key={col.key} style={{
-                    padding: '14px 20px',
-                    color: 'rgba(255, 255, 255, 0.3)',
-                    fontSize: '13px'
-                  }}>
-                    -
-                  </td>
-                ))}
+                {tableType === 'daily' ? (
+                  <>
+                    <td style={{ padding: '14px 20px' }}>
+                      <select
+                        value={newTask.status}
+                        onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '6px',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '13px',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="À faire">À faire</option>
+                        <option value="En cours">En cours</option>
+                        <option value="Terminé">Terminé</option>
+                      </select>
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <input
+                        type="date"
+                        value={newTask.date}
+                        onChange={(e) => setNewTask({ ...newTask, date: e.target.value })}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '6px',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '13px',
+                          outline: 'none'
+                        }}
+                      />
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <input
+                        type="time"
+                        value={newTask.time}
+                        onChange={(e) => setNewTask({ ...newTask, time: e.target.value })}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '6px',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '13px',
+                          outline: 'none'
+                        }}
+                      />
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td style={{ padding: '14px 20px' }}>
+                      <select
+                        value={newTask.status}
+                        onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '6px',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '13px',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="À faire">À faire</option>
+                        <option value="En cours">En cours</option>
+                        <option value="Terminé">Terminé</option>
+                      </select>
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <input
+                        type="date"
+                        value={newTask.startDate}
+                        onChange={(e) => setNewTask({ ...newTask, startDate: e.target.value })}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '6px',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '13px',
+                          outline: 'none'
+                        }}
+                      />
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <input
+                        type="date"
+                        value={newTask.endDate}
+                        onChange={(e) => setNewTask({ ...newTask, endDate: e.target.value })}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '6px',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '13px',
+                          outline: 'none'
+                        }}
+                      />
+                    </td>
+                  </>
+                )}
+                <td style={{ padding: '14px 20px' }}>
+                  <input
+                    type="text"
+                    placeholder="Responsable"
+                    value={newTask.assignee}
+                    onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
+                    style={{
+                      padding: '4px 8px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '6px',
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontSize: '13px',
+                      outline: 'none',
+                      width: '100%'
+                    }}
+                  />
+                </td>
+                <td style={{ padding: '14px 20px' }}>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newTask.progress}
+                    onChange={(e) => setNewTask({ ...newTask, progress: parseInt(e.target.value) || 0 })}
+                    style={{
+                      padding: '4px 8px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '6px',
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontSize: '13px',
+                      outline: 'none',
+                      width: '60px'
+                    }}
+                  />
+                  <span style={{ marginLeft: '8px', color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>%</span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -789,7 +1137,7 @@ const PlanViewMinimalDark = () => {
               pointerEvents: 'none',
               zIndex: 10,
               transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'blur(7px)'
             }}>
               Déposer ici
             </div>
@@ -824,6 +1172,33 @@ const PlanViewMinimalDark = () => {
         margin: '0 auto',
         padding: '48px 32px'
       }}>
+        {/* Titre de la page */}
+        <div style={{
+          marginBottom: '48px',
+          textAlign: 'center'
+        }}>
+          <h1 style={{
+            fontSize: '36px',
+            fontWeight: '700',
+            color: 'rgba(255, 255, 255, 0.95)',
+            letterSpacing: '-0.5px',
+            marginBottom: '8px',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.7))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            display: 'inline-block'
+          }}>
+            Planification des Tâches
+          </h1>
+          <p style={{
+            fontSize: '14px',
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontWeight: '400',
+            letterSpacing: '0.5px'
+          }}>
+            Organisez et suivez vos tâches quotidiennes et hebdomadaires
+          </p>
+        </div>
         
         <DraggableTable
           title="Tâches quotidiennes"
@@ -864,7 +1239,7 @@ const PlanViewMinimalDark = () => {
             left: contextMenu.x,
             top: contextMenu.y,
             background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
+            backdropFilter: 'blur(7px)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '16px',
             overflow: 'hidden',
@@ -939,50 +1314,42 @@ const PlanViewMinimalDark = () => {
             onMouseEnter={e => e.target.style.background = 'rgba(255, 255, 255, 0.05)'}
             onMouseLeave={e => e.target.style.background = 'transparent'}
           >
-            Déplacer vers {contextMenu.tableType === 'daily' ? 'Hebdomadaire' : 'Quotidien'}
+            Déplacer vers {contextMenu.tableType === 'daily' ? 'hebdomadaire' : 'quotidien'}
           </button>
         </div>
       )}
       
       {/* Modal d'édition glassmorphism */}
       {editModal.show && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2000
-          }}
-          onClick={() => setEditModal({ show: false, task: null, tableType: null })}
-        >
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '24px',
-              padding: '32px',
-              width: '520px',
-              maxWidth: '90%',
-              boxShadow: `
-                0 24px 48px rgba(0, 0, 0, 0.5),
-                inset 0 2px 8px rgba(255, 255, 255, 0.1)
-              `
-            }}
-            onClick={e => e.stopPropagation()}
-          >
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(7px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '24px',
+            padding: '36px',
+            width: '560px',
+            maxWidth: '90%',
+            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.5), inset 0 2px 8px rgba(255, 255, 255, 0.1)'
+          }}>
             <h3 style={{
-              fontSize: '20px',
+              fontSize: '22px',
               fontWeight: '600',
+              marginBottom: '28px',
               color: 'rgba(255, 255, 255, 0.95)',
-              marginBottom: '28px'
+              letterSpacing: '0.3px'
             }}>
               Éditer la tâche
             </h3>
@@ -1002,6 +1369,44 @@ const PlanViewMinimalDark = () => {
                 type="text"
                 value={editForm.name || ''}
                 onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 200ms ease',
+                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.6)',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Responsable
+              </label>
+              <input
+                type="text"
+                value={editForm.assignee || ''}
+                onChange={e => setEditForm({ ...editForm, assignee: e.target.value })}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -1215,44 +1620,6 @@ const PlanViewMinimalDark = () => {
               </div>
             </div>
             
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                color: 'rgba(255, 255, 255, 0.6)',
-                marginBottom: '8px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Responsable
-              </label>
-              <input
-                type="text"
-                value={editForm.assignee || ''}
-                onChange={e => setEditForm({ ...editForm, assignee: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  color: 'rgba(255, 255, 255, 0.95)',
-                  fontSize: '14px',
-                  outline: 'none',
-                  transition: 'all 200ms ease',
-                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                }}
-                onFocus={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                }}
-                onBlur={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                }}
-              />
-            </div>
-            
             <div style={{ marginBottom: '32px' }}>
               <label style={{
                 display: 'block',
@@ -1262,12 +1629,7 @@ const PlanViewMinimalDark = () => {
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}>
-                Progression: <span style={{ 
-                  color: editForm.progress >= 75 ? '#6bcf7f' : 
-                         editForm.progress >= 50 ? '#4a9ff5' : 
-                         editForm.progress >= 25 ? '#ffd93d' : '#ff6b6b',
-                  fontWeight: '600'
-                }}>{editForm.progress || 0}%</span>
+                Progression <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600' }}>{editForm.progress || 0}%</span>
               </label>
               <input
                 type="range"
@@ -1310,7 +1672,7 @@ const PlanViewMinimalDark = () => {
                   fontWeight: '500',
                   cursor: 'pointer',
                   transition: 'all 200ms ease',
-                  backdropFilter: 'blur(10px)',
+                  backdropFilter: 'blur(7px)',
                   boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
                 }}
                 onMouseEnter={e => {
