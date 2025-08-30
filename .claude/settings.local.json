@@ -3,7 +3,13 @@
     "allow": [
       "Bash(find:*)",
       "Bash(tree:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(del srccomponentstasksTestComponent.jsx)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(cp:*)",
+      "Bash(del \"src\\components\\tasks\\TestComponent.jsx\")",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
