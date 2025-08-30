@@ -1,18 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { AppContext } from '../contexts/AppContext';
 
 const PlanViewMinimalDark = () => {
-  // États pour les tâches
-  const [dailyTasks, setDailyTasks] = useState([
-    { id: 1, name: 'Révision du code', date: '2024-01-12', time: '09:00', assignee: 'Alice', progress: 75, priority: 'high', status: 'En cours' },
-    { id: 2, name: 'Réunion client', date: '2024-01-12', time: '14:00', assignee: 'Bob', progress: 50, priority: 'medium', status: 'En cours' },
-    { id: 3, name: 'Tests unitaires', date: '2024-01-12', time: '16:00', assignee: 'Charlie', progress: 25, priority: 'low', status: 'À faire' }
-  ]);
+  // Utiliser le contexte au lieu de l'état local
+  const { tasks, addTask, updateTask, deleteTask } = useContext(AppContext);
   
-  const [weeklyTasks, setWeeklyTasks] = useState([
-    { id: 101, name: 'Sprint planning', startDate: '2024-01-08', endDate: '2024-01-12', assignee: 'Alice', progress: 90, priority: 'high', status: 'Terminé' },
-    { id: 102, name: 'Refactoring API', startDate: '2024-01-10', endDate: '2024-01-17', assignee: 'David', progress: 30, priority: 'medium', status: 'En cours' },
-    { id: 103, name: 'Documentation', startDate: '2024-01-15', endDate: '2024-01-19', assignee: 'Eve', progress: 10, priority: 'low', status: 'À faire' }
-  ]);
+  // Filtrer les tâches par type (daily/weekly)
+  // Si pas de type, on les considère comme daily par défaut
+  const dailyTasks = tasks.filter(task => !task.type || task.type === 'daily');
+  const weeklyTasks = tasks.filter(task => task.type === 'weekly');
   
   // État du menu contextuel
   const [contextMenu, setContextMenu] = useState({
@@ -32,6 +28,8 @@ const PlanViewMinimalDark = () => {
   
   // État temporaire pour le formulaire d'édition
   const [editForm, setEditForm] = useState({});
+  
+  // Enlever l'ajout automatique de tâches d'exemple qui cause les duplications
   
   // Gestion du menu contextuel
   const handleContextMenu = (e, task, tableType) => {
@@ -59,8 +57,8 @@ const PlanViewMinimalDark = () => {
   
   // Ouvrir le modal d'édition
   const handleEdit = () => {
-    const tasks = contextMenu.tableType === 'daily' ? dailyTasks : weeklyTasks;
-    const task = tasks.find(t => t.id === contextMenu.taskId);
+    const currentTasks = contextMenu.tableType === 'daily' ? dailyTasks : weeklyTasks;
+    const task = currentTasks.find(t => t.id === contextMenu.taskId);
     
     setEditForm({ ...task });
     setEditModal({
@@ -71,14 +69,10 @@ const PlanViewMinimalDark = () => {
     setContextMenu({ ...contextMenu, show: false });
   };
   
-  // Supprimer une tâche
+  // Utiliser deleteTask du contexte
   const handleDelete = () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette tâche ?')) {
-      if (contextMenu.tableType === 'daily') {
-        setDailyTasks(prev => prev.filter(t => t.id !== contextMenu.taskId));
-      } else {
-        setWeeklyTasks(prev => prev.filter(t => t.id !== contextMenu.taskId));
-      }
+      deleteTask(contextMenu.taskId);
     }
     setContextMenu({ ...contextMenu, show: false });
   };
@@ -86,43 +80,33 @@ const PlanViewMinimalDark = () => {
   // Déplacer vers l'autre tableau
   const handleMoveToOtherTable = () => {
     const sourceTable = contextMenu.tableType === 'daily' ? dailyTasks : weeklyTasks;
-    const setSourceTable = contextMenu.tableType === 'daily' ? setDailyTasks : setWeeklyTasks;
-    const setTargetTable = contextMenu.tableType === 'daily' ? setWeeklyTasks : setDailyTasks;
-    
     const task = sourceTable.find(t => t.id === contextMenu.taskId);
     
     if (task) {
-      // Adapter les champs selon le tableau cible
-      const adaptedTask = { ...task };
+      const updatedTask = { ...task };
       if (contextMenu.tableType === 'daily') {
-        // Daily -> Weekly
-        delete adaptedTask.date;
-        delete adaptedTask.time;
-        adaptedTask.startDate = task.date;
-        adaptedTask.endDate = task.date;
+        updatedTask.type = 'weekly';
+        delete updatedTask.date;
+        delete updatedTask.time;
+        updatedTask.startDate = task.date;
+        updatedTask.endDate = task.date;
       } else {
-        // Weekly -> Daily
-        delete adaptedTask.startDate;
-        delete adaptedTask.endDate;
-        adaptedTask.date = task.startDate;
-        adaptedTask.time = '09:00';
+        updatedTask.type = 'daily';
+        delete updatedTask.startDate;
+        delete updatedTask.endDate;
+        updatedTask.date = task.startDate || new Date().toISOString().split('T')[0];
+        updatedTask.time = '09:00';
       }
       
-      setSourceTable(prev => prev.filter(t => t.id !== contextMenu.taskId));
-      setTargetTable(prev => [...prev, adaptedTask]);
+      updateTask(updatedTask);
     }
     
     setContextMenu({ ...contextMenu, show: false });
   };
   
-  // Sauvegarder les modifications
+  // Utiliser updateTask du contexte
   const handleSaveEdit = () => {
-    const setTasks = editModal.tableType === 'daily' ? setDailyTasks : setWeeklyTasks;
-    
-    setTasks(prev => prev.map(task => 
-      task.id === editForm.id ? editForm : task
-    ));
-    
+    updateTask(editForm);
     setEditModal({ show: false, task: null, tableType: null });
     setEditForm({});
   };
@@ -133,18 +117,18 @@ const PlanViewMinimalDark = () => {
       if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         
-        // Déterminer quel tableau est actif (simple logique : on ajoute au daily par défaut)
         const newTask = {
-          id: Date.now(),
           name: 'Nouvelle tâche',
+          type: 'daily',
           date: new Date().toISOString().split('T')[0],
           time: '09:00',
           assignee: '',
           progress: 0,
-          priority: 'medium'
+          priority: 'medium',
+          status: 'À faire'
         };
         
-        setDailyTasks(prev => [...prev, newTask]);
+        addTask(newTask);
       }
     };
     
@@ -153,7 +137,7 @@ const PlanViewMinimalDark = () => {
   }, []);
   
   // Composant Table réutilisable avec drag & drop
-  const DraggableTable = ({ title, tasks, setTasks, tableType, columns }) => {
+  const DraggableTable = ({ title, tasks, tableType, columns }) => {
     const [draggedIndex, setDraggedIndex] = useState(null);
     const [hoverIndex, setHoverIndex] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -177,6 +161,12 @@ const PlanViewMinimalDark = () => {
     const hoverIndexRef = useRef(null);
     const floatingElementRef = useRef(null);
     
+    const updateTasksOrder = (newOrderedTasks) => {
+      newOrderedTasks.forEach((task, index) => {
+        updateTask({ ...task, order: index });
+      });
+    };
+    
     // Cleanup du drag
     useEffect(() => {
       if (!isDragging) return;
@@ -189,93 +179,54 @@ const PlanViewMinimalDark = () => {
       return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
     }, [isDragging, tasks]);
     
-    // Navigation clavier locale au tableau
-    useEffect(() => {
-      const handleKeyDown = (e) => {
-        if (focusedRowIndex === null) return;
-        
-        if (e.key === 'Escape') {
-          setFocusedRowIndex(null);
-          setIsMovingMode(false);
-          return;
-        }
-        
-        if (e.key === 'Tab' && !isMovingMode) {
-          e.preventDefault();
-          const nextIndex = (focusedRowIndex + 1) % tasks.length;
-          setFocusedRowIndex(nextIndex);
-          return;
-        }
-        
-        if (e.key === 'Enter' && !e.ctrlKey) {
-          e.preventDefault();
-          setIsMovingMode(!isMovingMode);
-          return;
-        }
-        
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-          e.preventDefault();
-          const direction = e.key === 'ArrowUp' ? -1 : 1;
-          
-          if (isMovingMode) {
-            const newIndex = focusedRowIndex + direction;
-            if (newIndex >= 0 && newIndex < tasks.length) {
-              const newTasks = [...tasks];
-              const [movedTask] = newTasks.splice(focusedRowIndex, 1);
-              newTasks.splice(newIndex, 0, movedTask);
-              setTasks(newTasks);
-              setFocusedRowIndex(newIndex);
-            }
-          } else {
-            const newIndex = focusedRowIndex + direction;
-            if (newIndex >= 0 && newIndex < tasks.length) {
-              setFocusedRowIndex(newIndex);
-            }
-          }
-        }
-      };
-      
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [focusedRowIndex, isMovingMode, tasks, setTasks]);
-    
-    const getRowTransform = (index) => {
-      if (isDropping && index === draggedIndex) {
-        const targetPosition = hoverIndexRef.current;
-        if (targetPosition !== null && targetPosition !== draggedIndex) {
-          const offset = (targetPosition - draggedIndex) * 56;
-          return `translateY(${offset}px)`;
-        }
-        return '';
+    const getPriorityColor = (priority) => {
+      switch(priority) {
+        case 'high': return 'linear-gradient(135deg, #ff6b6b, #ff8787)';
+        case 'medium': return 'linear-gradient(135deg, #ffd93d, #ffed4e)';
+        case 'low': return 'linear-gradient(135deg, #6bcf7f, #8be59e)';
+        default: return 'linear-gradient(135deg, #6c757d, #909aa3)';
       }
-      
-      if (!isDragging || draggedIndex === null || hoverIndex === null) {
-        return '';
-      }
-      
-      if (index === draggedIndex) {
-        return '';
-      }
-      
-      if (hoverIndex === draggedIndex || hoverIndex === draggedIndex + 1) {
-        return '';
-      }
-      
-      if (draggedIndex < hoverIndex) {
-        if (index > draggedIndex && index < hoverIndex) {
-          return 'translateY(-56px)';
-        }
-      } else {
-        if (index < draggedIndex && index >= hoverIndex) {
-          return 'translateY(56px)';
-        }
-      }
-      
-      return '';
     };
     
+    const getStatusColor = (status) => {
+      switch(status) {
+        case 'Terminé': return { bg: 'linear-gradient(135deg, #6bcf7f, #8be59e)', color: '#ffffff' };
+        case 'En cours': return { bg: 'linear-gradient(135deg, #4a9ff5, #6fb3f7)', color: '#ffffff' };
+        case 'À faire': return { bg: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.5)' };
+        case 'Bloqué': return { bg: 'linear-gradient(135deg, #ff6b6b, #ff8787)', color: '#ffffff' };
+        default: return { bg: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.5)' };
+      }
+    };
+    
+    const handleAddNewTask = () => {
+      if (newTask.name.trim()) {
+        const taskToAdd = tableType === 'daily' ? {
+          name: newTask.name.trim(),
+          type: 'daily',
+          date: newTask.date,
+          time: newTask.time,
+          assignee: newTask.assignee,
+          progress: newTask.progress,
+          priority: newTask.priority,
+          status: newTask.status
+        } : {
+          name: newTask.name.trim(),
+          type: 'weekly',
+          startDate: newTask.startDate,
+          endDate: newTask.endDate,
+          assignee: newTask.assignee,
+          progress: newTask.progress,
+          priority: newTask.priority,
+          status: newTask.status
+        };
+        
+        addTask(taskToAdd);
+        setNewTask({ ...newTask, name: '' });
+      }
+    };
+    
+    // Fonctions de drag & drop
     const startDrag = (e, index) => {
-      if (isMovingMode) return;
       e.preventDefault();
       
       setDraggedIndex(index);
@@ -373,7 +324,7 @@ const PlanViewMinimalDark = () => {
           }
           
           newTasks.splice(insertIndex, 0, draggedItem);
-          setTasks(newTasks);
+          updateTasksOrder(newTasks);
           
           setDraggedIndex(null);
           setHoverIndex(null);
@@ -391,45 +342,42 @@ const PlanViewMinimalDark = () => {
       }
     };
     
-    const shouldShowPlaceholder = isDragging && 
-                                  hoverIndex !== null && 
-                                  draggedIndex !== null &&
-                                  hoverIndex !== draggedIndex && 
-                                  hoverIndex !== draggedIndex + 1;
-    
-    const getPlaceholderPosition = () => {
-      if (!shouldShowPlaceholder) return null;
+    const getRowTransform = (index) => {
+      if (isDropping && index === draggedIndex) {
+        const targetPosition = hoverIndexRef.current;
+        if (targetPosition !== null && targetPosition !== draggedIndex) {
+          const offset = (targetPosition - draggedIndex) * 56;
+          return `translateY(${offset}px)`;
+        }
+        return '';
+      }
       
-      let position;
+      if (!isDragging || draggedIndex === null || hoverIndex === null) {
+        return '';
+      }
+      
+      if (index === draggedIndex) {
+        return '';
+      }
+      
+      if (hoverIndex === draggedIndex || hoverIndex === draggedIndex + 1) {
+        return '';
+      }
+      
       if (draggedIndex < hoverIndex) {
-        position = (hoverIndex - 1) * 56;
+        if (index > draggedIndex && index < hoverIndex) {
+          return 'translateY(-56px)';
+        }
       } else {
-        position = hoverIndex * 56;
+        if (index < draggedIndex && index >= hoverIndex) {
+          return 'translateY(56px)';
+        }
       }
       
-      return position + 53;
+      return '';
     };
     
-    const getPriorityColor = (priority) => {
-      switch(priority) {
-        case 'high': return 'linear-gradient(135deg, #ff6b6b, #ff8787)';
-        case 'medium': return 'linear-gradient(135deg, #ffd93d, #ffed4e)';
-        case 'low': return 'linear-gradient(135deg, #6bcf7f, #8be59e)';
-        default: return 'linear-gradient(135deg, #6c757d, #909aa3)';
-      }
-    };
-    
-    const getStatusColor = (status) => {
-      switch(status) {
-        case 'Terminé': return { bg: 'linear-gradient(135deg, #6bcf7f, #8be59e)', color: '#ffffff' };
-        case 'En cours': return { bg: 'linear-gradient(135deg, #4a9ff5, #6fb3f7)', color: '#ffffff' };
-        case 'À faire': return { bg: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.5)' };
-        case 'Bloqué': return { bg: 'linear-gradient(135deg, #ff6b6b, #ff8787)', color: '#ffffff' };
-        default: return { bg: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.5)' };
-      }
-    };
-    
-    const renderCell = (task, column, index) => {
+    const renderCell = (task, column) => {
       const cellStyle = {
         padding: '14px 20px',
         color: 'rgba(255, 255, 255, 0.8)',
@@ -438,182 +386,46 @@ const PlanViewMinimalDark = () => {
       
       const isEditing = editingCell?.taskId === task.id && editingCell?.column === column;
       
-      // Pour l'édition directe
       if (isEditing) {
-        if (column === 'status') {
-          return (
-            <td style={cellStyle}>
-              <select
-                autoFocus
-                value={editingCell.value}
-                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
-                onBlur={() => {
-                  const updatedTasks = tasks.map((t, i) => 
-                    i === index ? { ...t, [column]: editingCell.value } : t
-                  );
-                  setTasks(updatedTasks);
+        return (
+          <td style={cellStyle}>
+            <input
+              type={column === 'date' || column === 'startDate' || column === 'endDate' ? 'date' : 
+                    column === 'time' ? 'time' : 
+                    column === 'progress' ? 'number' : 'text'}
+              autoFocus
+              value={editingCell.value}
+              onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+              onBlur={() => {
+                const updatedTask = { ...task, [column]: editingCell.value };
+                updateTask(updatedTask);
+                setEditingCell(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const updatedTask = { ...task, [column]: editingCell.value };
+                  updateTask(updatedTask);
                   setEditingCell(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const updatedTasks = tasks.map((t, i) => 
-                      i === index ? { ...t, [column]: editingCell.value } : t
-                    );
-                    setTasks(updatedTasks);
-                    setEditingCell(null);
-                  }
-                  if (e.key === 'Escape') {
-                    setEditingCell(null);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '6px 12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '8px',
-                  color: 'rgba(255, 255, 255, 0.95)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              >
-                <option value="À faire">À faire</option>
-                <option value="En cours">En cours</option>
-                <option value="Terminé">Terminé</option>
-                <option value="Bloqué">Bloqué</option>
-              </select>
-            </td>
-          );
-        } else if (column === 'priority') {
-          return (
-            <td style={cellStyle}>
-              <select
-                autoFocus
-                value={editingCell.value}
-                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
-                onBlur={() => {
-                  const updatedTasks = tasks.map((t, i) => 
-                    i === index ? { ...t, [column]: editingCell.value } : t
-                  );
-                  setTasks(updatedTasks);
+                }
+                if (e.key === 'Escape') {
                   setEditingCell(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const updatedTasks = tasks.map((t, i) => 
-                      i === index ? { ...t, [column]: editingCell.value } : t
-                    );
-                    setTasks(updatedTasks);
-                    setEditingCell(null);
-                  }
-                  if (e.key === 'Escape') {
-                    setEditingCell(null);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '6px 12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '8px',
-                  color: 'rgba(255, 255, 255, 0.95)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              >
-                <option value="high">Haute</option>
-                <option value="medium">Moyenne</option>
-                <option value="low">Basse</option>
-              </select>
-            </td>
-          );
-        } else if (column === 'progress') {
-          return (
-            <td style={cellStyle}>
-              <input
-                type="number"
-                autoFocus
-                min="0"
-                max="100"
-                value={editingCell.value}
-                onChange={(e) => setEditingCell({ ...editingCell, value: parseInt(e.target.value) || 0 })}
-                onBlur={() => {
-                  const updatedTasks = tasks.map((t, i) => 
-                    i === index ? { ...t, [column]: editingCell.value } : t
-                  );
-                  setTasks(updatedTasks);
-                  setEditingCell(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const updatedTasks = tasks.map((t, i) => 
-                      i === index ? { ...t, [column]: editingCell.value } : t
-                    );
-                    setTasks(updatedTasks);
-                    setEditingCell(null);
-                  }
-                  if (e.key === 'Escape') {
-                    setEditingCell(null);
-                  }
-                }}
-                style={{
-                  width: '80px',
-                  padding: '6px 12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '8px',
-                  color: 'rgba(255, 255, 255, 0.95)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              />
-            </td>
-          );
-        } else {
-          return (
-            <td style={cellStyle}>
-              <input
-                type={column === 'date' || column === 'startDate' || column === 'endDate' ? 'date' : 
-                      column === 'time' ? 'time' : 'text'}
-                autoFocus
-                value={editingCell.value}
-                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
-                onBlur={() => {
-                  const updatedTasks = tasks.map((t, i) => 
-                    i === index ? { ...t, [column]: editingCell.value } : t
-                  );
-                  setTasks(updatedTasks);
-                  setEditingCell(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const updatedTasks = tasks.map((t, i) => 
-                      i === index ? { ...t, [column]: editingCell.value } : t
-                    );
-                    setTasks(updatedTasks);
-                    setEditingCell(null);
-                  }
-                  if (e.key === 'Escape') {
-                    setEditingCell(null);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '6px 12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '8px',
-                  color: 'rgba(255, 255, 255, 0.95)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              />
-            </td>
-          );
-        }
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '6px 12px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                color: 'rgba(255, 255, 255, 0.95)',
+                fontSize: '14px',
+                outline: 'none'
+              }}
+            />
+          </td>
+        );
       }
       
-      // Affichage normal avec double-clic pour éditer
       switch (column) {
         case 'name':
           return (
@@ -635,7 +447,7 @@ const PlanViewMinimalDark = () => {
           );
           
         case 'status':
-          const statusStyle = getStatusColor(task.status);
+          const statusStyle = getStatusColor(task.status || 'À faire');
           return (
             <td 
               style={{ ...cellStyle, cursor: 'pointer' }}
@@ -648,83 +460,27 @@ const PlanViewMinimalDark = () => {
                 borderRadius: '20px',
                 fontSize: '12px',
                 fontWeight: '600',
-                display: 'inline-block',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
+                display: 'inline-block'
               }}>
-                {task.status}
+                {task.status || 'À faire'}
               </span>
-            </td>
-          );
-          
-        case 'date':
-        case 'time':
-        case 'startDate':
-        case 'endDate':
-          return (
-            <td 
-              style={{ ...cellStyle, cursor: 'pointer' }}
-              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] })}
-            >
-              <span style={{ 
-                color: 'rgba(255, 255, 255, 0.6)',
-                fontSize: '13px'
-              }}>
-                {task[column]}
-              </span>
-            </td>
-          );
-          
-        case 'assignee':
-          return (
-            <td 
-              style={{ ...cellStyle, cursor: 'pointer' }}
-              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] || '' })}
-            >
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: task.assignee ? 
-                    'linear-gradient(135deg, #667eea, #764ba2)' : 
-                    'rgba(255, 255, 255, 0.05)',
-                  border: '2px solid rgba(255, 255, 255, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: 'rgba(255, 255, 255, 0.9)',
-                  boxShadow: task.assignee ? 
-                    '0 8px 16px rgba(102, 126, 234, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)' : 
-                    'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                }}>
-                  {task.assignee ? task.assignee[0].toUpperCase() : '?'}
-                </div>
-                <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}>
-                  {task.assignee || 'Non assigné'}
-                </span>
-              </div>
             </td>
           );
           
         case 'progress':
-          const progressGradient = task.progress >= 75 ? 
+          const progress = task.progress || 0;
+          const progressGradient = progress >= 75 ? 
             'linear-gradient(90deg, #6bcf7f, #8be59e)' : 
-            task.progress >= 50 ? 
+            progress >= 50 ? 
             'linear-gradient(90deg, #4a9ff5, #6fb3f7)' : 
-            task.progress >= 25 ? 
+            progress >= 25 ? 
             'linear-gradient(90deg, #ffd93d, #ffed4e)' : 
             'linear-gradient(90deg, #ff6b6b, #ff8787)';
           
           return (
             <td 
               style={{ ...cellStyle, width: '160px', cursor: 'pointer' }}
-              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: task[column] })}
+              onDoubleClick={() => setEditingCell({ taskId: task.id, column, value: progress })}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
@@ -732,26 +488,18 @@ const PlanViewMinimalDark = () => {
                   height: '8px',
                   background: 'rgba(255, 255, 255, 0.05)',
                   borderRadius: '12px',
-                  overflow: 'hidden',
-                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)'
+                  overflow: 'hidden'
                 }}>
                   <div style={{
-                    width: `${task.progress}%`,
+                    width: `${progress}%`,
                     height: '100%',
                     background: progressGradient,
                     transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    borderRadius: '12px',
-                    boxShadow: '0 2px 8px rgba(255, 255, 255, 0.2)'
+                    borderRadius: '12px'
                   }} />
                 </div>
-                <span style={{ 
-                  fontSize: '12px', 
-                  color: 'rgba(255, 255, 255, 0.9)',
-                  fontWeight: '600',
-                  minWidth: '40px',
-                  textAlign: 'right'
-                }}>
-                  {task.progress}%
+                <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600' }}>
+                  {progress}%
                 </span>
               </div>
             </td>
@@ -769,77 +517,18 @@ const PlanViewMinimalDark = () => {
       }
     };
     
-    const handleAddNewTask = () => {
-      if (newTask.name.trim()) {
-        const taskToAdd = tableType === 'daily' ? {
-          id: Date.now(),
-          name: newTask.name.trim(),
-          date: newTask.date,
-          time: newTask.time,
-          assignee: newTask.assignee,
-          progress: newTask.progress,
-          priority: newTask.priority,
-          status: newTask.status
-        } : {
-          id: Date.now(),
-          name: newTask.name.trim(),
-          startDate: newTask.startDate,
-          endDate: newTask.endDate,
-          assignee: newTask.assignee,
-          progress: newTask.progress,
-          priority: newTask.priority,
-          status: newTask.status
-        };
-        
-        setTasks([...tasks, taskToAdd]);
-        
-        // Réinitialiser seulement le nom, garder les autres valeurs par défaut
-        setNewTask({
-          ...newTask,
-          name: ''
-        });
-      }
-    };
-    
     return (
       <div style={{ marginBottom: '48px' }}>
-        {focusedRowIndex !== null && (
-          <div style={{
-            marginBottom: '20px',
-            padding: '12px 18px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(7px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '16px',
-            fontSize: '12px',
-            color: 'rgba(255, 255, 255, 0.7)',
-            boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.2)'
-          }}>
-            {isMovingMode ? 
-              'Mode déplacement • ↑↓ pour déplacer • Entrée pour désactiver' :
-              'Navigation • TAB ou ↑↓ pour naviguer • Entrée pour déplacer'
-            }
-          </div>
-        )}
-        
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
           marginBottom: '16px'
         }}>
-          <h2 style={{ 
-            fontSize: '20px',
-            fontWeight: '600',
-            color: 'rgba(255, 255, 255, 0.9)'
-          }}>
+          <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
             {title}
           </h2>
-          <span style={{
-            fontSize: '11px',
-            color: 'rgba(255, 255, 255, 0.4)',
-            fontStyle: 'italic'
-          }}>
+          <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', fontStyle: 'italic' }}>
             💡 Double-cliquez sur une cellule pour l'éditer
           </span>
         </div>
@@ -850,11 +539,7 @@ const PlanViewMinimalDark = () => {
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: '24px',
           overflow: 'hidden',
-          position: 'relative',
-          boxShadow: `
-            0 20px 40px rgba(0, 0, 0, 0.3),
-            inset 0 2px 8px rgba(255, 255, 255, 0.05)
-          `
+          position: 'relative'
         }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -880,18 +565,15 @@ const PlanViewMinimalDark = () => {
             <tbody>
               {tasks.map((task, index) => {
                 const isDraggedRow = index === draggedIndex && isDragging;
-                const isFocused = index === focusedRowIndex;
-                const isBeingMoved = isMovingMode && index === focusedRowIndex;
                 
                 return (
                   <tr
                     key={task.id}
-                    onClick={() => setFocusedRowIndex(index)}
                     onContextMenu={(e) => handleContextMenu(e, task, tableType)}
-                    onMouseDown={(e) => !isMovingMode && startDrag(e, index)}
+                    onMouseDown={(e) => startDrag(e, index)}
                     onMouseEnter={(e) => handleMouseEnter(e, index)}
                     style={{
-                      cursor: isMovingMode ? 'default' : (isDragging ? 'grabbing' : 'grab'),
+                      cursor: isDragging ? 'grabbing' : 'grab',
                       height: '56px',
                       transform: getRowTransform(index),
                       transition: isDropping && index === draggedIndex 
@@ -900,25 +582,23 @@ const PlanViewMinimalDark = () => {
                           ? 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)' 
                           : 'background 200ms ease',
                       borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                      background: isFocused ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+                      background: 'transparent',
                       userSelect: 'none',
                       opacity: isDraggedRow && !isDropping ? 0 : 1,
-                      outline: isBeingMoved ? '2px solid rgba(255, 255, 255, 0.2)' : 'none',
-                      outlineOffset: '-2px',
                       position: 'relative'
                     }}
                     onMouseOver={(e) => {
-                      if (!isDragging && !isMovingMode && !isFocused) {
+                      if (!isDragging) {
                         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isDragging && !isMovingMode && !isFocused) {
+                      if (!isDragging) {
                         e.currentTarget.style.background = 'transparent';
                       }
                     }}
                   >
-                    {columns.map(col => renderCell(task, col.key, index))}
+                    {columns.map(col => renderCell(task, col.key))}
                   </tr>
                 );
               })}
@@ -927,221 +607,35 @@ const PlanViewMinimalDark = () => {
               <tr style={{
                 height: '56px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                background: 'rgba(255, 255, 255, 0.02)',
-                cursor: 'pointer'
+                background: 'rgba(255, 255, 255, 0.02)'
               }}>
-                <td style={{
-                  padding: '14px 20px',
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '4px',
-                      height: '28px',
-                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))',
-                      borderRadius: '12px'
-                    }} />
-                    <input
-                      type="text"
-                      value={newTask.name}
-                      onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddNewTask();
-                        }
-                      }}
-                      placeholder="➕ Ajouter une nouvelle tâche..."
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        outline: 'none',
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        fontSize: '14px',
-                        width: '100%',
-                        padding: '4px 0'
-                      }}
-                    />
-                  </div>
-                </td>
-                {tableType === 'daily' ? (
-                  <>
-                    <td style={{ padding: '14px 20px' }}>
-                      <select
-                        value={newTask.status}
-                        onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '6px',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          fontSize: '13px',
-                          outline: 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <option value="À faire">À faire</option>
-                        <option value="En cours">En cours</option>
-                        <option value="Terminé">Terminé</option>
-                      </select>
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <input
-                        type="date"
-                        value={newTask.date}
-                        onChange={(e) => setNewTask({ ...newTask, date: e.target.value })}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '6px',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          fontSize: '13px',
-                          outline: 'none'
-                        }}
-                      />
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <input
-                        type="time"
-                        value={newTask.time}
-                        onChange={(e) => setNewTask({ ...newTask, time: e.target.value })}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '6px',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          fontSize: '13px',
-                          outline: 'none'
-                        }}
-                      />
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td style={{ padding: '14px 20px' }}>
-                      <select
-                        value={newTask.status}
-                        onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '6px',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          fontSize: '13px',
-                          outline: 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <option value="À faire">À faire</option>
-                        <option value="En cours">En cours</option>
-                        <option value="Terminé">Terminé</option>
-                      </select>
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <input
-                        type="date"
-                        value={newTask.startDate}
-                        onChange={(e) => setNewTask({ ...newTask, startDate: e.target.value })}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '6px',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          fontSize: '13px',
-                          outline: 'none'
-                        }}
-                      />
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <input
-                        type="date"
-                        value={newTask.endDate}
-                        onChange={(e) => setNewTask({ ...newTask, endDate: e.target.value })}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '6px',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          fontSize: '13px',
-                          outline: 'none'
-                        }}
-                      />
-                    </td>
-                  </>
-                )}
                 <td style={{ padding: '14px 20px' }}>
                   <input
                     type="text"
-                    placeholder="Responsable"
-                    value={newTask.assignee}
-                    onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
+                    value={newTask.name}
+                    onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddNewTask();
+                      }
+                    }}
+                    placeholder="➕ Ajouter une nouvelle tâche..."
                     style={{
-                      padding: '4px 8px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '6px',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      fontSize: '13px',
+                      background: 'transparent',
+                      border: 'none',
                       outline: 'none',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: '14px',
                       width: '100%'
                     }}
                   />
                 </td>
-                <td style={{ padding: '14px 20px' }}>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={newTask.progress}
-                    onChange={(e) => setNewTask({ ...newTask, progress: parseInt(e.target.value) || 0 })}
-                    style={{
-                      padding: '4px 8px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '6px',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      fontSize: '13px',
-                      outline: 'none',
-                      width: '60px'
-                    }}
-                  />
-                  <span style={{ marginLeft: '8px', color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>%</span>
-                </td>
+                {columns.slice(1).map(col => (
+                  <td key={col.key} style={{ padding: '14px 20px' }}></td>
+                ))}
               </tr>
             </tbody>
           </table>
-          
-          {shouldShowPlaceholder && (
-            <div style={{
-              position: 'absolute',
-              top: `${getPlaceholderPosition()}px`,
-              left: '16px',
-              right: '16px',
-              height: '52px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '2px dashed rgba(255, 255, 255, 0.2)',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'rgba(255, 255, 255, 0.4)',
-              fontSize: '12px',
-              fontWeight: '600',
-              pointerEvents: 'none',
-              zIndex: 10,
-              transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-              backdropFilter: 'blur(7px)'
-            }}>
-              Déposer ici
-            </div>
-          )}
         </div>
       </div>
     );
@@ -1154,7 +648,6 @@ const PlanViewMinimalDark = () => {
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Effet de lumière douce */}
       <div style={{
         position: 'fixed',
         top: '-50%',
@@ -1172,7 +665,6 @@ const PlanViewMinimalDark = () => {
         margin: '0 auto',
         padding: '48px 32px'
       }}>
-        {/* Titre de la page */}
         <div style={{
           marginBottom: '48px',
           textAlign: 'center'
@@ -1203,7 +695,6 @@ const PlanViewMinimalDark = () => {
         <DraggableTable
           title="Tâches quotidiennes"
           tasks={dailyTasks}
-          setTasks={setDailyTasks}
           tableType="daily"
           columns={[
             { key: 'name', label: 'Tâche' },
@@ -1218,7 +709,6 @@ const PlanViewMinimalDark = () => {
         <DraggableTable
           title="Tâches hebdomadaires"
           tasks={weeklyTasks}
-          setTasks={setWeeklyTasks}
           tableType="weekly"
           columns={[
             { key: 'name', label: 'Projet' },
@@ -1231,7 +721,7 @@ const PlanViewMinimalDark = () => {
         />
       </div>
       
-      {/* Menu contextuel glassmorphism */}
+      {/* Menu contextuel */}
       {contextMenu.show && (
         <div
           style={{
@@ -1243,10 +733,7 @@ const PlanViewMinimalDark = () => {
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '16px',
             overflow: 'hidden',
-            boxShadow: `
-              0 16px 32px rgba(0, 0, 0, 0.4),
-              inset 0 2px 8px rgba(255, 255, 255, 0.1)
-            `,
+            boxShadow: '0 16px 32px rgba(0, 0, 0, 0.4)',
             zIndex: 1000
           }}
           onClick={e => e.stopPropagation()}
@@ -1262,8 +749,7 @@ const PlanViewMinimalDark = () => {
               color: 'rgba(255, 255, 255, 0.9)',
               fontSize: '13px',
               textAlign: 'left',
-              cursor: 'pointer',
-              transition: 'all 200ms ease'
+              cursor: 'pointer'
             }}
             onMouseEnter={e => e.target.style.background = 'rgba(255, 255, 255, 0.05)'}
             onMouseLeave={e => e.target.style.background = 'transparent'}
@@ -1282,8 +768,7 @@ const PlanViewMinimalDark = () => {
               color: 'rgba(255, 255, 255, 0.9)',
               fontSize: '13px',
               textAlign: 'left',
-              cursor: 'pointer',
-              transition: 'all 200ms ease'
+              cursor: 'pointer'
             }}
             onMouseEnter={e => {
               e.target.style.background = 'rgba(255, 107, 107, 0.1)';
@@ -1308,8 +793,7 @@ const PlanViewMinimalDark = () => {
               color: 'rgba(255, 255, 255, 0.9)',
               fontSize: '13px',
               textAlign: 'left',
-              cursor: 'pointer',
-              transition: 'all 200ms ease'
+              cursor: 'pointer'
             }}
             onMouseEnter={e => e.target.style.background = 'rgba(255, 255, 255, 0.05)'}
             onMouseLeave={e => e.target.style.background = 'transparent'}
@@ -1319,7 +803,7 @@ const PlanViewMinimalDark = () => {
         </div>
       )}
       
-      {/* Modal d'édition glassmorphism */}
+      {/* Modal d'édition */}
       {editModal.show && (
         <div style={{
           position: 'fixed',
@@ -1341,15 +825,13 @@ const PlanViewMinimalDark = () => {
             borderRadius: '24px',
             padding: '36px',
             width: '560px',
-            maxWidth: '90%',
-            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.5), inset 0 2px 8px rgba(255, 255, 255, 0.1)'
+            maxWidth: '90%'
           }}>
             <h3 style={{
               fontSize: '22px',
               fontWeight: '600',
               marginBottom: '28px',
-              color: 'rgba(255, 255, 255, 0.95)',
-              letterSpacing: '0.3px'
+              color: 'rgba(255, 255, 255, 0.95)'
             }}>
               Éditer la tâche
             </h3>
@@ -1377,284 +859,7 @@ const PlanViewMinimalDark = () => {
                   borderRadius: '12px',
                   color: 'rgba(255, 255, 255, 0.95)',
                   fontSize: '14px',
-                  outline: 'none',
-                  transition: 'all 200ms ease',
-                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                }}
-                onFocus={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                }}
-                onBlur={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                }}
-              />
-            </div>
-            
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                color: 'rgba(255, 255, 255, 0.6)',
-                marginBottom: '8px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Responsable
-              </label>
-              <input
-                type="text"
-                value={editForm.assignee || ''}
-                onChange={e => setEditForm({ ...editForm, assignee: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  color: 'rgba(255, 255, 255, 0.95)',
-                  fontSize: '14px',
-                  outline: 'none',
-                  transition: 'all 200ms ease',
-                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                }}
-                onFocus={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                }}
-                onBlur={e => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                }}
-              />
-            </div>
-            
-            {editModal.tableType === 'daily' ? (
-              <>
-                <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.6)',
-                      marginBottom: '8px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Date
-                    </label>
-                    <input
-                      type="date"
-                      value={editForm.date || ''}
-                      onChange={e => setEditForm({ ...editForm, date: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '12px',
-                        color: 'rgba(255, 255, 255, 0.95)',
-                        fontSize: '14px',
-                        outline: 'none',
-                        boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                      }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.6)',
-                      marginBottom: '8px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Heure
-                    </label>
-                    <input
-                      type="time"
-                      value={editForm.time || ''}
-                      onChange={e => setEditForm({ ...editForm, time: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '12px',
-                        color: 'rgba(255, 255, 255, 0.95)',
-                        fontSize: '14px',
-                        outline: 'none',
-                        boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                      }}
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '12px',
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    marginBottom: '8px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Date début
-                  </label>
-                  <input
-                    type="date"
-                    value={editForm.startDate || ''}
-                    onChange={e => setEditForm({ ...editForm, startDate: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      color: 'rgba(255, 255, 255, 0.95)',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                    }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '12px',
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    marginBottom: '8px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Date fin
-                  </label>
-                  <input
-                    type="date"
-                    value={editForm.endDate || ''}
-                    onChange={e => setEditForm({ ...editForm, endDate: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      color: 'rgba(255, 255, 255, 0.95)',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-            
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '12px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  marginBottom: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  Statut
-                </label>
-                <select
-                  value={editForm.status || 'À faire'}
-                  onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    color: 'rgba(255, 255, 255, 0.95)',
-                    fontSize: '14px',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                  }}
-                >
-                  <option value="À faire" style={{ background: '#141414' }}>À faire</option>
-                  <option value="En cours" style={{ background: '#141414' }}>En cours</option>
-                  <option value="Terminé" style={{ background: '#141414' }}>Terminé</option>
-                  <option value="Bloqué" style={{ background: '#141414' }}>Bloqué</option>
-                </select>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '12px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  marginBottom: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  Priorité
-                </label>
-                <select
-                  value={editForm.priority || 'medium'}
-                  onChange={e => setEditForm({ ...editForm, priority: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    color: 'rgba(255, 255, 255, 0.95)',
-                    fontSize: '14px',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                  }}
-                >
-                  <option value="high" style={{ background: '#141414' }}>Haute</option>
-                  <option value="medium" style={{ background: '#141414' }}>Moyenne</option>
-                  <option value="low" style={{ background: '#141414' }}>Basse</option>
-                </select>
-              </div>
-            </div>
-            
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                color: 'rgba(255, 255, 255, 0.6)',
-                marginBottom: '12px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Progression <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600' }}>{editForm.progress || 0}%</span>
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={editForm.progress || 0}
-                onChange={e => setEditForm({ ...editForm, progress: parseInt(e.target.value) })}
-                style={{
-                  width: '100%',
-                  height: '8px',
-                  WebkitAppearance: 'none',
-                  appearance: 'none',
-                  background: `linear-gradient(to right, 
-                    ${editForm.progress >= 75 ? '#6bcf7f' : 
-                      editForm.progress >= 50 ? '#4a9ff5' :
-                      editForm.progress >= 25 ? '#ffd93d' : '#ff6b6b'} 0%, 
-                    ${editForm.progress >= 75 ? '#6bcf7f' : 
-                      editForm.progress >= 50 ? '#4a9ff5' :
-                      editForm.progress >= 25 ? '#ffd93d' : '#ff6b6b'} ${editForm.progress || 0}%, 
-                    rgba(255, 255, 255, 0.05) ${editForm.progress || 0}%, 
-                    rgba(255, 255, 255, 0.05) 100%)`,
-                  borderRadius: '12px',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)'
+                  outline: 'none'
                 }}
               />
             </div>
@@ -1670,18 +875,7 @@ const PlanViewMinimalDark = () => {
                   color: 'rgba(255, 255, 255, 0.7)',
                   fontSize: '14px',
                   fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 200ms ease',
-                  backdropFilter: 'blur(7px)',
-                  boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-                }}
-                onMouseEnter={e => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                }}
-                onMouseLeave={e => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  cursor: 'pointer'
                 }}
               >
                 Annuler
@@ -1696,17 +890,7 @@ const PlanViewMinimalDark = () => {
                   color: 'white',
                   fontSize: '14px',
                   fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 200ms ease',
-                  boxShadow: '0 8px 20px rgba(102, 126, 234, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
-                }}
-                onMouseEnter={e => {
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 12px 28px rgba(102, 126, 234, 0.5), inset 0 2px 8px rgba(255, 255, 255, 0.3)';
-                }}
-                onMouseLeave={e => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 8px 20px rgba(102, 126, 234, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2)';
+                  cursor: 'pointer'
                 }}
               >
                 Sauvegarder

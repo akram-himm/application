@@ -1,308 +1,344 @@
 import React, { useState, useEffect } from 'react';
 
-const TaskModal = ({ task, tableType, radars, customStatuses, customPriorities, onSave, onClose }) => {
+const TaskModal = ({ isOpen, onClose, onSave, editingTask, radars, taskType, selectedDate }) => {
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    status: '',
-    priority: '',
-    date: new Date().toISOString().split('T')[0],
-    endDate: '',
-    time: '',
+    status: 'todo',
+    priority: 'medium',
     assignee: '',
-    tag: null
+    progress: 0,
+    tag: null,
+    // Pour tâches quotidiennes
+    date: selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    time: '09:00',
+    // Pour tâches hebdomadaires
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    description: ''
   });
-  
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState([]);
 
   useEffect(() => {
-    if (task) {
+    if (editingTask) {
       setFormData({
-        name: task.name || '',
-        description: task.description || '',
-        status: task.status || customStatuses[0]?.id || '',
-        priority: task.priority || customPriorities[0]?.id || '',
-        date: task.date || new Date().toISOString().split('T')[0],
-        endDate: task.endDate || '',
-        time: task.time || '',
-        assignee: task.assignee || '',
-        tag: task.tag || null
+        ...formData,
+        ...editingTask
       });
     } else {
+      // Réinitialiser pour une nouvelle tâche
       setFormData({
         name: '',
-        description: '',
-        status: customStatuses[0]?.id || '',
-        priority: customPriorities[0]?.id || '',
-        date: new Date().toISOString().split('T')[0],
-        endDate: '',
-        time: '',
+        status: 'todo',
+        priority: 'medium',
         assignee: '',
-        tag: null
+        progress: 0,
+        tag: null,
+        date: selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        time: '09:00',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+        description: ''
       });
     }
-  }, [task, customStatuses, customPriorities]);
-
-  // Gestion de l'autocomplete
-  const handleNameChange = (value) => {
-    setFormData({ ...formData, name: value });
-    
-    if (value.length > 0) {
-      const suggestions = [];
-      
-      // Rechercher dans les radars et matières
-      radars.forEach(radar => {
-        if (radar.name.toLowerCase().includes(value.toLowerCase())) {
-          suggestions.push({
-            type: 'radar',
-            id: radar.id,
-            name: radar.name,
-            icon: radar.icon,
-            radar: radar
-          });
-        }
-        
-        radar.subjects?.forEach(subject => {
-          if (subject.name.toLowerCase().includes(value.toLowerCase())) {
-            suggestions.push({
-              type: 'subject',
-              id: subject.id,
-              name: subject.name,
-              path: `${radar.name} > ${subject.name}`,
-              radar: radar,
-              subject: subject
-            });
-          }
-        });
-      });
-      
-      setFilteredSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
-    } else {
-      setShowSuggestions(false);
-    }
-  };
-
-  const handleSuggestionClick = (suggestion) => {
-    if (suggestion.type === 'radar') {
-      setFormData({
-        ...formData,
-        name: suggestion.name,
-        tag: {
-          type: 'radar',
-          radarId: suggestion.radar.id,
-          radarName: suggestion.radar.name
-        }
-      });
-    } else if (suggestion.type === 'subject') {
-      setFormData({
-        ...formData,
-        name: suggestion.name,
-        tag: {
-          type: 'subject',
-          radarId: suggestion.radar.id,
-          radarName: suggestion.radar.name,
-          subjectId: suggestion.subject.id,
-          path: suggestion.path
-        }
-      });
-    }
-    setShowSuggestions(false);
-  };
+  }, [editingTask, selectedDate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Pas de validation bloquante - on sauve directement
-    if (formData.name.trim()) {
-      onSave(formData);
+    if (!formData.name.trim()) {
+      alert('Le nom de la tâche est requis');
+      return;
+    }
+    onSave(formData);
+  };
+
+  const handleRadarChange = (radarId) => {
+    const radar = radars.find(r => r.id === radarId);
+    if (radar) {
+      setFormData({
+        ...formData,
+        tag: {
+          radar: radarId,
+          subject: null
+        }
+      });
+    } else {
+      setFormData({
+        ...formData,
+        tag: null
+      });
     }
   };
 
-  // Fermer les suggestions quand on clique ailleurs
-  useEffect(() => {
-    const handleClickOutside = () => setShowSuggestions(false);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+  const handleSubjectChange = (subjectId) => {
+    if (formData.tag) {
+      setFormData({
+        ...formData,
+        tag: {
+          ...formData.tag,
+          subject: subjectId
+        }
+      });
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 'high': return '#ff6b6b';
+      case 'medium': return '#ffd93d';
+      case 'low': return '#6bcf7f';
+      default: return '#6c757d';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'done': return '#6bcf7f';
+      case 'in-progress': return '#4a9ff5';
+      case 'todo': return '#ff6b6b';
+      default: return '#6c757d';
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={onClose}
+      style={{
+        background: 'rgba(0, 0, 0, 0.7)',
+        backdropFilter: 'blur(5px)'
       }}
     >
-      <div className="bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-lg p-6 w-full max-w-[500px] shadow-2xl">
-        <h2 className="text-xl font-semibold text-white/81 mb-5">
-          {task ? 'Modifier la tâche' : 'Nouvelle tâche'}
-        </h2>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4 relative">
-            <label className="block mb-2 text-white/46 text-sm font-medium">
-              Nom de la tâche
+      <div 
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          borderRadius: '24px',
+          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.5), inset 0 2px 8px rgba(255, 255, 255, 0.1)'
+        }}
+      >
+        {/* Header */}
+        <div className="sticky top-0 px-8 py-6 border-b border-white/10 bg-black/20 backdrop-blur-sm">
+          <h2 className="text-2xl font-bold text-white/90">
+            {editingTask ? 'Modifier la tâche' : 'Nouvelle tâche'}
+          </h2>
+          <p className="text-sm text-white/50 mt-1">
+            {taskType === 'daily' ? 'Tâche quotidienne' : 'Tâche hebdomadaire'}
+          </p>
+        </div>
+
+        {/* Formulaire */}
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          {/* Nom de la tâche */}
+          <div>
+            <label className="block mb-2 text-sm font-medium text-white/70">
+              Nom de la tâche *
             </label>
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              onFocus={() => {
-                if (formData.name.length > 0) {
-                  handleNameChange(formData.name);
-                }
-              }}
-              placeholder="Ex: Réviser le chapitre 3 ou tapez 'bac' pour suggestions"
-              className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150"
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-[rgb(35,131,226)] focus:bg-white/10 transition-all"
+              placeholder="Ex: Révision du code principal"
               autoFocus
             />
-            
-            {/* Suggestions dropdown */}
-            {showSuggestions && (
-              <div className="absolute z-10 w-full mt-1 bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {filteredSuggestions.map((suggestion, index) => (
-                  <button
-                    key={`${suggestion.type}-${suggestion.id}-${index}`}
-                    type="button"
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full px-3 py-2 text-left hover:bg-white/[0.055] transition-colors flex items-center gap-2"
-                  >
-                    {suggestion.type === 'radar' && (
-                      <>
-                        <span className="text-lg">{suggestion.icon}</span>
-                        <span className="text-white/81">{suggestion.name}</span>
-                        <span className="text-xs text-white/46 ml-auto">Radar</span>
-                      </>
-                    )}
-                    {suggestion.type === 'subject' && (
-                      <>
-                        <span className="text-white/81">{suggestion.name}</span>
-                        <span className="text-xs text-white/46 ml-auto">{suggestion.path}</span>
-                      </>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Affichage du tag sélectionné */}
-          {formData.tag && (
-            <div className="mb-4 px-3 py-2 bg-white/[0.055] rounded-md flex items-center justify-between">
-              <span className="text-sm text-white/60">
-                Lié à : {formData.tag.type === 'radar' ? formData.tag.radarName : formData.tag.path}
-              </span>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, tag: null })}
-                className="text-white/30 hover:text-white/60"
-              >
-                ✕
-              </button>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <label className="block mb-2 text-white/46 text-sm font-medium">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Détails de la tâche..."
-              className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150 resize-none"
-              rows="3"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          {/* Ligne de statut et priorité */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block mb-2 text-white/46 text-sm font-medium">
+              <label className="block mb-2 text-sm font-medium text-white/70">
                 Statut
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 focus:outline-none focus:border-white/20 transition-all duration-150"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
+                style={{
+                  borderLeft: `4px solid ${getStatusColor(formData.status)}`
+                }}
               >
-                {customStatuses.map(status => (
-                  <option key={status.id} value={status.id}>{status.name}</option>
-                ))}
+                <option value="todo">À faire</option>
+                <option value="in-progress">En cours</option>
+                <option value="done">Terminé</option>
               </select>
             </div>
-            
+
             <div>
-              <label className="block mb-2 text-white/46 text-sm font-medium">
+              <label className="block mb-2 text-sm font-medium text-white/70">
                 Priorité
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 focus:outline-none focus:border-white/20 transition-all duration-150"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
+                style={{
+                  borderLeft: `4px solid ${getPriorityColor(formData.priority)}`
+                }}
               >
-                {customPriorities.map(priority => (
-                  <option key={priority.id} value={priority.id}>{priority.name}</option>
-                ))}
+                <option value="low">🟢 Faible</option>
+                <option value="medium">🟡 Moyenne</option>
+                <option value="high">🔴 Haute</option>
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block mb-2 text-white/46 text-sm font-medium">
-                Date
-              </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 focus:outline-none focus:border-white/20 transition-all duration-150"
-              />
-            </div>
-            
-            {tableType === 'weekly' && (
+          {/* Dates selon le type */}
+          {taskType === 'daily' ? (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block mb-2 text-white/46 text-sm font-medium">
-                  Date limite
+                <label className="block mb-2 text-sm font-medium text-white/70">
+                  Date
                 </label>
                 <input
                   type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 focus:outline-none focus:border-white/20 transition-all duration-150"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
                 />
               </div>
-            )}
-            
-            {tableType === 'daily' && (
               <div>
-                <label className="block mb-2 text-white/46 text-sm font-medium">
+                <label className="block mb-2 text-sm font-medium text-white/70">
                   Heure
                 </label>
                 <input
                   type="time"
                   value={formData.time}
                   onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 focus:outline-none focus:border-white/20 transition-all duration-150"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
                 />
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-white/70">
+                  Date de début
+                </label>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
+                />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium text-white/70">
+                  Date de fin
+                </label>
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Assignation et progression */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block mb-2 text-sm font-medium text-white/70">
+                Responsable
+              </label>
+              <input
+                type="text"
+                value={formData.assignee}
+                onChange={(e) => setFormData({ ...formData, assignee: e.target.value })}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
+                placeholder="Nom du responsable"
+              />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-white/70">
+                Progression ({formData.progress}%)
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={formData.progress}
+                onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) })}
+                className="w-full"
+                style={{
+                  background: `linear-gradient(to right, rgb(35,131,226) 0%, rgb(35,131,226) ${formData.progress}%, rgba(255,255,255,0.1) ${formData.progress}%, rgba(255,255,255,0.1) 100%)`
+                }}
+              />
+            </div>
           </div>
 
-          <div className="flex gap-2 mt-6 justify-end">
+          {/* Liaison avec un radar */}
+          {radars.length > 0 && (
+            <div>
+              <label className="block mb-2 text-sm font-medium text-white/70">
+                Lier à un radar (optionnel)
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <select
+                  value={formData.tag?.radar || ''}
+                  onChange={(e) => handleRadarChange(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
+                >
+                  <option value="">Aucun radar</option>
+                  {radars.map(radar => (
+                    <option key={radar.id} value={radar.id}>
+                      {radar.icon} {radar.name}
+                    </option>
+                  ))}
+                </select>
+
+                {formData.tag?.radar && (
+                  <select
+                    value={formData.tag?.subject || ''}
+                    onChange={(e) => handleSubjectChange(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 focus:outline-none focus:border-[rgb(35,131,226)] transition-all"
+                  >
+                    <option value="">Aucune matière</option>
+                    {radars
+                      .find(r => r.id === formData.tag.radar)
+                      ?.subjects?.map(subject => (
+                        <option key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </option>
+                      ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          <div>
+            <label className="block mb-2 text-sm font-medium text-white/70">
+              Description (optionnel)
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-[rgb(35,131,226)] transition-all resize-none"
+              rows="3"
+              placeholder="Détails supplémentaires..."
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white/[0.055] text-white/46 border border-white/[0.094] rounded-md text-sm font-medium hover:bg-white/[0.08] transition-all duration-150"
+              className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg transition-all font-medium"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[rgb(35,131,226)] text-white rounded-md text-sm font-medium hover:bg-[rgb(28,104,181)] transition-all duration-150"
+              className="px-6 py-2.5 bg-[rgb(35,131,226)] hover:bg-[rgb(28,104,181)] text-white rounded-lg transition-all font-medium"
             >
-              {task ? 'Sauvegarder' : 'Créer'}
+              {editingTask ? 'Mettre à jour' : 'Créer la tâche'}
             </button>
           </div>
         </form>
