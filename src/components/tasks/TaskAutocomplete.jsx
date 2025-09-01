@@ -170,7 +170,7 @@ const TaskAutocomplete = ({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="w-full bg-transparent text-gray-300 placeholder-gray-500 outline-none focus:text-white"
+        className="w-full bg-transparent text-gray-600 placeholder-gray-500 outline-none focus:text-gray-900"
         autoComplete="off"
       />
       
@@ -198,10 +198,10 @@ const TaskAutocomplete = ({
                   <span className="text-xs text-gray-500">Sans tag</span>
                 )}
                 {suggestion.type === 'radar' && (
-                  <span className="text-xs text-purple-400">Radar</span>
+                  <span className="text-xs text-blue-500">Radar</span>
                 )}
                 {suggestion.type === 'subject' && (
-                  <span className="text-xs text-indigo-400">Matière</span>
+                  <span className="text-xs text-blue-400">Matière</span>
                 )}
               </div>
             </div>

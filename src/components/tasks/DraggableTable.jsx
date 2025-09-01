@@ -21,7 +21,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 // Composant pour une ligne draggable
-const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick, getPriorityColor, getStatusColor, editingCell, onEditingCellChange }) => {
+const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick, getPriorityColor, getStatusColor, editingCell, onEditingCellChange, radars }) => {
   const {
     attributes,
     listeners,
@@ -46,7 +46,7 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
     if (isEditing) {
       if (column === 'status') {
         return (
-          <td className="px-4 py-3">
+          <td className="px-6 py-5">
             <select
               autoFocus
               value={editingCell.value}
@@ -56,7 +56,7 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
                 if (e.key === 'Enter') onCellClick(task, column, editingCell.value);
                 if (e.key === 'Escape') onEditingCellChange(null);
               }}
-              className="px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+              className="px-2 py-1 bg-white border border-[#E4E7EB] rounded text-[#1E1F22] text-sm"
             >
               <option value="À faire">À faire</option>
               <option value="En cours">En cours</option>
@@ -66,7 +66,7 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
         );
       } else if (column === 'priority') {
         return (
-          <td className="px-4 py-3">
+          <td className="px-6 py-5">
             <select
               autoFocus
               value={editingCell.value}
@@ -76,7 +76,7 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
                 if (e.key === 'Enter') onCellClick(task, column, editingCell.value);
                 if (e.key === 'Escape') onEditingCellChange(null);
               }}
-              className="px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+              className="px-2 py-1 bg-white border border-[#E4E7EB] rounded text-[#1E1F22] text-sm"
             >
               <option value="Pas de panique">Pas de panique</option>
               <option value="Important">Important</option>
@@ -86,20 +86,31 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
         );
       } else if (column === 'name') {
         return (
-          <td className="px-4 py-3">
-            <input
-              autoFocus
-              type="text"
-              value={editingCell.value}
-              onChange={(e) => onEditingCellChange({ ...editingCell, value: e.target.value })}
-              onBlur={() => onCellClick(task, column, editingCell.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onCellClick(task, column, editingCell.value);
-                if (e.key === 'Escape') onEditingCellChange(null);
-              }}
-              className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white"
-              onClick={(e) => e.stopPropagation()}
-            />
+          <td className="px-6 py-5">
+            <div className="relative">
+              <TaskAutocomplete
+                value={editingCell.value}
+                onChange={(newValue) => onEditingCellChange({ ...editingCell, value: newValue })}
+                onSubmit={(taskData) => {
+                  // Si c'est un objet avec radar/subject, on met à jour toutes les infos
+                  if (typeof taskData === 'object') {
+                    const updatedTask = {
+                      ...task,
+                      name: taskData.name,
+                      radar: taskData.radar || null,
+                      radarName: taskData.radarName || null,
+                      subject: taskData.subject || null,
+                      subjectName: taskData.subjectName || null
+                    };
+                    onCellClick(updatedTask, 'fullUpdate', updatedTask);
+                  } else {
+                    onCellClick(task, column, editingCell.value);
+                  }
+                }}
+                radars={radars}
+                placeholder=""
+              />
+            </div>
           </td>
         );
       }
@@ -110,24 +121,35 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
       case 'name':
         return (
           <td 
-            className="px-4 py-3"
-            {...attributes}
-            {...listeners}
+            className="px-6 py-5"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
               <div 
-                className="w-1 h-6 rounded-full"
+                className="w-1.5 h-5 rounded-full mt-0.5"
                 style={{ background: getPriorityColor(task.priority) }}
               />
-              <span 
-                className="text-gray-200 cursor-pointer flex-1"
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  onEditingCellChange({ taskId: task.id, column, value });
-                }}
-              >
-                {value}
-              </span>
+              <div className="flex-1">
+                <span 
+                  className="text-[#1E1F22] cursor-pointer block"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    onEditingCellChange({ taskId: task.id, column, value });
+                  }}
+                >
+                  {value}
+                </span>
+                {task.radarName && (
+                  <span className="text-xs text-gray-500 ml-4">
+                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[10px] font-medium">
+                      radar
+                    </span>
+                    <span className="ml-1">› {task.radarName}</span>
+                    {task.subjectName && (
+                      <span> › {task.subjectName}</span>
+                    )}
+                  </span>
+                )}
+              </div>
             </div>
           </td>
         );
@@ -135,13 +157,15 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
       case 'status':
         const statusStyle = getStatusColor(task.status);
         return (
-          <td className="px-4 py-3">
+          <td className="px-6 py-5">
             <span 
-              className="px-3 py-1 rounded-full text-xs font-medium cursor-pointer"
-              style={{ 
-                background: statusStyle.bg,
-                color: statusStyle.color 
-              }}
+              className={`px-2.5 py-1 rounded-full text-xs cursor-pointer transition-all ${
+                value === 'En cours'
+                  ? 'bg-blue-500 text-white shadow-[0_4px_12px_rgba(59,130,246,0.18)]'
+                  : value === 'À faire'
+                    ? 'bg-white border border-gray-200 text-gray-700'
+                    : 'bg-white/70 border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
+              }`}
               onClick={(e) => {
                 e.stopPropagation();
                 onEditingCellChange({ taskId: task.id, column, value });
@@ -153,10 +177,15 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
         );
         
       case 'priority':
+        const isPriorityUrgent = value === 'Très important';
         return (
-          <td className="px-4 py-3">
+          <td className="px-6 py-5">
             <span 
-              className="text-gray-300 cursor-pointer px-2 py-1 hover:bg-gray-700 rounded"
+              className={`cursor-pointer px-2.5 py-1 rounded-full text-xs transition-all ${
+                isPriorityUrgent 
+                  ? 'bg-red-100 text-red-700 border border-red-200 shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
               onClick={(e) => {
                 e.stopPropagation();
                 onEditingCellChange({ taskId: task.id, column, value });
@@ -167,25 +196,9 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
           </td>
         );
         
-      case 'tag':
-        // Afficher le radar et/ou la matière
-        const tagDisplay = task.subjectName 
-          ? `${task.radarName} › ${task.subjectName}`
-          : task.radarName || '';
-        
-        return (
-          <td className="px-4 py-3">
-            {tagDisplay && (
-              <span className="text-xs px-2 py-1 bg-purple-900/30 text-purple-300 rounded-full">
-                {tagDisplay}
-              </span>
-            )}
-          </td>
-        );
-        
       default:
         return (
-          <td className="px-4 py-3 text-gray-300">
+          <td className="px-6 py-4 text-[#6B7280]">
             {value || '-'}
           </td>
         );
@@ -197,9 +210,9 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
       ref={setNodeRef}
       style={style}
       onContextMenu={(e) => onContextMenu(e, task)}
-      className="border-b border-gray-700/50 hover:bg-gray-800/30 transition-colors"
+      className="hover:bg-gray-50 transition"
     >
-      {columns.map(col => (
+      {columns.filter(col => col.key !== 'tag').map(col => (
         <React.Fragment key={col.key}>
           {renderCell(col.key)}
         </React.Fragment>
@@ -262,7 +275,10 @@ const DraggableTable = ({
 
   // Gérer le clic sur une cellule pour édition rapide
   const handleCellClick = (task, column, newValue) => {
-    if (newValue !== undefined && newValue !== task[column]) {
+    if (column === 'fullUpdate') {
+      // Mise à jour complète de la tâche (utilisé pour l'autocomplete)
+      onUpdateTask(newValue);
+    } else if (newValue !== undefined && newValue !== task[column]) {
       onUpdateTask({ ...task, [column]: newValue });
     }
     setEditingCell(null);
@@ -271,10 +287,10 @@ const DraggableTable = ({
   // Couleurs pour les priorités
   const getPriorityColor = (priority) => {
     switch(priority) {
-      case 'Très important': return '#8b5cf6'; // Violet
-      case 'Important': return '#ef4444'; // Rouge
-      case 'Pas de panique': return '#0ea5e9'; // Bleu ciel
-      default: return '#6b7280'; // Gris
+      case 'Très important': return '#EF4444'; // Rouge urgent
+      case 'Important': return '#3B82F6'; // Bleu accent
+      case 'Pas de panique': return '#9CA3AF'; // Gris muted
+      default: return '#9CA3AF'; // Gris muted
     }
   };
 
@@ -282,21 +298,21 @@ const DraggableTable = ({
   const getStatusColor = (status) => {
     switch(status) {
       case 'Terminé': 
-        return { bg: 'rgba(34, 197, 94, 0.2)', color: '#22c55e' };
+        return { bg: '#FFFFFF', color: '#6B7280', border: '#E4E7EB' };
       case 'En cours': 
-        return { bg: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' };
+        return { bg: '#FCE7E7', color: '#EF4444', border: 'rgba(239,68,68,.2)' };
       case 'À faire': 
-        return { bg: 'rgba(107, 114, 128, 0.2)', color: '#9ca3af' };
+        return { bg: '#FFFFFF', color: '#6B7280', border: '#E4E7EB' };
       default: 
-        return { bg: 'rgba(107, 114, 128, 0.2)', color: '#9ca3af' };
+        return { bg: '#FFFFFF', color: '#6B7280', border: '#E4E7EB' };
     }
   };
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl border border-gray-700/50 overflow-hidden">
+    <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] overflow-hidden">
       {/* Header avec effet neumorphism */}
-      <div className="px-6 py-4 bg-gray-900/50 border-b border-gray-700/50">
-        <h2 className="text-xl font-semibold text-white">
+      <div className="px-6 py-5 bg-gradient-to-b from-[#EFEFEF] to-[#F7F7F7] border-b border-gray-200">
+        <h2 className="text-[18px] font-semibold text-[#1E1F22]" style={{ letterSpacing: '-0.01em' }}>
           {title}
         </h2>
       </div>
@@ -309,19 +325,19 @@ const DraggableTable = ({
           onDragEnd={handleDragEnd}
         >
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-700/50 bg-gray-900/30">
-                {columns.map(col => (
+            <thead className="bg-gray-100 text-gray-600">
+              <tr>
+                {columns.filter(col => col.key !== 'tag').map(col => (
                   <th 
                     key={col.key}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    className="px-6 py-4 text-left text-sm font-medium tracking-wide"
                   >
                     {col.label}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-200">
               <SortableContext
                 items={tasks.map(t => t.id)}
                 strategy={verticalListSortingStrategy}
@@ -338,20 +354,24 @@ const DraggableTable = ({
                     getStatusColor={getStatusColor}
                     editingCell={editingCell}
                     onEditingCellChange={setEditingCell}
+                    radars={radars}
                   />
                 ))}
               </SortableContext>
               
               {/* Ligne d'ajout avec autocomplétion */}
-              <tr className="border-t border-gray-700/50 bg-gray-900/20">
-                <td colSpan={columns.length} className="px-4 py-3 relative">
-                  <TaskAutocomplete
-                    value={newTaskName}
-                    onChange={setNewTaskName}
-                    onSubmit={handleAddTask}
-                    radars={radars}
-                    placeholder="➕ Ajouter une tâche..."
-                  />
+              <tr className="border-t border-[#E4E7EB]">
+                <td colSpan={columns.filter(col => col.key !== 'tag').length} className="px-6 py-5 relative">
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-500 text-lg">+</span>
+                    <TaskAutocomplete
+                      value={newTaskName}
+                      onChange={setNewTaskName}
+                      onSubmit={handleAddTask}
+                      radars={radars}
+                      placeholder="Ajouter une tâche..."
+                    />
+                  </div>
                 </td>
               </tr>
             </tbody>

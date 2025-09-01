@@ -67,7 +67,6 @@ const PlanView = () => {
   // Colonnes pour les tableaux
   const dailyColumns = [
     { key: 'name', label: 'Tâche' },
-    { key: 'tag', label: 'Radar/Matière' },
     { key: 'status', label: 'Statut' },
     { key: 'priority', label: 'Priorité' },
     { key: 'date', label: 'Date' },
@@ -76,7 +75,6 @@ const PlanView = () => {
 
   const weeklyColumns = [
     { key: 'name', label: 'Tâche' },
-    { key: 'tag', label: 'Radar/Matière' },
     { key: 'status', label: 'Statut' },
     { key: 'priority', label: 'Priorité' },
     { key: 'startDate', label: 'Début' },
@@ -255,18 +253,17 @@ const PlanView = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950">
-      {/* Effet de fond subtil */}
-      <div className="fixed inset-0 bg-gradient-to-br from-neutral-900/20 via-transparent to-neutral-800/20 pointer-events-none" />
+    <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
+      {/* Effet de fond subtil - supprimé car le gradient est sur le body */}
       
-      <div className="relative p-8 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
+      <div className="max-w-7xl mx-auto p-8 space-y-10">
+        {/* Header héro premium */}
+        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-8">
+          <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">
             Gestion des Tâches
           </h1>
-          <p className="text-gray-400">
-            Organisez vos tâches quotidiennes et hebdomadaires
+          <p className="text-gray-600 mt-3 text-lg">
+            Organisez vos tâches <span className="text-blue-500 font-semibold">quotidiennes</span> et <span className="text-blue-500 font-semibold">hebdomadaires</span>
           </p>
         </div>
 
@@ -278,7 +275,7 @@ const PlanView = () => {
         />
 
         {/* Tableaux */}
-        <div className="space-y-8">
+        <div className="space-y-10">
           {/* Tâches du jour */}
           <DraggableTable
             key="daily-table"
@@ -309,10 +306,12 @@ const PlanView = () => {
         {/* Indicateurs d'aide */}
         <div className="mt-8 text-center space-y-2">
           <div className="text-sm text-gray-500">
-            💡 <strong>Double-clic</strong> sur le nom pour éditer | <strong>Clic</strong> sur statut/priorité pour changer
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+            <strong>Double-clic</strong> sur le nom pour éditer | <strong>Clic</strong> sur statut/priorité pour changer
           </div>
           <div className="text-sm text-gray-500">
-            ⚡ <strong>Ctrl+Enter</strong> pour ajouter une tâche | <strong>Clic droit</strong> pour plus d'options
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+            <strong>Ctrl+Enter</strong> pour ajouter une tâche | <strong>Clic droit</strong> pour plus d'options
           </div>
         </div>
       </div>

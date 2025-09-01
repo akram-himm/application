@@ -4,15 +4,15 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
   const [showFilters, setShowFilters] = useState(false);
 
   const priorities = [
-    { value: 'Pas de panique', color: 'bg-sky-600' },
-    { value: 'Important', color: 'bg-red-600' },
-    { value: 'Très important', color: 'bg-violet-600' }
+    { value: 'Pas de panique', color: '#9CA3AF' },
+    { value: 'Important', color: '#3B82F6' },
+    { value: 'Très important', color: '#EF4444' }
   ];
 
   const statuses = [
-    { value: 'À faire', color: 'bg-gray-600' },
-    { value: 'En cours', color: 'bg-blue-600' },
-    { value: 'Terminé', color: 'bg-green-600' }
+    { value: 'À faire', color: '#6B7280' },
+    { value: 'En cours', color: '#3B82F6' },
+    { value: 'Terminé', color: '#6B7280' }
   ];
 
   const handleFilterChange = (type, value) => {
@@ -40,23 +40,24 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
     <div className="mb-6">
       <button
         onClick={() => setShowFilters(!showFilters)}
-        className="mb-4 px-4 py-2 bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 rounded-lg transition-colors"
+        className="px-3 py-1.5 rounded-full bg-white/70 border border-gray-200 shadow-sm hover:shadow text-sm text-gray-700 transition-all"
       >
-        🔍 Filtres {showFilters ? '▲' : '▼'}
+        <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+        Filtres
       </button>
       
       {showFilters && (
-        <div className="space-y-4 p-4 bg-gray-800/30 rounded-lg">
+        <div className="space-y-4 p-6 bg-white/70 ring-1 ring-gray-200 rounded-2xl shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] mt-4">
           {/* Filtre par priorité */}
           <div>
-            <span className="text-sm font-medium text-gray-400 block mb-2">Priorité:</span>
+            <span className="text-sm font-medium text-[#6B7280] block mb-2">Priorité :</span>
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => onFiltersChange({...filters, priority: 'all'})}
-                className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                className={`px-3 py-1 rounded-full border text-sm transition-all ${
                   filters.priority === 'all' 
-                    ? 'bg-gray-600 text-white' 
-                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                    ? 'bg-[#1E1F22]/90 text-white border-[#1E1F22]' 
+                    : 'bg-white border-[#E4E7EB] text-[#6B7280] hover:bg-[#EFF2F6]'
                 }`}
               >
                 Toutes
@@ -65,11 +66,12 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
                 <button
                   key={p.value}
                   onClick={() => handleFilterChange('priority', p.value)}
-                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
-                    filters.priority === p.value 
-                      ? `${p.color} text-white` 
-                      : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
-                  }`}
+                  className={`px-3 py-1 rounded-full border text-sm transition-all`}
+                  style={{
+                    backgroundColor: filters.priority === p.value ? p.color : '#FFFFFF',
+                    color: filters.priority === p.value ? 'white' : '#6B7280',
+                    borderColor: filters.priority === p.value ? p.color : '#E4E7EB'
+                  }}
                 >
                   {p.value}
                 </button>
@@ -79,14 +81,14 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
 
           {/* Filtre par statut */}
           <div>
-            <span className="text-sm font-medium text-gray-400 block mb-2">Statut:</span>
+            <span className="text-sm font-medium text-[#6B7280] block mb-2">Statut :</span>
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => onFiltersChange({...filters, status: 'all'})}
-                className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                className={`px-3 py-1 rounded-full border text-sm transition-all ${
                   filters.status === 'all' 
-                    ? 'bg-gray-600 text-white' 
-                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                    ? 'bg-[#1E1F22]/90 text-white border-[#1E1F22]' 
+                    : 'bg-white border-[#E4E7EB] text-[#6B7280] hover:bg-[#EFF2F6]'
                 }`}
               >
                 Tous
@@ -95,11 +97,12 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
                 <button
                   key={s.value}
                   onClick={() => handleFilterChange('status', s.value)}
-                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
-                    filters.status === s.value 
-                      ? `${s.color} text-white` 
-                      : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
-                  }`}
+                  className={`px-3 py-1 rounded-full border text-sm transition-all`}
+                  style={{
+                    backgroundColor: filters.status === s.value ? s.color : '#FFFFFF',
+                    color: filters.status === s.value ? 'white' : '#6B7280',
+                    borderColor: filters.status === s.value ? s.color : '#E4E7EB'
+                  }}
                 >
                   {s.value}
                 </button>
@@ -109,14 +112,14 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
 
           {/* Filtre par radar */}
           <div>
-            <span className="text-sm font-medium text-gray-400 block mb-2">Radar:</span>
+            <span className="text-sm font-medium text-[#6B7280] block mb-2">Radar :</span>
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => onFiltersChange({...filters, radar: 'all', subject: 'all'})}
-                className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                className={`px-3 py-1.5 rounded-full text-sm transition-all ${
                   filters.radar === 'all' 
-                    ? 'bg-gray-600 text-white' 
-                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                    ? 'bg-[#1E1F22]/90 text-white border border-[#1E1F22]' 
+                    : 'bg-white/70 text-[#6B7280] border border-gray-200 hover:bg-white/90'
                 }`}
               >
                 Tous
@@ -125,10 +128,10 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
                 <button
                   key={r.id}
                   onClick={() => handleFilterChange('radar', r.id)}
-                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-sm transition-all ${
                     filters.radar === r.id 
-                      ? 'bg-purple-600 text-white' 
-                      : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                      ? 'bg-blue-500 text-white border border-blue-500' 
+                      : 'bg-white/70 text-[#6B7280] border border-gray-200 hover:bg-white/90'
                   }`}
                 >
                   {r.icon} {r.name}
@@ -140,14 +143,14 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
           {/* Filtre par matière (si un radar est sélectionné) */}
           {filters.radar !== 'all' && getSelectedRadar()?.subjects?.length > 0 && (
             <div>
-              <span className="text-sm font-medium text-gray-400 block mb-2">Matière:</span>
+              <span className="text-sm font-medium text-[#6B7280] block mb-2">Matière :</span>
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => onFiltersChange({...filters, subject: 'all'})}
-                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-sm transition-all ${
                     filters.subject === 'all' 
-                      ? 'bg-gray-600 text-white' 
-                      : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                      ? 'bg-[#1E1F22]/90 text-white border border-[#1E1F22]' 
+                      : 'bg-white/70 text-[#6B7280] border border-gray-200 hover:bg-white/90'
                   }`}
                 >
                   Toutes
@@ -156,10 +159,10 @@ const TaskFilters = ({ filters, onFiltersChange, radars }) => {
                   <button
                     key={s.id}
                     onClick={() => handleFilterChange('subject', s.id)}
-                    className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                    className={`px-3 py-1.5 rounded-full text-sm transition-all ${
                       filters.subject === s.id 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                        ? 'bg-blue-500 text-white border border-blue-500' 
+                        : 'bg-white/70 text-[#6B7280] border border-gray-200 hover:bg-white/90'
                     }`}
                   >
                     {s.name}

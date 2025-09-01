@@ -108,44 +108,44 @@ const Dashboard = () => {
     : 0;
 
   return (
-    <div className="min-h-screen bg-[rgb(25,25,25)]">
+    <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
       <div className="max-w-[1200px] mx-auto px-5 py-10">
         {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-[40px] font-bold text-white/81 mb-2">Tableau de bord</h1>
-          <p className="text-white/46 text-base">Vue d'ensemble de votre progression</p>
+        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[20px_20px_40px_rgba(0,0,0,0.08),_-12px_-12px_32px_rgba(255,255,255,0.6)] p-8 mb-10">
+          <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">Tableau de bord</h1>
+          <p className="text-gray-600 mt-3 text-lg">Vue d'ensemble de votre progression</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {/* Progression globale */}
-          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
+          <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white/81">Progression globale</h3>
-              <span className="text-3xl">📊</span>
+              <h3 className="text-lg font-semibold text-[#1E1F22]">Progression globale</h3>
+              <span className="text-2xl text-blue-500">📊</span>
             </div>
-            <div className="text-4xl font-bold text-[rgb(35,131,226)] mb-2">{stats.total}%</div>
-            <p className="text-sm text-white/46">Moyenne de tous les radars</p>
+            <div className="text-4xl font-bold text-blue-500 mb-2">{stats.total}%</div>
+            <p className="text-sm text-gray-600">Moyenne de tous les radars</p>
           </div>
 
           {/* Tâches aujourd'hui */}
-          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
+          <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white/81">Tâches du jour</h3>
-              <span className="text-3xl">📋</span>
+              <h3 className="text-lg font-semibold text-[#1E1F22]">Tâches du jour</h3>
+              <span className="text-2xl text-amber-500">📋</span>
             </div>
-            <div className="text-4xl font-bold text-[rgb(251,191,36)] mb-2">{todayTasks.length}</div>
-            <p className="text-sm text-white/46">À accomplir aujourd'hui</p>
+            <div className="text-4xl font-bold text-amber-500 mb-2">{todayTasks.length}</div>
+            <p className="text-sm text-gray-600">À accomplir aujourd'hui</p>
           </div>
 
           {/* Taux de complétion */}
-          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
+          <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white/81">Taux de complétion</h3>
-              <span className="text-3xl">✅</span>
+              <h3 className="text-lg font-semibold text-[#1E1F22]">Taux de complétion</h3>
+              <span className="text-2xl text-green-500">✅</span>
             </div>
-            <div className="text-4xl font-bold text-[rgb(34,197,94)] mb-2">{taskCompletionRate}%</div>
-            <p className="text-sm text-white/46">{completedTasks} sur {tasks.length} tâches</p>
+            <div className="text-4xl font-bold text-green-500 mb-2">{taskCompletionRate}%</div>
+            <p className="text-sm text-gray-600">{completedTasks} sur {tasks.length} tâches</p>
           </div>
         </div>
 
@@ -170,10 +170,10 @@ const Dashboard = () => {
             <div className="space-y-4">
               {stats.byRadar.length === 0 ? (
                 <div className="text-center py-10">
-                  <p className="text-white/46">Aucun radar créé</p>
+                  <p className="text-gray-600">Aucun radar créé</p>
                   <button
                     onClick={() => navigate('/improvements')}
-                    className="mt-4 px-4 py-2 bg-[rgb(35,131,226)] text-white rounded-lg hover:bg-[rgb(28,104,181)] transition-colors"
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 shadow-sm transition-colors"
                   >
                     Créer un radar
                   </button>

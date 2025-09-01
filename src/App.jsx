@@ -18,7 +18,7 @@ function App() {
     <AppProvider>
       <AkramProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <div className="flex h-screen bg-[rgb(25,25,25)]">
+          <div className="flex h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
             <Sidebar />
             <main className="flex-1 overflow-y-auto">
               <Routes>
