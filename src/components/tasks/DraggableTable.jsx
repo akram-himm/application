@@ -123,14 +123,14 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
           <td 
             className="px-6 py-5"
           >
-            <div className="flex items-start gap-2">
+            <div className="flex items-center gap-2">
               <div 
-                className="w-1.5 h-5 rounded-full mt-0.5"
+                className="w-1.5 h-5 rounded-full flex-shrink-0"
                 style={{ background: getPriorityColor(task.priority) }}
               />
-              <div className="flex-1">
+              <div className="flex-1 flex items-center gap-2">
                 <span 
-                  className="text-[#1E1F22] cursor-pointer block"
+                  className="text-[#1E1F22] cursor-pointer"
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     onEditingCellChange({ taskId: task.id, column, value });
@@ -139,13 +139,13 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
                   {value}
                 </span>
                 {task.radarName && (
-                  <span className="text-xs text-gray-500 ml-4">
+                  <span className="text-xs text-gray-500 flex items-center gap-1">
                     <span className="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[10px] font-medium">
                       radar
                     </span>
-                    <span className="ml-1">› {task.radarName}</span>
+                    <span className="text-[11px]">› {task.radarName}</span>
                     {task.subjectName && (
-                      <span> › {task.subjectName}</span>
+                      <span className="text-[11px]">› {task.subjectName}</span>
                     )}
                   </span>
                 )}

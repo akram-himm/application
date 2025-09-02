@@ -50,49 +50,53 @@ const CalendarView = () => {
     setSelectedDate(today);
   };
   
+  // Sauvegarder les tâches dans localStorage
+  useEffect(() => {
+    localStorage.setItem('weeklyTasks', JSON.stringify(weeklyTasks));
+  }, [weeklyTasks]);
+  
   // Générer les jours du calendrier
   const generateCalendarDays = () => {
+    const days = [];
     const firstDay = getFirstDayOfMonth(currentDate);
     const daysInMonth = getDaysInMonth(currentDate);
     const startDayOfWeek = getDayOfWeek(firstDay);
     
-    const days = [];
-    
     // Jours du mois précédent
-    const prevMonthDays = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).getDate();
+    const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+    const daysInPrevMonth = getDaysInMonth(prevMonth);
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
       days.push({
-        day: prevMonthDays - i,
+        day: daysInPrevMonth - i,
         isCurrentMonth: false,
-        isPrevMonth: true,
-        date: new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, prevMonthDays - i)
+        date: new Date(prevMonth.getFullYear(), prevMonth.getMonth(), daysInPrevMonth - i)
       });
     }
     
     // Jours du mois actuel
-    for (let day = 1; day <= daysInMonth; day++) {
+    for (let i = 1; i <= daysInMonth; i++) {
       days.push({
-        day,
+        day: i,
         isCurrentMonth: true,
-        date: new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+        date: new Date(currentDate.getFullYear(), currentDate.getMonth(), i)
       });
     }
     
     // Jours du mois suivant
     const remainingDays = 42 - days.length; // 6 semaines * 7 jours
-    for (let day = 1; day <= remainingDays; day++) {
+    for (let i = 1; i <= remainingDays; i++) {
+      const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1);
       days.push({
-        day,
+        day: i,
         isCurrentMonth: false,
-        isNextMonth: true,
-        date: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, day)
+        date: new Date(nextMonth.getFullYear(), nextMonth.getMonth(), i)
       });
     }
     
     return days;
   };
   
-  // Vérifier si c'est aujourd'hui
+  // Vérifier si une date est aujourd'hui
   const isToday = (date) => {
     const today = new Date();
     return date.getDate() === today.getDate() &&
@@ -100,36 +104,34 @@ const CalendarView = () => {
            date.getFullYear() === today.getFullYear();
   };
   
-  // Vérifier si c'est la date sélectionnée
+  // Vérifier si une date est sélectionnée
   const isSelected = (date) => {
     return date.getDate() === selectedDate.getDate() &&
            date.getMonth() === selectedDate.getMonth() &&
            date.getFullYear() === selectedDate.getFullYear();
   };
   
-  // Obtenir les tâches pour une date
+  // Obtenir les tâches pour une date donnée
   const getTasksForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return weeklyTasks.filter(task => task.date === dateStr);
+    return weeklyTasks.filter(task => {
+      const taskDate = new Date(task.date);
+      return taskDate.getDate() === date.getDate() &&
+             taskDate.getMonth() === date.getMonth() &&
+             taskDate.getFullYear() === date.getFullYear();
+    });
   };
   
-  // Ajouter une tâche
+  // Ajouter une nouvelle tâche
   const handleAddTask = () => {
-    if (newTask.name.trim()) {
+    if (newTask.name.trim() && selectedDay) {
       const task = {
         id: Date.now(),
         name: newTask.name,
-        date: selectedDay.toISOString().split('T')[0],
         time: newTask.time,
         priority: newTask.priority,
-        status: 'todo',
-        completed: false
+        date: selectedDay.toISOString()
       };
-      
-      const updatedTasks = [...weeklyTasks, task];
-      setWeeklyTasks(updatedTasks);
-      localStorage.setItem('weeklyTasks', JSON.stringify(updatedTasks));
-      
+      setWeeklyTasks([...weeklyTasks, task]);
       setNewTask({ name: '', time: '', priority: 'medium' });
       setShowTaskModal(false);
     }
@@ -137,14 +139,12 @@ const CalendarView = () => {
   
   // Supprimer une tâche
   const handleDeleteTask = (taskId) => {
-    const updatedTasks = weeklyTasks.filter(t => t.id !== taskId);
-    setWeeklyTasks(updatedTasks);
-    localStorage.setItem('weeklyTasks', JSON.stringify(updatedTasks));
+    setWeeklyTasks(weeklyTasks.filter(task => task.id !== taskId));
   };
   
   // Obtenir la couleur de priorité
   const getPriorityColor = (priority) => {
-    switch (priority) {
+    switch(priority) {
       case 'low': return 'bg-green-500';
       case 'medium': return 'bg-yellow-500';
       case 'high': return 'bg-red-500';
@@ -155,50 +155,51 @@ const CalendarView = () => {
   const calendarDays = generateCalendarDays();
   
   return (
-    <div className="h-full bg-[rgb(25,25,25)] overflow-hidden flex flex-col">
-      {/* Header */}
-      <header className="border-b border-[rgb(47,47,47)] px-6 py-4">
+    <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
+      <div className="max-w-7xl mx-auto p-8 space-y-10">
+        {/* Header héro premium */}
+        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-8">
+          <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">Calendrier</h1>
+          <p className="text-gray-600 mt-3 text-lg">Organisez vos <span className="text-blue-500 font-semibold">événements et tâches</span></p>
+        </div>
+        
+        {/* Navigation */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-white/81">Calendrier</h1>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={goToPreviousMonth}
-                className="p-2 hover:bg-white/[0.055] rounded-lg transition-colors"
-              >
-                <svg className="w-5 h-5 text-white/60" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" />
-                </svg>
-              </button>
-              <h2 className="text-lg font-semibold text-white/81 min-w-[200px] text-center">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </h2>
-              <button
-                onClick={goToNextMonth}
-                className="p-2 hover:bg-white/[0.055] rounded-lg transition-colors"
-              >
-                <svg className="w-5 h-5 text-white/60" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z" />
-                </svg>
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={goToPreviousMonth}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-600" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" />
+              </svg>
+            </button>
+            <h2 className="text-lg font-semibold text-[#1E1F22] min-w-[200px] text-center">
+              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
+            <button
+              onClick={goToNextMonth}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-600" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z" />
+              </svg>
+            </button>
           </div>
           <button
             onClick={goToToday}
-            className="px-4 py-2 bg-white/[0.055] text-white/81 rounded-lg hover:bg-white/[0.08] transition-colors"
+            className="px-4 py-2.5 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 shadow-sm transition-all duration-150"
           >
             Aujourd'hui
           </button>
         </div>
-      </header>
-      
-      {/* Calendar Grid */}
-      <div className="flex-1 p-6">
-        <div className="h-full bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg overflow-hidden">
+        
+        {/* Calendar Grid */}
+        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] overflow-hidden">
           {/* Days of week header */}
-          <div className="grid grid-cols-7 bg-[rgb(37,37,37)] border-b border-[rgb(47,47,47)]">
+          <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
             {daysOfWeek.map(day => (
-              <div key={day} className="px-4 py-3 text-center text-sm font-medium text-white/60">
+              <div key={day} className="px-4 py-3 text-center text-sm font-medium text-gray-600">
                 {day}
               </div>
             ))}
@@ -222,16 +223,16 @@ const CalendarView = () => {
                       setShowTaskModal(true);
                     }
                   }}
-                  className={`relative border-r border-b border-[rgb(47,47,47)] p-2 cursor-pointer transition-all hover:bg-white/[0.02] ${
-                    !isCurrentMonth ? 'bg-black/20' : ''
-                  } ${isSelectedDate ? 'bg-white/[0.055]' : ''}`}
+                  className={`relative border-r border-b border-gray-200 p-2 cursor-pointer transition-all hover:bg-gray-50 ${
+                    !isCurrentMonth ? 'bg-gray-100/50' : ''
+                  } ${isSelectedDate ? 'bg-blue-50' : ''}`}
                 >
                   <div className={`text-sm font-medium mb-1 ${
                     isTodayDate 
-                      ? 'text-white bg-[rgb(35,131,226)] w-7 h-7 rounded-full flex items-center justify-center' 
+                      ? 'text-white bg-blue-500 w-7 h-7 rounded-full flex items-center justify-center' 
                       : isCurrentMonth 
-                        ? 'text-white/81' 
-                        : 'text-white/30'
+                        ? 'text-[#1E1F22]' 
+                        : 'text-gray-400'
                   }`}>
                     {dayInfo.day}
                   </div>
@@ -244,11 +245,11 @@ const CalendarView = () => {
                         className="group relative"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/[0.055] rounded text-xs text-white/70 hover:bg-white/[0.08] transition-colors">
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 rounded text-xs text-gray-700 hover:bg-blue-100 transition-colors">
                           <div className={`w-1.5 h-1.5 rounded-full ${getPriorityColor(task.priority)}`} />
                           <span className="truncate flex-1">{task.name}</span>
                           {task.time && (
-                            <span className="text-white/40 text-[10px]">{task.time}</span>
+                            <span className="text-gray-500 text-[10px]">{task.time}</span>
                           )}
                         </div>
                         <button
@@ -262,7 +263,7 @@ const CalendarView = () => {
                       </div>
                     ))}
                     {tasks.length > 3 && (
-                      <div className="text-[10px] text-white/40 px-1.5">
+                      <div className="text-[10px] text-gray-500 px-1.5">
                         +{tasks.length - 3} autres...
                       </div>
                     )}
@@ -278,10 +279,10 @@ const CalendarView = () => {
       {showTaskModal && selectedDay && (
         <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center" onClick={() => setShowTaskModal(false)}>
           <div 
-            className="bg-[rgb(37,37,37)] border border-white/10 rounded-xl shadow-xl p-6 w-[400px]"
+            className="bg-white rounded-2xl ring-1 ring-gray-200 shadow-2xl p-6 w-[400px]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-white/81 mb-4">
+            <h3 className="text-lg font-semibold text-[#1E1F22] mb-4">
               Ajouter une tâche - {selectedDay.toLocaleDateString('fr-FR', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -292,85 +293,54 @@ const CalendarView = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="block mb-2 text-white/60 text-sm">Nom de la tâche</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la tâche</label>
                 <input
                   type="text"
                   value={newTask.name}
-                  onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+                  onChange={(e) => setNewTask({...newTask, name: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[#1E1F22] focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Ex: Réunion équipe"
-                  className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20"
-                  autoFocus
                 />
               </div>
               
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="block mb-2 text-white/60 text-sm">Heure</label>
-                  <input
-                    type="time"
-                    value={newTask.time}
-                    onChange={(e) => setNewTask({ ...newTask, time: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 focus:outline-none focus:border-white/20"
-                  />
-                </div>
-                
-                <div className="flex-1">
-                  <label className="block mb-2 text-white/60 text-sm">Priorité</label>
-                  <select
-                    value={newTask.priority}
-                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 focus:outline-none focus:border-white/20"
-                  >
-                    <option value="low">Basse</option>
-                    <option value="medium">Moyenne</option>
-                    <option value="high">Haute</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Heure (optionnel)</label>
+                <input
+                  type="time"
+                  value={newTask.time}
+                  onChange={(e) => setNewTask({...newTask, time: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[#1E1F22] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
               
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => setShowTaskModal(false)}
-                  className="flex-1 px-4 py-2 bg-white/[0.055] text-white/60 rounded-lg hover:bg-white/[0.08] transition-colors"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
+                <select
+                  value={newTask.priority}
+                  onChange={(e) => setNewTask({...newTask, priority: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[#1E1F22] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleAddTask}
-                  className="flex-1 px-4 py-2 bg-[rgb(35,131,226)] text-white rounded-lg hover:bg-[rgb(28,104,181)] transition-colors"
-                >
-                  Ajouter
-                </button>
+                  <option value="low">Faible</option>
+                  <option value="medium">Moyenne</option>
+                  <option value="high">Haute</option>
+                </select>
               </div>
             </div>
             
-            {/* Liste des tâches existantes pour ce jour */}
-            {getTasksForDate(selectedDay).length > 0 && (
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <h4 className="text-sm font-medium text-white/60 mb-3">Tâches existantes</h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {getTasksForDate(selectedDay).map(task => (
-                    <div key={task.id} className="flex items-center justify-between p-2 bg-white/[0.03] rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)}`} />
-                        <span className="text-sm text-white/70">{task.name}</span>
-                        {task.time && (
-                          <span className="text-xs text-white/40">{task.time}</span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                          <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowTaskModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-[#1E1F22] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAddTask}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Ajouter
+              </button>
+            </div>
           </div>
         </div>
       )}

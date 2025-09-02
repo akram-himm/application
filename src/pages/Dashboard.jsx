@@ -108,7 +108,7 @@ const Dashboard = () => {
     : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
+    <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
       <div className="max-w-[1200px] mx-auto px-5 py-10">
         {/* Header */}
         <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[20px_20px_40px_rgba(0,0,0,0.08),_-12px_-12px_32px_rgba(255,255,255,0.6)] p-8 mb-10">
@@ -152,8 +152,8 @@ const Dashboard = () => {
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Diagramme circulaire */}
-          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white/81 mb-6">Progression par radar</h3>
+          <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-6">
+            <h3 className="text-lg font-semibold text-[#1E1F22] mb-6">Progression par radar</h3>
             <div className="flex items-center justify-center">
               <canvas 
                 ref={canvasRef} 
@@ -165,8 +165,8 @@ const Dashboard = () => {
           </div>
 
           {/* Liste des radars */}
-          <div className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white/81 mb-6">Détail par radar</h3>
+          <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-6">
+            <h3 className="text-lg font-semibold text-[#1E1F22] mb-6">Détail par radar</h3>
             <div className="space-y-4">
               {stats.byRadar.length === 0 ? (
                 <div className="text-center py-10">
@@ -189,10 +189,10 @@ const Dashboard = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-white/81 font-medium">{radar.name}</span>
-                        <span className="text-white/46 text-sm">{radar.progress}%</span>
+                        <span className="text-[#1E1F22] font-medium">{radar.name}</span>
+                        <span className="text-gray-600 text-sm">{radar.progress}%</span>
                       </div>
-                      <div className="h-2 bg-white/[0.055] rounded-full overflow-hidden">
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className="h-full rounded-full transition-all duration-300"
                           style={{ 
@@ -201,7 +201,7 @@ const Dashboard = () => {
                           }}
                         />
                       </div>
-                      <span className="text-xs text-white/46 mt-1">{radar.subjects} matières</span>
+                      <span className="text-xs text-gray-500 mt-1">{radar.subjects} matières</span>
                     </div>
                   </div>
                 ))
@@ -214,29 +214,29 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
           <button
             onClick={() => navigate('/improvements')}
-            className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6 hover:bg-[rgb(37,37,37)] transition-colors text-left"
+            className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.08),_-10px_-10px_20px_rgba(255,255,255,0.6)] transition-all text-left"
           >
             <span className="text-2xl mb-3 block">🎯</span>
-            <h4 className="text-white/81 font-medium mb-1">Gérer les radars</h4>
-            <p className="text-sm text-white/46">Créer et organiser vos domaines</p>
+            <h4 className="text-[#1E1F22] font-medium mb-1">Gérer les radars</h4>
+            <p className="text-sm text-gray-600">Créer et organiser vos domaines</p>
           </button>
 
           <button
             onClick={() => navigate('/plan')}
-            className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6 hover:bg-[rgb(37,37,37)] transition-colors text-left"
+            className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.08),_-10px_-10px_20px_rgba(255,255,255,0.6)] transition-all text-left"
           >
             <span className="text-2xl mb-3 block">📝</span>
-            <h4 className="text-white/81 font-medium mb-1">Planifier</h4>
-            <p className="text-sm text-white/46">Organiser vos tâches</p>
+            <h4 className="text-[#1E1F22] font-medium mb-1">Planifier</h4>
+            <p className="text-sm text-gray-600">Organiser vos tâches</p>
           </button>
 
           <button
             onClick={() => navigate('/calendar')}
-            className="bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-6 hover:bg-[rgb(37,37,37)] transition-colors text-left"
+            className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.08),_-10px_-10px_20px_rgba(255,255,255,0.6)] transition-all text-left"
           >
             <span className="text-2xl mb-3 block">📅</span>
-            <h4 className="text-white/81 font-medium mb-1">Calendrier</h4>
-            <p className="text-sm text-white/46">Vue mensuelle (bientôt)</p>
+            <h4 className="text-[#1E1F22] font-medium mb-1">Calendrier</h4>
+            <p className="text-sm text-gray-600">Vue mensuelle (bientôt)</p>
           </button>
         </div>
       </div>

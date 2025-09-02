@@ -121,51 +121,58 @@ const RadarView = () => {
   }, [contextMenu.show]);
   
   return (
-    <div className="min-h-screen bg-[rgb(25,25,25)]">
-      {/* Navigation */}
-      <nav className="p-5 flex items-center gap-2 text-sm text-white/46">
-        <button onClick={() => navigate('/')} className="hover:text-white/81 transition-colors">
-          Tableau de bord
-        </button>
-        <span>/</span>
-        <span className="text-white/81">{radar.name}</span>
-      </nav>
+    <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
+      <div className="max-w-7xl mx-auto p-8">
+        {/* Navigation */}
+        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-500">
+          <button onClick={() => navigate('/')} className="hover:text-blue-500 transition-colors">
+            Tableau de bord
+          </button>
+          <span>/</span>
+          <button onClick={() => navigate('/improvements')} className="hover:text-blue-500 transition-colors">
+            Améliorations
+          </button>
+          <span>/</span>
+          <span className="text-[#1E1F22] font-medium">{radar.name}</span>
+        </nav>
       
-      {/* Header */}
-      <div className="px-5 mb-5">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-4xl">{radar.icon}</span>
-          <h1 className="text-3xl font-bold text-white/81">{radar.name}</h1>
-        </div>
-        <p className="text-white/46">{radar.description}</p>
-        
-        {/* Progress Bar */}
-        <div className="flex items-center gap-3 mt-4">
-          <div className="flex-1 h-2 bg-white/[0.055] rounded-sm overflow-hidden">
-            <div
-              className="h-full bg-[rgb(35,131,226)] rounded-sm transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
+        {/* Header héro premium */}
+        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-8 mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <span className="text-5xl">{radar.icon}</span>
+            <div>
+              <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">{radar.name}</h1>
+              <p className="text-gray-600 mt-2">{radar.description}</p>
+            </div>
           </div>
-          <span className="text-base font-medium text-white/81">{progress}%</span>
+          
+          {/* Progress Bar */}
+          <div className="flex items-center gap-4 mt-6">
+            <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-lg font-bold text-blue-500">{progress}%</span>
+          </div>
         </div>
-      </div>
       
-      {/* Actions */}
-      <div className="absolute top-5 right-5 flex gap-2 z-50">
-        <button
-          onClick={handleAddSubject}
-          className="flex items-center gap-1.5 px-3 py-2 bg-[rgb(35,131,226)] text-white rounded-lg text-sm font-medium transition-all duration-150 hover:bg-[rgb(28,104,181)]"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
-          </svg>
-          Ajouter
-        </button>
-      </div>
+        {/* Actions */}
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={handleAddSubject}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 shadow-sm transition-all duration-150"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
+            </svg>
+            Ajouter une matière
+          </button>
+        </div>
       
-      {/* Radar Chart */}
-      <div className="relative animate-fadeIn">
+        {/* Radar Chart */}
+        <div className="relative animate-fadeIn">
         <RadarChart
           subjects={subjects}
           hoveredSubject={hoveredSubject}
@@ -184,13 +191,13 @@ const RadarView = () => {
       {/* Context Menu */}
       {contextMenu.show && (
         <div
-          className="fixed bg-[rgb(37,37,37)]/95 backdrop-blur-xl border border-white/10 rounded-lg p-1 shadow-2xl z-[300] animate-scaleIn"
+          className="fixed bg-white rounded-xl ring-1 ring-gray-200 shadow-2xl p-1 z-[300] animate-scaleIn"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={handleEditSubject}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-white/81 rounded-md transition-all duration-150 hover:bg-white/[0.08]"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 rounded-lg transition-all duration-150 hover:bg-gray-100"
           >
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
               <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.226 13.25a4.25 4.25 0 0 1-1.154.734l-2.72.906a.75.75 0 0 1-.95-.95l.906-2.72c.141-.424.415-.81.734-1.154l8.258-8.262zm1.414 1.06a.25.25 0 0 0-.353 0L10.53 5.119l.707.707 1.545-1.545a.25.25 0 0 0 0-.354l-.354-.353zM9.822 5.826 4.31 11.338a2.75 2.75 0 0 0-.475.748l-.51 1.53 1.53-.51a2.75 2.75 0 0 0 .748-.475l5.512-5.512-.707-.707z" />
@@ -199,7 +206,7 @@ const RadarView = () => {
           </button>
           <button
             onClick={handleDeleteSubject}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-white/81 rounded-md transition-all duration-150 hover:bg-white/[0.08]"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 rounded-lg transition-all duration-150 hover:bg-gray-100"
           >
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
               <path d="M6.5 5.5a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5zm4.25 0a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5z" />
@@ -219,6 +226,7 @@ const RadarView = () => {
           editingSubject={editingSubject}
         />
       )}
+      </div>
     </div>
   );
 };

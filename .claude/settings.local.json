@@ -9,7 +9,9 @@
       "Bash(npm install:*)",
       "Bash(cp:*)",
       "Bash(del \"src\\components\\tasks\\TestComponent.jsx\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(dir:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

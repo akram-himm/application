@@ -36,7 +36,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className={`${isCollapsed ? 'w-[50px]' : 'w-[260px]'} h-screen ${altStyle ? 'bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]' : 'bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]'} flex flex-col transition-all duration-200`}>
+    <aside className={`${isCollapsed ? 'w-[50px]' : 'w-[260px]'} h-screen ${altStyle ? 'bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]' : 'bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]'} flex flex-col transition-all duration-200`}>
       {/* Header */}
       <div className="h-14 px-4 flex items-center justify-between border-b border-gray-200/70">
         {!isCollapsed && (
