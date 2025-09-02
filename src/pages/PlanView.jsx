@@ -9,6 +9,9 @@ import ConfirmModal from '../components/tasks/ConfirmModal';
 const PlanView = () => {
   const { tasks, addTask, updateTask, deleteTask, radars } = useContext(AppContext);
   
+  // Vérifier si on doit inverser les styles
+  const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
+  
   // États
   const [filters, setFilters] = useState({
     priority: 'all',
@@ -253,7 +256,7 @@ const PlanView = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
+    <div className={`min-h-screen ${altStyle ? 'bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]' : 'bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]'}`}>
       {/* Effet de fond subtil - supprimé car le gradient est sur le body */}
       
       <div className="max-w-7xl mx-auto p-8 space-y-10">
