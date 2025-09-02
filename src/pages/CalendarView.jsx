@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AppContext } from '../contexts/AppContext';
 
 const CalendarView = () => {
+  const { tasks, addTask, updateTask, deleteTask } = useContext(AppContext);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [newTask, setNewTask] = useState({ name: '', time: '', priority: 'medium' });
   
-  // Charger les tâches de la semaine depuis localStorage
+  // Charger les tâches de la semaine depuis localStorage (pour compatibilité)
   const [weeklyTasks, setWeeklyTasks] = useState(() => {
     const saved = localStorage.getItem('weeklyTasks');
     return saved ? JSON.parse(saved) : [];
@@ -26,6 +28,22 @@ const CalendarView = () => {
   // Obtenir le jour de la semaine (0-6)
   const getDayOfWeek = (date) => {
     return date.getDay();
+  };
+
+  // Vérifier si une date est dans la semaine en cours
+  const isInCurrentWeek = (date) => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const dayOfWeek = now.getDay();
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Lundi = 0
+    startOfWeek.setDate(now.getDate() - diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    return date >= startOfWeek && date <= endOfWeek;
   };
   
   // Jours de la semaine
@@ -124,14 +142,39 @@ const CalendarView = () => {
   // Ajouter une nouvelle tâche
   const handleAddTask = () => {
     if (newTask.name.trim() && selectedDay) {
-      const task = {
+      // Convertir les priorités du calendrier vers le format des tâches
+      const priorityMap = {
+        'low': 'Pas de panique',
+        'medium': 'Important',
+        'high': 'Très important'
+      };
+
+      // Si la date est dans la semaine en cours, créer une tâche hebdomadaire
+      if (isInCurrentWeek(selectedDay)) {
+        const weeklyTask = {
+          id: Date.now(),
+          name: newTask.name,
+          type: 'weekly',
+          status: 'À faire',
+          priority: priorityMap[newTask.priority] || 'Pas de panique',
+          startDate: selectedDay.toISOString().split('T')[0],
+          endDate: '-',  // Date fin vide par défaut
+          time: newTask.time || '-',
+          fromCalendar: true // Marqueur pour identifier que ça vient du calendrier
+        };
+        addTask(weeklyTask); // Ajouter au contexte global
+      }
+      
+      // Toujours ajouter à la liste locale du calendrier
+      const calendarTask = {
         id: Date.now(),
         name: newTask.name,
         time: newTask.time,
         priority: newTask.priority,
         date: selectedDay.toISOString()
       };
-      setWeeklyTasks([...weeklyTasks, task]);
+      setWeeklyTasks([...weeklyTasks, calendarTask]);
+      
       setNewTask({ name: '', time: '', priority: 'medium' });
       setShowTaskModal(false);
     }
@@ -139,7 +182,14 @@ const CalendarView = () => {
   
   // Supprimer une tâche
   const handleDeleteTask = (taskId) => {
+    // Supprimer de la liste locale
     setWeeklyTasks(weeklyTasks.filter(task => task.id !== taskId));
+    
+    // Supprimer aussi du contexte global si la tâche existe
+    const globalTask = tasks.find(t => t.id === taskId && t.fromCalendar);
+    if (globalTask) {
+      deleteTask(taskId);
+    }
   };
   
   // Obtenir la couleur de priorité

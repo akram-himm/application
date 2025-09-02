@@ -29,6 +29,7 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
     transform,
     transition,
     isDragging,
+    setActivatorNodeRef,
   } = useSortable({ id: task.id });
 
   const style = {
@@ -46,41 +47,125 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
       if (column === 'status') {
         return (
           <td className="px-6 py-5">
-            <select
-              autoFocus
-              value={editingCell.value}
-              onChange={(e) => onEditingCellChange({ ...editingCell, value: e.target.value })}
-              onBlur={() => onCellClick(task, column, editingCell.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onCellClick(task, column, editingCell.value);
-                if (e.key === 'Escape') onEditingCellChange(null);
-              }}
-              className="px-2 py-1 bg-white border border-[#E4E7EB] rounded text-[#1E1F22] text-sm"
-            >
-              <option value="À faire">À faire</option>
-              <option value="En cours">En cours</option>
-              <option value="Terminé">Terminé</option>
-            </select>
+            <div className="relative inline-block">
+              <button
+                type="button"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                  editingCell.value === 'En cours'
+                    ? 'bg-blue-500 text-white shadow-[0_2px_8px_rgba(59,130,246,0.25)]'
+                    : editingCell.value === 'À faire'
+                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                      : editingCell.value === 'Terminé'
+                        ? 'bg-green-100 text-green-700 border border-green-200'
+                        : 'bg-gray-100 text-gray-600 border border-gray-200'
+                }`}
+                onClick={() => onEditingCellChange(null)}
+              >
+                {editingCell.value}
+                <svg className="w-3 h-3 opacity-60 rotate-180" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                </svg>
+              </button>
+              <div className="absolute top-[calc(100%+4px)] left-0 z-50 bg-white border border-gray-200 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] overflow-hidden min-w-[120px]">
+                {['À faire', 'En cours', 'Terminé'].map(option => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`block w-full px-3 py-2 text-left text-xs hover:bg-gray-50 transition-colors ${
+                      option === 'En cours'
+                        ? 'text-blue-600 hover:bg-blue-50'
+                        : option === 'À faire'
+                          ? 'text-amber-600 hover:bg-amber-50'
+                          : 'text-green-600 hover:bg-green-50'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCellClick(task, column, option);
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
           </td>
         );
       } else if (column === 'priority') {
         return (
           <td className="px-6 py-5">
-            <select
+            <div className="relative inline-block">
+              <button
+                type="button"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                  editingCell.value === 'Très important'
+                    ? 'bg-red-100 text-red-700 border border-red-200'
+                    : editingCell.value === 'Important'
+                      ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                      : 'bg-gray-100 text-gray-600 border border-gray-200'
+                }`}
+                onClick={() => onEditingCellChange(null)}
+              >
+                {editingCell.value}
+                <svg className="w-3 h-3 opacity-60 rotate-180" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                </svg>
+              </button>
+              <div className="absolute top-[calc(100%+4px)] left-0 z-50 bg-white border border-gray-200 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] overflow-hidden min-w-[140px]">
+                {['Pas de panique', 'Important', 'Très important'].map(option => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`block w-full px-3 py-2 text-left text-xs hover:bg-gray-50 transition-colors ${
+                      option === 'Très important'
+                        ? 'text-red-600 hover:bg-red-50'
+                        : option === 'Important'
+                          ? 'text-orange-600 hover:bg-orange-50'
+                          : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCellClick(task, column, option);
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </td>
+        );
+      } else if (column === 'date' || column === 'startDate' || column === 'endDate') {
+        return (
+          <td className="px-6 py-5">
+            <input
+              type="date"
               autoFocus
-              value={editingCell.value}
+              value={editingCell.value || ''}
               onChange={(e) => onEditingCellChange({ ...editingCell, value: e.target.value })}
               onBlur={() => onCellClick(task, column, editingCell.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onCellClick(task, column, editingCell.value);
                 if (e.key === 'Escape') onEditingCellChange(null);
               }}
-              className="px-2 py-1 bg-white border border-[#E4E7EB] rounded text-[#1E1F22] text-sm"
-            >
-              <option value="Pas de panique">Pas de panique</option>
-              <option value="Important">Important</option>
-              <option value="Très important">Très important</option>
-            </select>
+              className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[#1E1F22] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </td>
+        );
+      } else if (column === 'time') {
+        return (
+          <td className="px-6 py-5">
+            <input
+              type="time"
+              autoFocus
+              value={editingCell.value || ''}
+              onChange={(e) => onEditingCellChange({ ...editingCell, value: e.target.value })}
+              onBlur={() => onCellClick(task, column, editingCell.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onCellClick(task, column, editingCell.value);
+                if (e.key === 'Escape') onEditingCellChange(null);
+              }}
+              className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[#1E1F22] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </td>
         );
       } else if (column === 'name') {
@@ -121,6 +206,9 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
         return (
           <td 
             className="px-6 py-5"
+            ref={setActivatorNodeRef}
+            {...listeners}
+            style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
           >
             <div className="flex items-center gap-2">
               <div 
@@ -156,16 +244,18 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
         );
         
       case 'status':
-        const statusStyle = getStatusColor(task.status);
         return (
           <td className="px-6 py-5">
-            <span 
-              className={`px-2.5 py-1 rounded-full text-xs cursor-pointer transition-all ${
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
                 value === 'En cours'
-                  ? 'bg-blue-500 text-white shadow-[0_4px_12px_rgba(59,130,246,0.18)]'
+                  ? 'bg-blue-500 text-white shadow-[0_2px_8px_rgba(59,130,246,0.25)] hover:bg-blue-600'
                   : value === 'À faire'
-                    ? 'bg-white border border-gray-200 text-gray-700'
-                    : 'bg-white/70 border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
+                    ? 'bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200'
+                    : value === 'Terminé'
+                      ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200'
+                      : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
               }`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -173,19 +263,26 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
               }}
             >
               {value}
-            </span>
+              <svg className="w-3 h-3 opacity-60" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+              </svg>
+            </button>
           </td>
         );
         
       case 'priority':
-        const isPriorityUrgent = value === 'Très important';
         return (
           <td className="px-6 py-5">
-            <span 
-              className={`cursor-pointer px-2.5 py-1 rounded-full text-xs transition-all ${
-                isPriorityUrgent 
-                  ? 'bg-red-100 text-red-700 border border-red-200 shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50'
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                value === 'Très important'
+                  ? 'bg-red-100 text-red-700 border border-red-200 hover:bg-red-200'
+                  : value === 'Important'
+                    ? 'bg-orange-100 text-orange-700 border border-orange-200 hover:bg-orange-200'
+                    : value === 'Pas de panique'
+                      ? 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                      : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
               }`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -193,6 +290,27 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
               }}
             >
               {value}
+              <svg className="w-3 h-3 opacity-60" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+              </svg>
+            </button>
+          </td>
+        );
+        
+      case 'date':
+      case 'time':
+      case 'startDate':
+      case 'endDate':
+        return (
+          <td className="px-6 py-5">
+            <span 
+              className="text-[#6B7280] cursor-pointer hover:text-[#1E1F22] hover:bg-gray-50 px-2 py-1 rounded transition-all"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditingCellChange({ taskId: task.id, column, value: value || '' });
+              }}
+            >
+              {value || <span className="text-gray-400 italic">Cliquer pour ajouter</span>}
             </span>
           </td>
         );
@@ -211,9 +329,8 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       onContextMenu={(e) => onContextMenu(e, task)}
-      className="hover:bg-gray-50 transition cursor-grab active:cursor-grabbing"
+      className="hover:bg-gray-50 transition"
     >
       {columns.filter(col => col.key !== 'tag').map(col => (
         <React.Fragment key={col.key}>

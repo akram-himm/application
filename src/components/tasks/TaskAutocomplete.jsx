@@ -178,30 +178,30 @@ const TaskAutocomplete = ({
       {showSuggestions && suggestions.length > 0 && (
         <div 
           ref={suggestionsRef}
-          className="absolute bottom-full left-0 w-full mb-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden z-50 max-h-64 overflow-y-auto"
+          className="absolute bottom-full left-0 w-full mb-1 bg-white border border-gray-200 rounded-xl shadow-[0_8px_20px_rgba(0,0,0,0.12)] overflow-hidden z-50 max-h-64 overflow-y-auto"
         >
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
               onClick={() => handleSelectSuggestion(suggestion)}
               className={`
-                px-3 py-2 cursor-pointer transition-colors
+                px-3 py-2.5 cursor-pointer transition-all
                 ${index === selectedIndex 
-                  ? 'bg-gray-700 text-white' 
-                  : 'text-gray-300 hover:bg-gray-700/50'
+                  ? 'bg-blue-50 text-blue-600' 
+                  : 'text-gray-700 hover:bg-gray-50'
                 }
               `}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm">{suggestion.label}</span>
+                <span className="text-sm font-medium">{suggestion.label}</span>
                 {suggestion.type === 'none' && (
                   <span className="text-xs text-gray-500">Sans tag</span>
                 )}
                 {suggestion.type === 'radar' && (
-                  <span className="text-xs text-blue-500">Radar</span>
+                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded">Radar</span>
                 )}
                 {suggestion.type === 'subject' && (
-                  <span className="text-xs text-blue-400">Matière</span>
+                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-500 rounded">Matière</span>
                 )}
               </div>
             </div>

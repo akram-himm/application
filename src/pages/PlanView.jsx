@@ -94,8 +94,8 @@ const PlanView = () => {
         type: 'daily',
         status: 'À faire',
         priority: 'Pas de panique',
-        date: new Date().toISOString().split('T')[0],
-        time: '09:00'
+        date: '-',
+        time: '-'
       };
       addTask(newTask);
     } else {
@@ -105,8 +105,8 @@ const PlanView = () => {
         type: 'daily',
         status: 'À faire',
         priority: 'Pas de panique',
-        date: new Date().toISOString().split('T')[0],
-        time: '09:00',
+        date: '-',
+        time: '-',
         radar: taskData.radar || null,
         radarName: taskData.radarName || null,
         subject: taskData.subject || null,
@@ -125,8 +125,6 @@ const PlanView = () => {
 
   // Gestion des tâches hebdomadaires
   const handleAddWeeklyTask = (taskData) => {
-    const today = new Date().toISOString().split('T')[0];
-    
     // Si c'est une string (ancien comportement)
     if (typeof taskData === 'string') {
       const newTask = {
@@ -134,9 +132,9 @@ const PlanView = () => {
         type: 'weekly',
         status: 'À faire',
         priority: 'Pas de panique',
-        startDate: today,
-        endDate: today,
-        time: '09:00'
+        startDate: '-',
+        endDate: '-',
+        time: '-'
       };
       addTask(newTask);
     } else {
@@ -146,9 +144,9 @@ const PlanView = () => {
         type: 'weekly',
         status: 'À faire',
         priority: 'Pas de panique',
-        startDate: today,
-        endDate: today,
-        time: '09:00',
+        startDate: '-',
+        endDate: '-',
+        time: '-',
         radar: taskData.radar || null,
         radarName: taskData.radarName || null,
         subject: taskData.subject || null,
@@ -173,6 +171,8 @@ const PlanView = () => {
   // Gestion du menu contextuel
   const handleContextMenu = (e, task, isWeekly) => {
     e.preventDefault();
+    
+    // Position exacte de la souris
     setContextMenu({
       show: true,
       x: e.clientX,
