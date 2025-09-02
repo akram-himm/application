@@ -35,7 +35,6 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
   };
 
   const renderCell = (column) => {
@@ -125,21 +124,23 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
           >
             <div className="flex items-center gap-2">
               <div 
-                className="w-1.5 h-5 rounded-full flex-shrink-0"
+                className="w-1.5 h-10 rounded-full flex-shrink-0"
                 style={{ background: getPriorityColor(task.priority) }}
               />
-              <div className="flex-1 flex items-center gap-2">
-                <span 
-                  className="text-[#1E1F22] cursor-pointer"
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    onEditingCellChange({ taskId: task.id, column, value });
-                  }}
-                >
-                  {value}
-                </span>
+              <div className="flex-1">
+                <div>
+                  <span 
+                    className="text-[#1E1F22] cursor-pointer"
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      onEditingCellChange({ taskId: task.id, column, value });
+                    }}
+                  >
+                    {value}
+                  </span>
+                </div>
                 {task.radarName && (
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
+                  <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
                     <span className="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[10px] font-medium">
                       radar
                     </span>
@@ -147,7 +148,7 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
                     {task.subjectName && (
                       <span className="text-[11px]">› {task.subjectName}</span>
                     )}
-                  </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -209,8 +210,10 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
     <tr
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       onContextMenu={(e) => onContextMenu(e, task)}
-      className="hover:bg-gray-50 transition"
+      className="hover:bg-gray-50 transition cursor-grab active:cursor-grabbing"
     >
       {columns.filter(col => col.key !== 'tag').map(col => (
         <React.Fragment key={col.key}>
