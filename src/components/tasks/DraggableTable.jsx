@@ -1,7 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import TaskAutocomplete from './TaskAutocomplete';
-import Card from '../ui/Card';
 import {
   DndContext,
   closestCenter,
@@ -430,7 +429,7 @@ const DraggableTable = ({
   };
 
   return (
-    <Card padding="none" className="overflow-hidden">
+    <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] overflow-hidden">
       {/* Header avec effet neumorphism */}
       <div className="px-6 py-5 bg-gradient-to-b from-[#EFEFEF] to-[#F7F7F7] border-b border-gray-200">
         <h2 className="text-[18px] font-semibold text-[#1E1F22]" style={{ letterSpacing: '-0.01em' }}>
@@ -499,7 +498,7 @@ const DraggableTable = ({
           </table>
         </DndContext>
       </div>
-    </Card>
+    </div>
   );
 };
 
