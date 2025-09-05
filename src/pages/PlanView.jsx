@@ -1,16 +1,36 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, memo, useCallback, useMemo } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import DraggableTable from '../components/tasks/DraggableTable';
+import WeeklyCalendarFullCalendar from '../components/tasks/WeeklyCalendarFullCalendar';
 import TaskContextMenu from '../components/tasks/TaskContextMenu';
 import TaskEditModal from '../components/tasks/TaskEditModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ConfirmModal from '../components/tasks/ConfirmModal';
+import { HeaderCard } from '../components/ui/Card';
 
-const PlanView = () => {
+const PlanView = memo(() => {
   const { tasks, addTask, updateTask, deleteTask, radars } = useContext(AppContext);
   
   // Vérifier si on doit inverser les styles
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
+  
+  // État pour les modes d'affichage
+  const [viewMode, setViewMode] = useState({
+    showDaily: true,
+    showWeekly: false
+  });
+  
+  // Fonction pour gérer le changement des modes d'affichage
+  const handleViewModeChange = (mode, checked) => {
+    setViewMode(prev => {
+      const newMode = { ...prev, [mode]: checked };
+      // Empêcher de tout décocher
+      if (!newMode.showDaily && !newMode.showWeekly) {
+        return { ...prev, [mode]: true };
+      }
+      return newMode;
+    });
+  };
   
   // États
   const [filters, setFilters] = useState({
@@ -36,8 +56,8 @@ const PlanView = () => {
     taskToDelete: null
   });
 
-  // Filtrer les tâches selon tous les critères
-  const applyFilters = (taskList) => {
+  // Filtrer les tâches selon tous les critères - Optimisé avec useCallback
+  const applyFilters = useCallback((taskList) => {
     let filtered = taskList;
     
     if (filters.priority !== 'all') {
@@ -57,15 +77,22 @@ const PlanView = () => {
     }
     
     return filtered;
-  };
+  }, [filters]);
 
-  const dailyTasks = applyFilters(
-    tasks.filter(task => !task.type || task.type === 'daily')
-  ).sort((a, b) => (a.order || 0) - (b.order || 0));
+  // Optimiser le calcul des tâches filtrées avec useMemo
+  const dailyTasks = useMemo(() => 
+    applyFilters(
+      tasks.filter(task => !task.type || task.type === 'daily')
+    ).sort((a, b) => (a.order || 0) - (b.order || 0)),
+    [tasks, applyFilters]
+  );
   
-  const weeklyTasks = applyFilters(
-    tasks.filter(task => task.type === 'weekly')
-  ).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const weeklyTasks = useMemo(() =>
+    applyFilters(
+      tasks.filter(task => task.type === 'weekly')
+    ).sort((a, b) => (a.order || 0) - (b.order || 0)),
+    [tasks, applyFilters]
+  );
 
   // Colonnes pour les tableaux
   const dailyColumns = [
@@ -138,19 +165,19 @@ const PlanView = () => {
       };
       addTask(newTask);
     } else {
-      // Nouveau comportement avec radar/matière
+      // Nouveau comportement - préserver toutes les propriétés de taskData
       const newTask = {
-        name: taskData.name,
         type: 'weekly',
         status: 'À faire',
         priority: 'Pas de panique',
         startDate: '-',
         endDate: '-',
         time: '-',
-        radar: taskData.radar || null,
-        radarName: taskData.radarName || null,
-        subject: taskData.subject || null,
-        subjectName: taskData.subjectName || null
+        radar: null,
+        radarName: null,
+        subject: null,
+        subjectName: null,
+        ...taskData // Écraser avec les vraies valeurs de taskData
       };
       addTask(newTask);
     }
@@ -172,11 +199,13 @@ const PlanView = () => {
   const handleContextMenu = (e, task, isWeekly) => {
     e.preventDefault();
     
-    // Position exacte de la souris
+    // Utiliser nativeEvent pour avoir les vraies coordonnées
+    const event = e.nativeEvent || e;
+    
     setContextMenu({
       show: true,
-      x: e.clientX,
-      y: e.clientY,
+      x: event.clientX || e.clientX,
+      y: event.clientY || e.clientY,
       task,
       isWeekly
     });
@@ -193,12 +222,18 @@ const PlanView = () => {
   };
 
   const handleDelete = () => {
-    // Fermer le menu et ouvrir le modal de confirmation
-    setContextMenu({ ...contextMenu, show: false });
-    setConfirmModal({
-      show: true,
-      taskToDelete: contextMenu.task
-    });
+    const taskToDelete = contextMenu.task;
+    
+    // Fermer le menu immédiatement
+    setContextMenu({ show: false, x: 0, y: 0, task: null, isWeekly: false });
+    
+    // Petit délai pour éviter le clignotement
+    setTimeout(() => {
+      setConfirmModal({
+        show: true,
+        taskToDelete: taskToDelete
+      });
+    }, 100);
   };
 
   // Gérer la confirmation de suppression
@@ -242,6 +277,34 @@ const PlanView = () => {
     setEditModal({ show: false, task: null, isWeekly: false });
   };
 
+  // Transfert automatique des tâches du jour - désactivé pour éviter les boucles infinies
+  // Cette fonctionnalité devrait être déclenchée par une action utilisateur ou au chargement initial
+  // useEffect(() => {
+  //   const today = new Date();
+  //   today.setHours(0, 0, 0, 0);
+  //   
+  //   // Chercher les tâches hebdomadaires dont la date est aujourd'hui
+  //   const tasksToTransfer = weeklyTasks.filter(task => {
+  //     if (!task.date) return false;
+  //     const taskDate = new Date(task.date);
+  //     taskDate.setHours(0, 0, 0, 0);
+  //     return taskDate.getTime() === today.getTime() && task.autoTransfer !== false;
+  //   });
+  //   
+  //   // Les marquer comme transférées pour éviter les boucles infinies
+  //   tasksToTransfer.forEach(task => {
+  //     if (!dailyTasks.find(dt => dt.originalWeeklyId === task.id)) {
+  //       const dailyTask = {
+  //         ...task,
+  //         type: 'daily',
+  //         originalWeeklyId: task.id,
+  //         autoTransfer: false
+  //       };
+  //       addTask(dailyTask);
+  //     }
+  //   });
+  // }, []);
+
   // Raccourci clavier Ctrl+Enter pour ajouter une tâche
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -260,15 +323,37 @@ const PlanView = () => {
       {/* Effet de fond subtil - supprimé car le gradient est sur le body */}
       
       <div className="max-w-7xl mx-auto p-8 space-y-10">
-        {/* Header héro premium */}
-        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-8">
+        {/* Header héro premium avec boutons radio */}
+        <HeaderCard className="relative">
           <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">
             Gestion des Tâches
           </h1>
           <p className="text-gray-600 mt-3 text-lg">
             Organisez vos tâches <span className="text-blue-500 font-semibold">quotidiennes</span> et <span className="text-blue-500 font-semibold">hebdomadaires</span>
           </p>
-        </div>
+          
+          {/* Boutons radio pour choisir la vue */}
+          <div className="absolute top-8 right-8 flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={viewMode.showDaily}
+                onChange={(e) => handleViewModeChange('showDaily', e.target.checked)}
+                className="w-4 h-4 text-blue-500 bg-white/70 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Jour</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={viewMode.showWeekly}
+                onChange={(e) => handleViewModeChange('showWeekly', e.target.checked)}
+                className="w-4 h-4 text-blue-500 bg-white/70 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Semaine</span>
+            </label>
+          </div>
+        </HeaderCard>
 
         {/* Filtres */}
         <TaskFilters 
@@ -277,33 +362,35 @@ const PlanView = () => {
           radars={radars}
         />
 
-        {/* Tableaux */}
+        {/* Tableaux selon le mode d'affichage */}
         <div className="space-y-10">
           {/* Tâches du jour */}
-          <DraggableTable
-            key="daily-table"
-            title="Tâches du jour"
-            tasks={dailyTasks}
-            columns={dailyColumns}
-            onUpdateTasks={handleUpdateDailyTasks}
-            onAddTask={handleAddDailyTask}
-            onUpdateTask={updateTask}
-            onDoubleClick={(task, cellIndex) => handleDoubleClick(task, cellIndex, false)}
-            onContextMenu={(e, task) => handleContextMenu(e, task, false)}
-          />
+          {viewMode.showDaily && (
+            <DraggableTable
+              key="daily-table"
+              title="Tâches du jour"
+              tasks={dailyTasks}
+              columns={dailyColumns}
+              onUpdateTasks={handleUpdateDailyTasks}
+              onAddTask={handleAddDailyTask}
+              onUpdateTask={updateTask}
+              onDoubleClick={(task, cellIndex) => handleDoubleClick(task, cellIndex, false)}
+              onContextMenu={(e, task) => handleContextMenu(e, task, false)}
+            />
+          )}
 
-          {/* Tâches de la semaine */}
-          <DraggableTable
-            key="weekly-table"
-            title="Tâches de la semaine"
-            tasks={weeklyTasks}
-            columns={weeklyColumns}
-            onUpdateTasks={handleUpdateWeeklyTasks}
-            onAddTask={handleAddWeeklyTask}
-            onUpdateTask={updateTask}
-            onDoubleClick={(task, cellIndex) => handleDoubleClick(task, cellIndex, true)}
-            onContextMenu={(e, task) => handleContextMenu(e, task, true)}
-          />
+          {/* Planning hebdomadaire */}
+          {viewMode.showWeekly && (
+            <div>
+              <h2 className="text-xl font-semibold text-[#1E1F22] mb-4">Planning de la semaine</h2>
+              <WeeklyCalendarFullCalendar
+                tasks={weeklyTasks}
+                onAddTask={handleAddWeeklyTask}
+                onUpdateTask={updateTask}
+                onDeleteTask={deleteTask}
+              />
+            </div>
+          )}
         </div>
 
         {/* Indicateurs d'aide */}
@@ -349,6 +436,8 @@ const PlanView = () => {
       />
     </div>
   );
-};
+});
+
+PlanView.displayName = 'PlanView';
 
 export default PlanView;

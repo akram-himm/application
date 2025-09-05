@@ -1,8 +1,9 @@
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useContext, useEffect, useRef, memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
+import Card, { HeaderCard, StatCard, ClickableCard } from '../components/ui/Card';
 
-const Dashboard = () => {
+const Dashboard = memo(() => {
   const navigate = useNavigate();
   const { radars, tasks } = useContext(AppContext);
   const canvasRef = useRef(null);
@@ -95,58 +96,64 @@ const Dashboard = () => {
     });
   }, [radars]);
 
-  const stats = calculateGlobalStats();
-  const todayTasks = tasks.filter(task => {
-    const taskDate = new Date(task.date);
-    const today = new Date();
-    return taskDate.toDateString() === today.toDateString();
-  });
+  const stats = useMemo(() => calculateGlobalStats(), [radars]);
+  
+  const todayTasks = useMemo(() => 
+    tasks.filter(task => {
+      const taskDate = new Date(task.date);
+      const today = new Date();
+      return taskDate.toDateString() === today.toDateString();
+    }), [tasks]
+  );
 
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const taskCompletionRate = tasks.length > 0 
-    ? Math.round((completedTasks / tasks.length) * 100)
-    : 0;
+  const { completedTasks, taskCompletionRate } = useMemo(() => {
+    const completed = tasks.filter(task => task.status === 'Terminé').length;
+    const rate = tasks.length > 0 
+      ? Math.round((completed / tasks.length) * 100)
+      : 0;
+    return { completedTasks: completed, taskCompletionRate: rate };
+  }, [tasks]);
 
   return (
-    <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
-      <div className="max-w-[1200px] mx-auto px-5 py-10">
-        {/* Header */}
-        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[20px_20px_40px_rgba(0,0,0,0.08),_-12px_-12px_32px_rgba(255,255,255,0.6)] p-8 mb-10">
+    <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
+      <div className="max-w-7xl mx-auto p-8 space-y-10">
+        {/* Header héro premium */}
+        <HeaderCard>
           <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">Tableau de bord</h1>
           <p className="text-gray-600 mt-3 text-lg">Vue d'ensemble de votre progression</p>
-        </div>
+        </HeaderCard>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Progression globale */}
-          <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6">
+          <Card>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[#1E1F22]">Progression globale</h3>
               <span className="text-2xl text-blue-500">📊</span>
             </div>
             <div className="text-4xl font-bold text-blue-500 mb-2">{stats.total}%</div>
             <p className="text-sm text-gray-600">Moyenne de tous les radars</p>
-          </div>
+          </Card>
 
           {/* Tâches aujourd'hui */}
-          <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6">
+          <Card>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[#1E1F22]">Tâches du jour</h3>
               <span className="text-2xl text-amber-500">📋</span>
             </div>
             <div className="text-4xl font-bold text-amber-500 mb-2">{todayTasks.length}</div>
             <p className="text-sm text-gray-600">À accomplir aujourd'hui</p>
-          </div>
+          </Card>
 
           {/* Taux de complétion */}
-          <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6">
+          <Card>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[#1E1F22]">Taux de complétion</h3>
               <span className="text-2xl text-green-500">✅</span>
             </div>
             <div className="text-4xl font-bold text-green-500 mb-2">{taskCompletionRate}%</div>
             <p className="text-sm text-gray-600">{completedTasks} sur {tasks.length} tâches</p>
-          </div>
+          </Card>
         </div>
 
         {/* Main Content */}
@@ -173,7 +180,7 @@ const Dashboard = () => {
                   <p className="text-gray-600">Aucun radar créé</p>
                   <button
                     onClick={() => navigate('/improvements')}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 shadow-sm transition-colors"
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-sm transition-colors"
                   >
                     Créer un radar
                   </button>
@@ -211,37 +218,39 @@ const Dashboard = () => {
         </div>
 
         {/* Actions rapides */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
-          <button
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <ClickableCard
             onClick={() => navigate('/improvements')}
-            className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.08),_-10px_-10px_20px_rgba(255,255,255,0.6)] transition-all text-left"
+            className="text-left"
           >
             <span className="text-2xl mb-3 block">🎯</span>
             <h4 className="text-[#1E1F22] font-medium mb-1">Gérer les radars</h4>
             <p className="text-sm text-gray-600">Créer et organiser vos domaines</p>
-          </button>
+          </ClickableCard>
 
-          <button
+          <ClickableCard
             onClick={() => navigate('/plan')}
-            className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.08),_-10px_-10px_20px_rgba(255,255,255,0.6)] transition-all text-left"
+            className="text-left"
           >
             <span className="text-2xl mb-3 block">📝</span>
             <h4 className="text-[#1E1F22] font-medium mb-1">Planifier</h4>
             <p className="text-sm text-gray-600">Organiser vos tâches</p>
-          </button>
+          </ClickableCard>
 
-          <button
+          <ClickableCard
             onClick={() => navigate('/calendar')}
-            className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[12px_12px_24px_rgba(0,0,0,0.06),_-8px_-8px_16px_rgba(255,255,255,0.5)] p-6 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.08),_-10px_-10px_20px_rgba(255,255,255,0.6)] transition-all text-left"
+            className="text-left"
           >
             <span className="text-2xl mb-3 block">📅</span>
             <h4 className="text-[#1E1F22] font-medium mb-1">Calendrier</h4>
             <p className="text-sm text-gray-600">Vue mensuelle (bientôt)</p>
-          </button>
+          </ClickableCard>
         </div>
       </div>
     </div>
   );
-};
+});
+
+Dashboard.displayName = 'Dashboard';
 
 export default Dashboard;

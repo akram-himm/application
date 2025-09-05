@@ -18,8 +18,8 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
   const centerY = size / 2;
   const radius = size * 0.4;
 
-  // Toujours afficher 6 axes
-  const FIXED_AXES_COUNT = 6;
+  // Minimum 6 axes, mais peut augmenter selon le nombre de matières
+  const AXES_COUNT = Math.max(6, subjects.length);
 
   const animateRadar = useCallback(() => {
     setAnimationProgress(prev => {
@@ -46,17 +46,6 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     };
   }, [subjects]);
 
-  // Créer un tableau de 6 éléments avec les matières existantes
-  const getAxisData = () => {
-    const axisData = new Array(FIXED_AXES_COUNT).fill(null);
-    subjects.forEach((subject, index) => {
-      if (index < FIXED_AXES_COUNT) {
-        axisData[index] = subject;
-      }
-    });
-    return axisData;
-  };
-
   const drawRadar = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -64,18 +53,17 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, size, size);
     
-    const angleStep = (Math.PI * 2) / FIXED_AXES_COUNT;
-    const axisData = getAxisData();
+    const angleStep = (Math.PI * 2) / AXES_COUNT;
 
-    // Grilles circulaires
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.055)';
+    // Grilles circulaires - couleurs adaptées au thème light
+    ctx.strokeStyle = 'rgba(156, 163, 175, 0.3)'; // gray-400 à 30%
     ctx.lineWidth = 1;
     
     for (let i = 1; i <= 5; i++) {
       ctx.beginPath();
       ctx.globalAlpha = animationProgress;
       
-      for (let j = 0; j < FIXED_AXES_COUNT; j++) {
+      for (let j = 0; j < AXES_COUNT; j++) {
         const angle = j * angleStep - Math.PI / 2;
         const x = centerX + Math.cos(angle) * radius * (i / 5) * animationProgress;
         const y = centerY + Math.sin(angle) * radius * (i / 5) * animationProgress;
@@ -91,11 +79,11 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       ctx.stroke();
     }
     
-    // Axes radiaux (toujours 6)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.094)';
+    // Axes radiaux
+    ctx.strokeStyle = 'rgba(107, 114, 128, 0.4)'; // gray-500 à 40%
     ctx.lineWidth = 1;
     
-    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+    for (let i = 0; i < AXES_COUNT; i++) {
       const angle = i * angleStep - Math.PI / 2;
       ctx.beginPath();
       ctx.globalAlpha = animationProgress;
@@ -108,111 +96,101 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     }
     
     // Forme du radar (seulement pour les matières existantes)
-    const validSubjects = axisData.filter(s => s !== null);
-    if (validSubjects.length > 0) {
-      // Forme remplie - Connecter tous les points en ordre
+    if (subjects.length > 0) {
+      // Forme remplie
       ctx.beginPath();
-      ctx.globalAlpha = 0.1 * animationProgress;
+      ctx.globalAlpha = 0.15 * animationProgress;
       ctx.fillStyle = 'rgb(35, 131, 226)';
       
-      let hasStarted = false;
-      for (let i = 0; i < FIXED_AXES_COUNT; i++) {
-        if (axisData[i]) {
-          const angle = i * angleStep - Math.PI / 2;
-          let value = axisData[i].value;
-          
-          const penalty = penalties.find(p => p.subjectId === axisData[i].id);
-          if (penalty) {
-            value = Math.max(0, value - penalty.penaltyValue);
-          }
-          
-          const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
-          const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
-          
-          if (!hasStarted) {
-            ctx.moveTo(x, y);
-            hasStarted = true;
-          } else {
-            ctx.lineTo(x, y);
-          }
+      subjects.forEach((subject, index) => {
+        const angle = index * angleStep - Math.PI / 2;
+        let value = subject.value;
+        
+        const penalty = penalties.find(p => p.subjectId === subject.id);
+        if (penalty) {
+          value = Math.max(0, value - penalty.penaltyValue);
         }
-      }
+        
+        const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
+        const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
+        
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
       
-      if (hasStarted) {
-        ctx.closePath();
-        ctx.fill();
-      }
+      ctx.closePath();
+      ctx.fill();
       
-      // Bordure de la forme - Connecter tous les points en ordre
+      // Bordure de la forme
       ctx.beginPath();
       ctx.globalAlpha = 1 * animationProgress;
       ctx.strokeStyle = 'rgb(35, 131, 226)';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       
-      hasStarted = false;
-      for (let i = 0; i < FIXED_AXES_COUNT; i++) {
-        if (axisData[i]) {
-          const angle = i * angleStep - Math.PI / 2;
-          let value = axisData[i].value;
-          
-          const penalty = penalties.find(p => p.subjectId === axisData[i].id);
-          if (penalty) {
-            value = Math.max(0, value - penalty.penaltyValue);
-          }
-          
-          const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
-          const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
-          
-          if (!hasStarted) {
-            ctx.moveTo(x, y);
-            hasStarted = true;
-          } else {
-            ctx.lineTo(x, y);
-          }
+      subjects.forEach((subject, index) => {
+        const angle = index * angleStep - Math.PI / 2;
+        let value = subject.value;
+        
+        const penalty = penalties.find(p => p.subjectId === subject.id);
+        if (penalty) {
+          value = Math.max(0, value - penalty.penaltyValue);
         }
-      }
+        
+        const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
+        const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
+        
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
       
-      if (hasStarted) {
-        ctx.closePath();
-        ctx.stroke();
-      }
+      ctx.closePath();
+      ctx.stroke();
       
-      // Points sur les axes et au centre
-      axisData.forEach((subject, index) => {
-        if (subject) {
-          const angle = index * angleStep - Math.PI / 2;
-          let value = subject.value;
-          
-          const penalty = penalties.find(p => p.subjectId === subject.id);
-          let hasPenalty = false;
-          if (penalty) {
-            value = Math.max(0, value - penalty.penaltyValue);
-            hasPenalty = true;
-          }
-          
-          const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
-          const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
-          
-          // Point
-          ctx.beginPath();
-          ctx.globalAlpha = 1;
-          
-          if (hasPenalty) {
-            ctx.fillStyle = 'rgb(251, 191, 36)';
-          } else if (subjects.indexOf(subject) === hoveredSubject) {
-            ctx.fillStyle = 'rgb(35, 131, 226)';
-          } else {
-            ctx.fillStyle = 'white';
-          }
-          
-          ctx.arc(x, y, subjects.indexOf(subject) === hoveredSubject ? 8 : 6, 0, Math.PI * 2);
-          ctx.fill();
-          
-          if (hasPenalty) {
-            ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-          }
+      // Points sur les axes
+      subjects.forEach((subject, index) => {
+        const angle = index * angleStep - Math.PI / 2;
+        let value = subject.value;
+        
+        const penalty = penalties.find(p => p.subjectId === subject.id);
+        let hasPenalty = false;
+        if (penalty) {
+          value = Math.max(0, value - penalty.penaltyValue);
+          hasPenalty = true;
+        }
+        
+        const x = centerX + Math.cos(angle) * radius * (value / 100) * animationProgress;
+        const y = centerY + Math.sin(angle) * radius * (value / 100) * animationProgress;
+        
+        // Point extérieur blanc
+        ctx.beginPath();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'white';
+        ctx.arc(x, y, index === hoveredSubject ? 10 : 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Point intérieur coloré
+        ctx.beginPath();
+        if (hasPenalty) {
+          ctx.fillStyle = 'rgb(251, 191, 36)';
+        } else if (index === hoveredSubject) {
+          ctx.fillStyle = 'rgb(35, 131, 226)';
+        } else {
+          ctx.fillStyle = 'rgb(59, 130, 246)';
+        }
+        ctx.arc(x, y, index === hoveredSubject ? 7 : 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Bordure pour les pénalités
+        if (hasPenalty) {
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
         }
       });
       
@@ -221,14 +199,14 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       if (stackedSubjects && stackedSubjects.length > 0) {
         // Cercle plus grand au centre pour indiquer l'empilement
         ctx.beginPath();
-        ctx.globalAlpha = 0.8;
+        ctx.globalAlpha = 0.9;
         ctx.fillStyle = 'rgb(251, 191, 36)';
-        ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
         ctx.fill();
         
         // Nombre de matières empilées
-        ctx.fillStyle = 'rgb(25, 25, 25)';
-        ctx.font = 'bold 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(stackedSubjects.length.toString(), centerX, centerY);
@@ -241,40 +219,38 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
-    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
+    for (let i = 0; i < AXES_COUNT; i++) {
       const angle = i * angleStep - Math.PI / 2;
       const labelRadius = radius + 30;
       const x = centerX + Math.cos(angle) * labelRadius * animationProgress;
       const y = centerY + Math.sin(angle) * labelRadius * animationProgress;
       
-      if (axisData[i]) {
-        const subject = axisData[i];
+      if (i < subjects.length) {
+        const subject = subjects[i];
         const penalty = penalties.find(p => p.subjectId === subject.id);
         
         if (penalty) {
           ctx.fillStyle = 'rgb(251, 191, 36)';
-        } else if (subjects.indexOf(subject) === hoveredSubject) {
+        } else if (i === hoveredSubject) {
           ctx.fillStyle = 'rgb(35, 131, 226)';
         } else {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.81)';
+          ctx.fillStyle = 'rgb(75, 85, 99)'; // gray-600
         }
         
-        ctx.fillText(subject.name, x, y);
+        // Tronquer le texte s'il est trop long
+        let text = subject.name;
+        if (text.length > 12) {
+          text = text.substring(0, 10) + '...';
+        }
+        ctx.fillText(text, x, y);
       } else {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.fillText('---', x, y);
+        // Axes vides quand moins de 6 matières
+        ctx.fillStyle = 'rgba(156, 163, 175, 0.5)'; // gray-400 à 50%
+        ctx.fillText('—', x, y);
       }
     }
     
-    // Gérer les matières supplémentaires (plus de 6)
-    if (subjects.length > FIXED_AXES_COUNT) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.46)';
-      ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`+${subjects.length - FIXED_AXES_COUNT} matières supplémentaires`, 10, size - 10);
-    }
-    
-  }, [size, centerX, centerY, radius, subjects, hoveredSubject, penalties, animationProgress]);
+  }, [size, centerX, centerY, radius, subjects, hoveredSubject, penalties, animationProgress, AXES_COUNT]);
 
   useEffect(() => {
     drawRadar();
@@ -303,7 +279,7 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     
     // Vérifier d'abord si on clique au centre (matières empilées)
     const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
-    if (distanceFromCenter <= 12) {
+    if (distanceFromCenter <= 14) {
       const stackedSubjects = getStackedSubjectsAtCenter();
       if (stackedSubjects && stackedSubjects.length > 0) {
         e.stopPropagation();
@@ -324,31 +300,27 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     }
     
     // Sinon, vérifier les points sur les axes
-    const angleStep = (Math.PI * 2) / FIXED_AXES_COUNT;
-    const axisData = getAxisData();
+    const angleStep = (Math.PI * 2) / AXES_COUNT;
     
-    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
-      if (axisData[i]) {
-        const angle = i * angleStep - Math.PI / 2;
-        let value = axisData[i].value;
-        
-        const penalty = penalties.find(p => p.subjectId === axisData[i].id);
-        if (penalty) {
-          value = Math.max(0, value - penalty.penaltyValue);
-        }
-        
-        const pointX = centerX + Math.cos(angle) * radius * (value / 100);
-        const pointY = centerY + Math.sin(angle) * radius * (value / 100);
-        
-        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
-        
-        if (distance <= 10) {
-          const subjectIndex = subjects.indexOf(axisData[i]);
-          onSelectSubject(subjectIndex);
-          return;
-        }
+    subjects.forEach((subject, index) => {
+      const angle = index * angleStep - Math.PI / 2;
+      let value = subject.value;
+      
+      const penalty = penalties.find(p => p.subjectId === subject.id);
+      if (penalty) {
+        value = Math.max(0, value - penalty.penaltyValue);
       }
-    }
+      
+      const pointX = centerX + Math.cos(angle) * radius * (value / 100);
+      const pointY = centerY + Math.sin(angle) * radius * (value / 100);
+      
+      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+      
+      if (distance <= 12) {
+        onSelectSubject(index);
+        return;
+      }
+    });
   };
 
   const handleCanvasContextMenu = (e) => {
@@ -360,7 +332,7 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     
     // Vérifier si on fait un clic droit au centre
     const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
-    if (distanceFromCenter <= 12) {
+    if (distanceFromCenter <= 14) {
       const stackedSubjects = getStackedSubjectsAtCenter();
       if (stackedSubjects && stackedSubjects.length > 0) {
         setStackedSubjectsMenu({
@@ -374,31 +346,27 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     }
     
     // Sinon, vérifier les points sur les axes
-    const angleStep = (Math.PI * 2) / FIXED_AXES_COUNT;
-    const axisData = getAxisData();
+    const angleStep = (Math.PI * 2) / AXES_COUNT;
     
-    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
-      if (axisData[i]) {
-        const angle = i * angleStep - Math.PI / 2;
-        let value = axisData[i].value;
-        
-        const penalty = penalties.find(p => p.subjectId === axisData[i].id);
-        if (penalty) {
-          value = Math.max(0, value - penalty.penaltyValue);
-        }
-        
-        const pointX = centerX + Math.cos(angle) * radius * (value / 100);
-        const pointY = centerY + Math.sin(angle) * radius * (value / 100);
-        
-        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
-        
-        if (distance <= 10) {
-          const subjectIndex = subjects.indexOf(axisData[i]);
-          onContextMenu(e, subjectIndex);
-          return;
-        }
+    subjects.forEach((subject, index) => {
+      const angle = index * angleStep - Math.PI / 2;
+      let value = subject.value;
+      
+      const penalty = penalties.find(p => p.subjectId === subject.id);
+      if (penalty) {
+        value = Math.max(0, value - penalty.penaltyValue);
       }
-    }
+      
+      const pointX = centerX + Math.cos(angle) * radius * (value / 100);
+      const pointY = centerY + Math.sin(angle) * radius * (value / 100);
+      
+      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+      
+      if (distance <= 12) {
+        onContextMenu(e, index);
+        return;
+      }
+    });
   };
 
   const handleCanvasMouseMove = (e) => {
@@ -406,15 +374,14 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    const angleStep = (Math.PI * 2) / FIXED_AXES_COUNT;
-    const axisData = getAxisData();
+    const angleStep = (Math.PI * 2) / AXES_COUNT;
     let hovered = null;
     
     // Vérifier d'abord le centre
     const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
     const stackedSubjects = getStackedSubjectsAtCenter();
     
-    if (distanceFromCenter <= 12 && stackedSubjects && stackedSubjects.length > 0) {
+    if (distanceFromCenter <= 14 && stackedSubjects && stackedSubjects.length > 0) {
       canvasRef.current.style.cursor = 'pointer';
       tooltipRef.current.innerHTML = `<div class="text-sm font-semibold">${stackedSubjects.length} matières empilées</div><div class="text-xs opacity-70">Cliquez pour voir la liste</div>`;
       tooltipRef.current.style.display = 'block';
@@ -424,27 +391,25 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     }
     
     // Vérifier les points sur les axes
-    for (let i = 0; i < FIXED_AXES_COUNT; i++) {
-      if (axisData[i]) {
-        const angle = i * angleStep - Math.PI / 2;
-        let value = axisData[i].value;
-        
-        const penalty = penalties.find(p => p.subjectId === axisData[i].id);
-        if (penalty) {
-          value = Math.max(0, value - penalty.penaltyValue);
-        }
-        
-        const pointX = centerX + Math.cos(angle) * radius * (value / 100);
-        const pointY = centerY + Math.sin(angle) * radius * (value / 100);
-        
-        const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
-        
-        if (distance <= 10) {
-          hovered = subjects.indexOf(axisData[i]);
-          break;
-        }
+    subjects.forEach((subject, index) => {
+      const angle = index * angleStep - Math.PI / 2;
+      let value = subject.value;
+      
+      const penalty = penalties.find(p => p.subjectId === subject.id);
+      if (penalty) {
+        value = Math.max(0, value - penalty.penaltyValue);
       }
-    }
+      
+      const pointX = centerX + Math.cos(angle) * radius * (value / 100);
+      const pointY = centerY + Math.sin(angle) * radius * (value / 100);
+      
+      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+      
+      if (distance <= 12) {
+        hovered = index;
+        return;
+      }
+    });
     
     onHoverSubject(hovered);
     canvasRef.current.style.cursor = hovered !== null ? 'pointer' : 'default';
@@ -468,7 +433,7 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       tooltipRef.current.style.display = 'block';
       tooltipRef.current.style.left = e.clientX + 10 + 'px';
       tooltipRef.current.style.top = e.clientY - 10 + 'px';
-    } else if (distanceFromCenter > 10) {
+    } else if (distanceFromCenter > 14) {
       tooltipRef.current.style.display = 'none';
     }
   };
@@ -506,23 +471,23 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       
       <div
         ref={tooltipRef}
-        className="fixed bg-[rgb(37,37,37)] border border-white/[0.094] rounded-lg px-3 py-2 text-white/81 text-sm z-[100] pointer-events-none"
+        className="fixed bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-lg px-3 py-2 text-gray-200 text-sm z-[100] pointer-events-none shadow-xl"
         style={{ display: 'none' }}
       />
       
       {/* Menu pour les matières empilées */}
       {stackedSubjectsMenu && (
         <div
-          className="stacked-subjects-menu fixed bg-[rgb(37,37,37)]/95 backdrop-blur-xl border border-white/10 rounded-lg p-1 shadow-2xl z-[300] animate-scaleIn"
+          className="stacked-subjects-menu fixed bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl p-1 z-[300] animate-scaleIn"
           style={{ left: stackedSubjectsMenu.x, top: stackedSubjectsMenu.y }}
         >
-          <div className="text-xs text-white/46 px-3 py-1.5 border-b border-white/10">
+          <div className="text-xs text-gray-400 px-3 py-1.5 border-b border-gray-700/50">
             Matières au centre
           </div>
           {stackedSubjectsMenu.subjects.map((subject, index) => (
             <button
               key={subject.id}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-white/81 rounded-md transition-all duration-150 hover:bg-white/[0.08]"
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-200 rounded-lg transition-all duration-150 hover:bg-gray-700/50"
               onClick={(e) => {
                 e.stopPropagation();
                 const subjectIndex = subjects.indexOf(subject);
@@ -550,8 +515,8 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       {subjects.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
-            <p className="text-white/46 text-lg mb-2">Aucune matière créée</p>
-            <p className="text-white/30 text-sm">Cliquez sur "Ajouter" pour créer votre première matière</p>
+            <p className="text-gray-500 text-lg mb-2">Aucune matière créée</p>
+            <p className="text-gray-400 text-sm">Cliquez sur "Ajouter une matière" pour commencer</p>
           </div>
         </div>
       )}

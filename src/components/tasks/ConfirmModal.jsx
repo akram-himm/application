@@ -1,35 +1,27 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 
 const ConfirmModal = ({ show, message, onConfirm, onCancel }) => {
   if (!show) return null;
 
   const handleConfirm = () => {
     onConfirm();
-    // Focus l'input après confirmation
-    setTimeout(() => {
-      const input = document.querySelector('input[placeholder*="Ajouter"]');
-      if (input) input.focus();
-    }, 50);
   };
 
   const handleCancel = () => {
     onCancel();
-    // Focus l'input après annulation
-    setTimeout(() => {
-      const input = document.querySelector('input[placeholder*="Ajouter"]');
-      if (input) input.focus();
-    }, 50);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  // Utiliser un portail pour rendre dans body
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60"
         onClick={handleCancel}
       />
       
-      {/* Modal */}
+      {/* Modal - toujours centré dans la viewport */}
       <div className="relative bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 max-w-sm mx-4">
         <p className="text-white mb-6">{message}</p>
         
@@ -48,7 +40,8 @@ const ConfirmModal = ({ show, message, onConfirm, onCancel }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

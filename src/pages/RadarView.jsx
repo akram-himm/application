@@ -6,6 +6,7 @@ import RadarChart from '../components/radar/RadarChart';
 import AkramControl from '../components/radar/AkramControl';
 import FloatingAlert from '../components/radar/FloatingAlert';
 import SubjectModal from '../components/radar/SubjectModal';
+import { HeaderCard } from '../components/ui/Card';
 
 const RadarView = () => {
   const { radarId } = useParams();
@@ -137,7 +138,7 @@ const RadarView = () => {
         </nav>
       
         {/* Header héro premium */}
-        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-8 mb-8">
+        <HeaderCard className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <span className="text-5xl">{radar.icon}</span>
             <div>
@@ -156,7 +157,7 @@ const RadarView = () => {
             </div>
             <span className="text-lg font-bold text-blue-500">{progress}%</span>
           </div>
-        </div>
+        </HeaderCard>
       
         {/* Actions */}
         <div className="flex justify-end mb-6">
@@ -191,28 +192,26 @@ const RadarView = () => {
       {/* Context Menu */}
       {contextMenu.show && (
         <div
-          className="fixed bg-white rounded-xl ring-1 ring-gray-200 shadow-2xl p-1 z-[300] animate-scaleIn"
+          className="fixed z-[100] bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden min-w-[200px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={handleEditSubject}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 rounded-lg transition-all duration-150 hover:bg-gray-100"
+            className="w-full px-4 py-3 text-left text-gray-200 hover:bg-gray-700/50 hover:text-white transition-colors flex items-center gap-3"
           >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.226 13.25a4.25 4.25 0 0 1-1.154.734l-2.72.906a.75.75 0 0 1-.95-.95l.906-2.72c.141-.424.415-.81.734-1.154l8.258-8.262zm1.414 1.06a.25.25 0 0 0-.353 0L10.53 5.119l.707.707 1.545-1.545a.25.25 0 0 0 0-.354l-.354-.353zM9.822 5.826 4.31 11.338a2.75 2.75 0 0 0-.475.748l-.51 1.53 1.53-.51a2.75 2.75 0 0 0 .748-.475l5.512-5.512-.707-.707z" />
-            </svg>
-            Modifier
+            <span className="text-lg">✏️</span>
+            <span>Modifier</span>
           </button>
+          
+          <div className="h-px bg-gray-700/50" />
+          
           <button
             onClick={handleDeleteSubject}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 rounded-lg transition-all duration-150 hover:bg-gray-100"
+            className="w-full px-4 py-3 text-left text-gray-200 hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center gap-3"
           >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M6.5 5.5a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5zm4.25 0a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5z" />
-              <path d="M12 2.75a.75.75 0 0 1 .75.75v.5h.75a.75.75 0 0 1 0 1.5h-.5v7a2.25 2.25 0 0 1-2.25 2.25h-5.5A2.25 2.25 0 0 1 3 12.5v-7h-.5a.75.75 0 0 1 0-1.5h.75v-.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75h1.5zm-7.5.75v-.25h5v.25h-5zm7 2.5h-7v7a.75.75 0 0 0 .75.75h5.5a.75.75 0 0 0 .75-.75v-7z" />
-            </svg>
-            Supprimer
+            <span className="text-lg">🗑️</span>
+            <span>Supprimer</span>
           </button>
         </div>
       )}

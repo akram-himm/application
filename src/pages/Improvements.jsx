@@ -2,10 +2,11 @@ import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 import RadarModal from '../components/dashboard/RadarModal';
+import Card, { HeaderCard } from '../components/ui/Card';
 
 const Improvements = () => {
   const navigate = useNavigate();
-  const { radars, addRadar, updateRadar, deleteRadar } = useContext(AppContext);
+  const { radars, addRadar, updateRadar, deleteRadar, setRadars } = useContext(AppContext);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRadar, setEditingRadar] = useState(null);
   const [draggedCard, setDraggedCard] = useState(null);
@@ -83,8 +84,8 @@ const Improvements = () => {
     const insertIndex = dropTargetIndex > draggedIndex ? dropTargetIndex - 1 : dropTargetIndex;
     newRadars.splice(insertIndex, 0, removed);
     
-    // Ici vous devriez appeler une fonction pour réorganiser les radars
-    // Par exemple: reorderRadars(newRadars);
+    // Réorganiser les radars
+    reorderRadars(newRadars);
   };
 
   const openModal = (radar = null) => {
@@ -123,14 +124,18 @@ const Improvements = () => {
     return Math.round(totalProgress / radar.subjects.length);
   };
 
+  const reorderRadars = (newRadars) => {
+    setRadars(newRadars);
+  };
+
   return (
     <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
       <div className="max-w-7xl mx-auto p-8 space-y-10">
         {/* Header héro premium */}
-        <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-8">
+        <HeaderCard>
           <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">Améliorations</h1>
           <p className="text-gray-600 mt-3 text-lg">Gérez vos <span className="text-blue-500 font-semibold">différents domaines</span> de vie</p>
-        </div>
+        </HeaderCard>
 
         {/* Toolbar */}
         <div className="flex items-center mb-6 gap-3">
@@ -148,17 +153,18 @@ const Improvements = () => {
         {/* Radar Grid */}
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
           {radars.length === 0 ? (
-            <div className="col-span-full text-center py-20 rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)]">
+            <Card className="col-span-full text-center py-20">
               <div className="text-6xl mb-4">🎯</div>
               <p className="text-gray-600 text-lg font-medium">Aucun radar créé</p>
               <p className="text-gray-500 text-sm mt-2">Créez votre premier radar pour commencer</p>
-            </div>
+            </Card>
           ) : (
             radars.map((radar, index) => (
-              <div
+              <Card
                 key={radar.id}
                 data-index={index}
-                className="radar-card relative rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-6 cursor-pointer transition-all duration-150 hover:bg-white/90 hover:shadow-[20px_20px_40px_rgba(0,0,0,0.1),_-12px_-12px_32px_rgba(255,255,255,0.7)]"
+                variant="hover"
+                className="radar-card relative cursor-pointer"
                 draggable
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnd={handleDragEnd}
@@ -210,7 +216,7 @@ const Improvements = () => {
                     <div className="text-xs text-gray-500 mt-0.5">Catégories</div>
                   </div>
                 </div>
-              </div>
+              </Card>
             ))
           )}
         </div>
