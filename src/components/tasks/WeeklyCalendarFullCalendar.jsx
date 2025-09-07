@@ -30,8 +30,8 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         title: task.name,
         start: `${taskDate}T${task.time}:00`,
         end: task.endTime ? `${taskEndDate}T${task.endTime}:00` : `${taskEndDate}T${addHour(task.time)}:00`,
-        backgroundColor: task.color ? hexToRgba(task.color, 0.2) : 'rgba(156, 163, 175, 0.15)',
-        borderColor: task.color ? hexToRgba(task.color, 0.5) : 'rgba(156, 163, 175, 0.4)',
+        backgroundColor: task.color ? hexToRgba(task.color, 0.15) : 'rgba(156, 163, 175, 0.15)',
+        borderColor: task.color || '#9ca3af',
         textColor: task.color || 'rgb(75, 85, 99)',
         extendedProps: { 
           task,
@@ -144,19 +144,12 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
   };
 
   return (
-    <div className="w-full">
+    <div className="p-4">
       <style>{`
         /* Style neumorphique pour FullCalendar */
         .fc {
           font-family: inherit;
           background: transparent;
-          width: 100% !important;
-        }
-        
-        /* Forcer le calendrier à prendre toute la largeur */
-        .fc-view-harness,
-        .fc-view-harness-active {
-          width: 100% !important;
         }
         
         /* Conteneur principal du calendrier - Style neumorphique */
@@ -282,35 +275,46 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         
         /* Zone de sélection */
         .fc-highlight {
-          background: linear-gradient(135deg, 
-            rgba(35, 131, 226, 0.08) 0%, 
-            rgba(35, 131, 226, 0.15) 100%
-          ) !important;
-          border: 1px solid rgba(35, 131, 226, 0.3) !important;
-          border-radius: 0.5rem;
+          background: rgba(59, 130, 246, 0.15) !important;
+          border: 1px solid rgba(59, 130, 246, 0.25) !important;
+          border-radius: 0 !important;
         }
         
-        /* Événements - Style neumorphique professionnel */
+        /* Miroir de sélection (utilisé avec selectMirror) */
+        .fc .fc-timegrid-event-harness-inset .fc-timegrid-event.fc-event-mirror,
+        .fc .fc-timegrid-event.fc-event-mirror {
+          background: rgba(59, 130, 246, 0.15) !important;
+          border: 2px solid rgba(59, 130, 246, 0.4) !important;
+          border-radius: 0 !important;
+          opacity: 0.8;
+        }
+        
+        /* Zone de sélection temporaire */
+        .fc .fc-timegrid-col-events .fc-event-main {
+          border-radius: 0 !important;
+        }
+        
+        /* Événements - Style glassmorphism avec ligne colorée */
         .fc-event {
-          border: 1px solid rgba(255, 255, 255, 0.3) !important;
-          border-left: 3px solid !important;
-          border-radius: 0.75rem;
-          padding: 6px 8px !important;
+          backdrop-filter: blur(10px) saturate(120%) !important;
+          -webkit-backdrop-filter: blur(10px) saturate(120%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          border-radius: 0 !important;
+          padding: 2px !important;
           font-size: 0.8rem;
-          backdrop-filter: blur(5px);
+          position: relative;
           box-shadow: 
-            4px 4px 8px rgba(0, 0, 0, 0.06),
-            -2px -2px 4px rgba(255, 255, 255, 0.5),
-            inset 1px 1px 1px rgba(255, 255, 255, 0.3);
+            0 8px 32px 0 rgba(31, 38, 135, 0.07),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.15);
           transition: all 0.2s ease;
+          overflow: visible !important;
         }
         
         .fc-event:hover {
-          transform: translateY(-2px);
+          transform: translateY(-1px);
           box-shadow: 
-            6px 6px 12px rgba(0, 0, 0, 0.08),
-            -3px -3px 6px rgba(255, 255, 255, 0.6),
-            inset 1px 1px 2px rgba(255, 255, 255, 0.4);
+            0 12px 40px 0 rgba(31, 38, 135, 0.1),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.2);
           z-index: 10 !important;
         }
         
@@ -405,7 +409,7 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         nowIndicator={true}
         editable={true}
         selectable={true}
-        selectMirror={true}
+        selectMirror={false}
         events={events}
         select={handleDateSelect}
         eventClick={handleEventClick}
@@ -449,17 +453,31 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         eventContent={(eventInfo) => {
           const status = eventInfo.event.extendedProps.status;
           const statusIcon = status === 'Terminé' ? '✓' : status === 'En cours' ? '•' : null;
+          const borderColor = eventInfo.event.borderColor;
+          
           return (
             <div style={{ 
               position: 'relative', 
               width: '100%', 
               height: '100%', 
-              padding: '2px 4px'
+              paddingLeft: '6px'
             }}>
+              {/* Ligne verticale colorée */}
+              <div style={{
+                position: 'absolute',
+                left: '-1px',
+                top: '-2px',
+                bottom: '-2px',
+                width: '3.5px',
+                backgroundColor: borderColor,
+                borderRadius: '0'
+              }} />
+              
               <div style={{ 
                 fontSize: '0.75rem', 
                 fontWeight: '500',
-                color: eventInfo.event.textColor || 'rgb(75, 85, 99)'
+                color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
+                marginLeft: '4px'
               }}>
                 {eventInfo.event.title}
               </div>
@@ -467,7 +485,8 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
                 fontSize: '0.65rem', 
                 color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
                 opacity: '0.7',
-                marginTop: '1px'
+                marginTop: '1px',
+                marginLeft: '4px'
               }}>
                 {eventInfo.timeText}
               </div>
