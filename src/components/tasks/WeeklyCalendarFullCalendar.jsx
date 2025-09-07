@@ -144,51 +144,248 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
   };
 
   return (
-    <div className="p-4 ml-8">
+    <div className="w-full">
       <style>{`
-        /* Style minimal pour FullCalendar */
+        /* Style neumorphique pour FullCalendar */
         .fc {
           font-family: inherit;
           background: transparent;
+          width: 100% !important;
         }
         
-        /* Fond général */
+        /* Forcer le calendrier à prendre toute la largeur */
+        .fc-view-harness,
+        .fc-view-harness-active {
+          width: 100% !important;
+        }
+        
+        /* Conteneur principal du calendrier - Style neumorphique */
         .fc-theme-standard .fc-scrollgrid {
-          background-color: rgba(249, 250, 251, 0.3);
-          border: 1px solid rgba(156, 163, 175, 0.3);
-          border-radius: 0.5rem;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(229, 231, 235, 0.5);
+          border-radius: 1.25rem;
+          overflow: hidden;
+          box-shadow: 18px 18px 36px rgba(0,0,0,0.08), -10px -10px 28px rgba(255,255,255,0.60);
         }
         
-        /* En-tête des jours */
+        /* En-tête des jours - Style sérieux avec ombre intérieure */
+        .fc .fc-col-header {
+          background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+          box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.04);
+        }
+        
         .fc .fc-col-header-cell {
-          padding: 0.75rem 0.5rem;
-          background: rgba(243, 244, 246, 0.5);
+          padding: 0.5rem 0.5rem 1.5rem 0.5rem;
           font-weight: 600;
+          font-size: 0.9rem;
+          color: #1F2937;
+          text-align: center;
+          border-right: 3px solid rgba(229, 231, 235, 0.5) !important;
+          border-bottom: 1px solid rgba(229, 231, 235, 0.4) !important;
           text-transform: uppercase;
-          font-size: 0.75rem;
+          letter-spacing: 0.5px;
         }
         
-        /* Lignes des heures */
-        .fc .fc-timegrid-slot {
-          height: 2.5rem;
+        .fc .fc-col-header-cell:last-child {
+          border-right: none !important;
         }
         
+        .fc .fc-col-header-cell-cushion {
+          color: #1F2937;
+        }
+        
+        /* Aujourd'hui - mise en évidence subtile */
+        .fc .fc-day-today .fc-col-header-cell-cushion {
+          color: #2383E2;
+          font-weight: 700;
+          text-shadow: 0 0 8px rgba(35, 131, 226, 0.2);
+        }
+        
+        .fc .fc-day-today {
+          background: linear-gradient(180deg, 
+            rgba(35, 131, 226, 0.03) 0%, 
+            rgba(35, 131, 226, 0.08) 100%
+          ) !important;
+        }
+        
+        /* Colonne des heures - Style professionnel */
+        .fc .fc-timegrid-axis {
+          width: 60px !important;
+          padding-right: 12px;
+          text-align: right;
+          background: rgba(249, 250, 251, 0.5);
+          border-right: 1px solid rgba(229, 231, 235, 0.4) !important;
+        }
+        
+        /* Style des heures */
         .fc .fc-timegrid-slot-label {
-          font-size: 0.75rem;
-          color: #6b7280;
+          font-size: 0.8rem;
+          color: #6B7280;
+          font-weight: 500;
+          vertical-align: top;
+          padding-top: 0;
+          line-height: 1;
+        }
+        
+        /* Alignement des heures avec les lignes */
+        .fc .fc-timegrid-slot-label-frame {
+          text-align: right;
+          vertical-align: top;
+        }
+        
+        .fc .fc-timegrid-slot-label-cushion {
+          position: relative;
+          top: -0.6rem;
+          display: inline-block;
+        }
+        
+        /* Fix pour la première heure (06:00) */
+        .fc .fc-timegrid-slots tr:first-child .fc-timegrid-slot-label-cushion {
+          top: -0.8rem;
+        }
+        
+        /* Lignes horizontales des heures - visibles mais subtiles */
+        .fc .fc-timegrid-slot {
+          height: 3rem;
+          border-bottom: 1px solid rgba(229, 231, 235, 0.25) !important;
+        }
+        
+        /* Lignes plus marquées toutes les heures */
+        .fc .fc-timegrid-slot-minor {
+          border-bottom: 1px dotted rgba(229, 231, 235, 0.2) !important;
+        }
+        
+        /* Bordures verticales entre les colonnes */
+        .fc .fc-timegrid-col {
+          border-right: 3px solid rgba(229, 231, 235, 0.90) !important;
+        }
+        
+        .fc .fc-timegrid-col:last-child {
+          border-right: none !important;
+        }
+        
+        /* Ligne de l'heure actuelle */
+        .fc .fc-timegrid-now-indicator-line {
+          border: none;
+          background: linear-gradient(90deg, 
+            transparent 0%, 
+            rgba(239, 68, 68, 0.8) 10%, 
+            rgba(239, 68, 68, 0.8) 90%, 
+            transparent 100%
+          );
+          height: 2px;
+        }
+        
+        .fc .fc-timegrid-now-indicator-arrow {
+          border-color: #EF4444;
         }
         
         /* Zone de sélection */
         .fc-highlight {
-          background: rgba(59, 130, 246, 0.3) !important;
+          background: linear-gradient(135deg, 
+            rgba(35, 131, 226, 0.08) 0%, 
+            rgba(35, 131, 226, 0.15) 100%
+          ) !important;
+          border: 1px solid rgba(35, 131, 226, 0.3) !important;
+          border-radius: 0.5rem;
         }
         
-        /* Événements */
+        /* Événements - Style neumorphique professionnel */
         .fc-event {
-          border-left-width: 3px !important;
-          border-radius: 0.375rem;
-          padding: 0;
-          font-size: 0.75rem;
+          border: 1px solid rgba(255, 255, 255, 0.3) !important;
+          border-left: 3px solid !important;
+          border-radius: 0.75rem;
+          padding: 6px 8px !important;
+          font-size: 0.8rem;
+          backdrop-filter: blur(5px);
+          box-shadow: 
+            4px 4px 8px rgba(0, 0, 0, 0.06),
+            -2px -2px 4px rgba(255, 255, 255, 0.5),
+            inset 1px 1px 1px rgba(255, 255, 255, 0.3);
+          transition: all 0.2s ease;
+        }
+        
+        .fc-event:hover {
+          transform: translateY(-2px);
+          box-shadow: 
+            6px 6px 12px rgba(0, 0, 0, 0.08),
+            -3px -3px 6px rgba(255, 255, 255, 0.6),
+            inset 1px 1px 2px rgba(255, 255, 255, 0.4);
+          z-index: 10 !important;
+        }
+        
+        /* Corps du calendrier */
+        .fc .fc-timegrid-body {
+          background: rgba(255, 255, 255, 0.4);
+        }
+        
+        /* Amélioration du contraste pour les slots */
+        .fc .fc-timegrid-slots {
+          background: linear-gradient(180deg, 
+            rgba(255, 255, 255, 0) 0%, 
+            rgba(249, 250, 251, 0.3) 100%
+          );
+        }
+        
+        /* Bordure principale du calendrier */
+        .fc-scrollgrid {
+          border: 1px solid rgba(229, 231, 235, 0.5) !important;
+        }
+        
+        /* Effet de profondeur pour les cellules */
+        .fc .fc-timegrid-col-frame {
+          background: linear-gradient(180deg, 
+            rgba(255, 255, 255, 0.5) 0%, 
+            rgba(255, 255, 255, 0.2) 100%
+          );
+        }
+        
+        /* Style pour les weekends - légèrement différent */
+        .fc .fc-day-sat,
+        .fc .fc-day-sun {
+          background: rgba(249, 250, 251, 0.3);
+        }
+        
+        /* Amélioration de la lisibilité */
+        .fc-event-title {
+          font-weight: 500;
+          text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+        
+        .fc-event-time {
+          font-size: 0.7rem;
+          opacity: 0.9;
+        }
+        
+        /* Ombre pour le conteneur principal */
+        .fc-view-harness {
+          border-radius: 1.25rem;
+          overflow: hidden;
+        }
+        
+        /* Ajustement des paddings */
+        .fc-timegrid-axis-cushion {
+          padding: 4px 0;
+        }
+        
+        /* Style pour la barre de défilement si visible */
+        .fc-scrollgrid-section-body::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        
+        .fc-scrollgrid-section-body::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.05);
+          border-radius: 4px;
+        }
+        
+        .fc-scrollgrid-section-body::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 4px;
+        }
+        
+        .fc-scrollgrid-section-body::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 0, 0, 0.3);
         }
       `}</style>
       
@@ -216,6 +413,39 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         eventResize={handleEventResize}
         weekends={true}
         firstDay={1}
+        dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+        dayHeaderContent={(arg) => {
+          const date = arg.date;
+          const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+          const dayNumber = date.getDate();
+          const isToday = date.toDateString() === new Date().toDateString();
+          
+          return (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              gap: '2px'
+            }}>
+              <div style={{ 
+                fontSize: '0.9rem', 
+                fontWeight: '600',
+                color: isToday ? '#2383E2' : '#1F2937',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                {dayName}
+              </div>
+              <div style={{ 
+                fontSize: '0.75rem', 
+                color: isToday ? '#2383E2' : '#9CA3AF',
+                fontWeight: isToday ? '500' : '400'
+              }}>
+                {dayNumber}
+              </div>
+            </div>
+          );
+        }}
         eventContent={(eventInfo) => {
           const status = eventInfo.event.extendedProps.status;
           const statusIcon = status === 'Terminé' ? '✓' : status === 'En cours' ? '•' : null;
