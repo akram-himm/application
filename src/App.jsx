@@ -9,6 +9,8 @@ import CrashRecovery from './components/CrashRecovery';
 // import Layout from './components/Layout';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
+import DashboardView from './pages/DashboardView';
+import HistoryView from './pages/HistoryView';
 import Improvements from './pages/Improvements';
 import RadarView from './pages/RadarView';
 import ChaptersView from './pages/ChaptersView';
@@ -32,6 +34,8 @@ function App() {
                   <ErrorBoundary>
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
+                      <Route path="/dashboard" element={<DashboardView />} />
+                      <Route path="/history" element={<HistoryView />} />
                       <Route path="/improvements" element={<Improvements />} />
                       <Route path="/radar/:radarId" element={<RadarView />} />
                       <Route path="/radar/:radarId/subject/:subjectId" element={<ChaptersView />} />
