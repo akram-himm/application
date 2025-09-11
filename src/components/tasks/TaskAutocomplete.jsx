@@ -178,7 +178,7 @@ const TaskAutocomplete = ({
       {showSuggestions && suggestions.length > 0 && (
         <div 
           ref={suggestionsRef}
-          className="absolute bottom-full left-0 w-full mb-1 bg-white border border-gray-200 rounded-xl shadow-[0_8px_20px_rgba(0,0,0,0.12)] overflow-hidden z-50 max-h-64 overflow-y-auto"
+          className="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-[0_8px_20px_rgba(0,0,0,0.12)] overflow-hidden z-50 max-h-64 overflow-y-auto"
         >
           {suggestions.map((suggestion, index) => (
             <div

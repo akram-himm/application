@@ -99,8 +99,8 @@ const PlanView = memo(() => {
     { key: 'name', label: 'Tâche' },
     { key: 'status', label: 'Statut' },
     { key: 'priority', label: 'Priorité' },
-    { key: 'date', label: 'Date' },
-    { key: 'time', label: 'Heure' }
+    { key: 'time', label: 'Heure' },
+    { key: 'date', label: 'Date' }
   ];
 
   const weeklyColumns = [
@@ -322,18 +322,15 @@ const PlanView = memo(() => {
     <div className={`min-h-screen ${altStyle ? 'bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]' : 'bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]'}`}>
       {/* Effet de fond subtil - supprimé car le gradient est sur le body */}
       
-      <div className="max-w-7xl mx-auto p-8 space-y-10">
-        {/* Header héro premium avec boutons radio */}
-        <HeaderCard className="relative">
-          <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">
-            Gestion des Tâches
+      <div className="max-w-7xl mx-auto p-8 space-y-6">
+        {/* En-tête avec titre et boutons */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-gray-800 tracking-tight">
+            Planification
           </h1>
-          <p className="text-gray-600 mt-3 text-lg">
-            Organisez vos tâches <span className="text-blue-500 font-semibold">quotidiennes</span> et <span className="text-blue-500 font-semibold">hebdomadaires</span>
-          </p>
           
           {/* Boutons radio pour choisir la vue */}
-          <div className="absolute top-8 right-8 flex items-center gap-4">
+          <div className="flex items-center gap-3 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -343,6 +340,7 @@ const PlanView = memo(() => {
               />
               <span className="text-sm font-medium text-gray-700">Jour</span>
             </label>
+            <div className="w-px h-4 bg-gray-300"></div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -353,7 +351,7 @@ const PlanView = memo(() => {
               <span className="text-sm font-medium text-gray-700">Semaine</span>
             </label>
           </div>
-        </HeaderCard>
+        </div>
 
         {/* Filtres */}
         <TaskFilters 
@@ -366,17 +364,21 @@ const PlanView = memo(() => {
         <div className="space-y-10">
           {/* Tâches du jour */}
           {viewMode.showDaily && (
-            <DraggableTable
-              key="daily-table"
-              title="Tâches du jour"
-              tasks={dailyTasks}
-              columns={dailyColumns}
-              onUpdateTasks={handleUpdateDailyTasks}
-              onAddTask={handleAddDailyTask}
-              onUpdateTask={updateTask}
-              onDoubleClick={(task, cellIndex) => handleDoubleClick(task, cellIndex, false)}
-              onContextMenu={(e, task) => handleContextMenu(e, task, false)}
-            />
+            <div className="space-y-3">
+              <h2 className="text-lg font-medium text-gray-700">Tâches du jour</h2>
+              <DraggableTable
+                key="daily-table"
+                title=""
+                tasks={dailyTasks}
+                columns={dailyColumns}
+                onUpdateTasks={handleUpdateDailyTasks}
+                onAddTask={handleAddDailyTask}
+                onUpdateTask={updateTask}
+                onDoubleClick={(task, cellIndex) => handleDoubleClick(task, cellIndex, false)}
+                onContextMenu={(e, task) => handleContextMenu(e, task, false)}
+                onDeleteTasks={deleteTask}
+              />
+            </div>
           )}
 
           {/* Planning hebdomadaire */}

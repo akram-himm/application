@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -13,33 +14,56 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
   const [tempColor, setTempColor] = useState('#9ca3af');
   const [eventStatus, setEventStatus] = useState('À faire');
   const [eventDescription, setEventDescription] = useState('');
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0, time: null, show: false });
+  const [showTaskDetails, setShowTaskDetails] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [editedTask, setEditedTask] = useState(null);
+  const [detailsPosition, setDetailsPosition] = useState({ x: 0, y: 0 });
+  const [localEvents, setLocalEvents] = useState([]);
 
   // Convertir les tâches en événements FullCalendar
-  const events = tasks
-    .filter(task => {
-      const hasDate = (task.startDate && task.startDate !== '-') || (task.date && task.date !== '-');
-      const hasTime = task.time && task.time !== '-';
-      return hasDate && hasTime;
-    })
-    .map(task => {
-      const taskDate = task.startDate || task.date;
-      const taskEndDate = task.endDate || task.date;
-      
-      return {
-        id: task.id,
-        title: task.name,
-        start: `${taskDate}T${task.time}:00`,
-        end: task.endTime ? `${taskEndDate}T${task.endTime}:00` : `${taskEndDate}T${addHour(task.time)}:00`,
-        backgroundColor: task.color ? hexToRgba(task.color, 0.15) : 'rgba(156, 163, 175, 0.15)',
-        borderColor: task.color || '#9ca3af',
-        textColor: task.color || 'rgb(75, 85, 99)',
-        extendedProps: { 
-          task,
-          status: task.status,
-          description: task.description 
-        }
-      };
-    });
+  useEffect(() => {
+    const newEvents = tasks
+      .filter(task => {
+        const hasDate = (task.startDate && task.startDate !== '-') || (task.date && task.date !== '-');
+        const hasTime = task.time && task.time !== '-';
+        return hasDate && hasTime;
+      })
+      .map(task => {
+        const taskDate = task.startDate || task.date;
+        const taskEndDate = task.endDate || task.date;
+        
+        // Ajuster l'opacité selon la luminosité de la couleur
+        const adjustOpacity = (color) => {
+          if (!color) return 0.15;
+          const hex = color.replace('#', '');
+          const r = parseInt(hex.slice(0, 2), 16);
+          const g = parseInt(hex.slice(2, 4), 16);
+          const b = parseInt(hex.slice(4, 6), 16);
+          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+          // Plus la couleur est sombre, plus on augmente l'opacité
+          return luminance < 0.5 ? 0.25 : 0.15;
+        };
+
+        return {
+          id: String(task.id),  // S'assurer que l'ID est une chaîne
+          title: task.name,
+          start: `${taskDate}T${task.time}:00`,
+          end: task.endTime ? `${taskEndDate}T${task.endTime}:00` : `${taskEndDate}T${addHour(task.time)}:00`,
+          backgroundColor: task.color ? hexToRgba(task.color, adjustOpacity(task.color)) : 'rgba(156, 163, 175, 0.15)',
+          borderColor: task.color || '#9ca3af',
+          textColor: task.color || 'rgb(75, 85, 99)',
+          editable: true,  // Rendre chaque événement éditable
+          extendedProps: { 
+            task,
+            status: task.status,
+            description: task.description 
+          }
+        };
+      });
+    setLocalEvents(newEvents);
+  }, [tasks]);
     
   // Fonction pour ajouter une heure à un temps donné
   function addHour(time) {
@@ -78,22 +102,109 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
   // Gérer le clic sur un événement
   const handleEventClick = (clickInfo) => {
     const task = clickInfo.event.extendedProps.task;
+    setSelectedTask(task);
+    setEditedTask({...task});
+    setShowTaskDetails(true);
+    setIsEditingTask(false);
+    
+    // Calculer la position de la fenêtre de détails relative au calendrier
+    const eventElement = clickInfo.el;
+    const rect = eventElement.getBoundingClientRect();
+    
+    // Obtenir la position du conteneur parent (calendrier)
+    const calendarContainer = eventElement.closest('.p-4');
+    const containerRect = calendarContainer ? calendarContainer.getBoundingClientRect() : { left: 0, top: 0 };
+    
+    const windowWidth = window.innerWidth;
+    const detailsWidth = 320;
+    const detailsHeight = 450;
+    
+    // Position relative au conteneur du calendrier
+    const relativeLeft = rect.left - containerRect.left;
+    const relativeTop = rect.top - containerRect.top;
+    const relativeRight = rect.right - containerRect.left;
+    
+    // Position horizontale - directement à côté de la tâche
+    let xPosition;
+    
+    // Vérifier d'abord s'il y a de la place à droite
+    if (rect.right + detailsWidth + 10 < windowWidth) {
+      // Place à droite
+      xPosition = relativeRight + 8;
+    } else {
+      // Pas de place à droite, mettre à gauche
+      xPosition = relativeLeft - detailsWidth - 8;
+      
+      // Si ça sort à gauche, forcer à droite
+      if (xPosition < 0) {
+        xPosition = relativeRight + 8;
+      }
+    }
+    
+    // Position verticale - centrer par rapport à la tâche (relative au conteneur)
+    let yPosition = relativeTop + (rect.height / 2);
+    
+    setDetailsPosition({ x: xPosition, y: yPosition });
+  };
+
+  // Gérer la sauvegarde des modifications
+  const handleSaveTaskEdit = () => {
+    onUpdateTask(editedTask);
+    setSelectedTask(editedTask);
+    setIsEditingTask(false);
+  };
+
+  // Gérer le clic droit sur un événement
+  const handleEventContextMenu = (e, task) => {
+    e.preventDefault();
     if (confirm(`Voulez-vous supprimer "${task.name}" ?`)) {
       onDeleteTask(task.id);
+      setShowTaskDetails(false);
+      setSelectedTask(null);
     }
   };
 
   // Gérer le déplacement d'un événement
   const handleEventDrop = (dropInfo) => {
+    console.log('EventDrop déclenché!', dropInfo);
     const task = dropInfo.event.extendedProps.task;
     const newDate = dropInfo.event.start.toISOString().split('T')[0];
     const newTime = dropInfo.event.start.toTimeString().slice(0, 5);
     
+    // Calculer l'heure de fin si elle existe
+    let endTime = null;
+    if (dropInfo.event.end) {
+      endTime = dropInfo.event.end.toTimeString().slice(0, 5);
+    }
+    
+    console.log('Mise à jour de la tâche:', {
+      ...task,
+      startDate: newDate,
+      endDate: newDate,
+      time: newTime,
+      endTime: endTime
+    });
+    
+    // Mettre à jour localement d'abord
+    const updatedEvents = localEvents.map(evt => {
+      if (evt.id === dropInfo.event.id) {
+        return {
+          ...evt,
+          start: dropInfo.event.startStr,
+          end: dropInfo.event.endStr
+        };
+      }
+      return evt;
+    });
+    setLocalEvents(updatedEvents);
+    
+    // Puis mettre à jour dans le contexte global
     onUpdateTask({
       ...task,
       startDate: newDate,
       endDate: newDate,
-      time: newTime
+      time: newTime,
+      endTime: endTime || task.endTime
     });
   };
 
@@ -143,8 +254,117 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
     setShowColorPicker(false);
   };
 
+  // Gérer le mouvement de la souris sur le calendrier
+  const handleMouseMove = (e) => {
+    const calendarEl = e.currentTarget;
+    const rect = calendarEl.getBoundingClientRect();
+    
+    // Trouver la grille des heures
+    const timeGrid = calendarEl.querySelector('.fc-timegrid-slots');
+    if (!timeGrid) return;
+    
+    const timeGridRect = timeGrid.getBoundingClientRect();
+    const relativeY = e.clientY - timeGridRect.top;
+    
+    // Calculer l'heure précise en fonction de la position Y
+    const slotHeight = 48; // 3rem = 48px (hauteur d'un slot de 30 minutes)
+    const minutesPerPixel = 30 / slotHeight; // Combien de minutes par pixel
+    const totalMinutes = relativeY * minutesPerPixel; // Total des minutes depuis 6h00
+    
+    if (relativeY >= 0 && totalMinutes <= 960) { // 960 minutes = 16 heures (de 6h à 22h)
+      const startHour = 6; // Commence à 6h
+      const hours = Math.floor(totalMinutes / 60) + startHour;
+      const minutes = Math.floor(totalMinutes % 60);
+      
+      // Arrondir aux 5 minutes les plus proches
+      const roundedMinutes = Math.round(minutes / 5) * 5;
+      const finalMinutes = roundedMinutes === 60 ? 0 : roundedMinutes;
+      const finalHours = roundedMinutes === 60 ? hours + 1 : hours;
+      
+      const timeString = `${finalHours.toString().padStart(2, '0')}:${finalMinutes.toString().padStart(2, '0')}`;
+      
+      // Utiliser les coordonnées relatives au conteneur au lieu de la fenêtre
+      const relativeX = e.clientX - rect.left;
+      const relativeYMouse = e.clientY - rect.top;
+      
+      setMousePosition({
+        x: relativeX,
+        y: relativeYMouse,
+        time: timeString,
+        show: true
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setMousePosition({ ...mousePosition, show: false });
+  };
+
+  // Gérer la fermeture avec Escape et clic extérieur
+  useEffect(() => {
+    if (!showTaskDetails) return;
+
+    // Fermer avec Escape
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        setShowTaskDetails(false);
+        setSelectedTask(null);
+        setIsEditingTask(false);
+      }
+    };
+
+    // Fermer en cliquant en dehors
+    const handleClickOutside = (e) => {
+      const detailsWindow = document.querySelector('.task-details-window');
+      if (detailsWindow && !detailsWindow.contains(e.target)) {
+        // Vérifier que ce n'est pas un clic sur une tâche
+        if (!e.target.closest('.fc-event')) {
+          setShowTaskDetails(false);
+          setSelectedTask(null);
+          setIsEditingTask(false);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTaskDetails]);
+
   return (
-    <div className="p-4">
+    <div className="p-4 relative">
+      <div 
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ position: 'relative' }}
+      >
+        {/* Indicateur d'heure qui suit la souris - caché quand le modal est ouvert */}
+        {mousePosition.show && mousePosition.time && !showModal && (
+          <div
+            style={{
+              position: 'absolute',
+              left: `${mousePosition.x + 6}px`,
+              top: `${mousePosition.y +6}px`,
+              backgroundColor: 'rgba(207, 207, 207, 0.49)',
+              color: 'gray',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              fontSize: '0.7rem',
+              fontWeight: '600',
+              pointerEvents: 'none',
+              zIndex: 1000,
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
+              transform: 'translateY(-100%)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {mousePosition.time}
+          </div>
+        )}
       <style>{`
         /* Style neumorphique pour FullCalendar */
         .fc {
@@ -294,27 +514,29 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
           border-radius: 0 !important;
         }
         
-        /* Événements - Style glassmorphism avec ligne colorée */
+        /* Événements - Style glassmorphism léger avec ombres subtiles */
         .fc-event {
-          backdrop-filter: blur(10px) saturate(120%) !important;
-          -webkit-backdrop-filter: blur(10px) saturate(120%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          backdrop-filter: blur(8px) saturate(120%) !important;
+          -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.18) !important;
           border-radius: 0 !important;
           padding: 2px !important;
           font-size: 0.8rem;
           position: relative;
           box-shadow: 
-            0 8px 32px 0 rgba(31, 38, 135, 0.07),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+            0 4px 16px rgba(0, 0, 0, 0.08),
+            0 1px 3px rgba(0, 0, 0, 0.06);
           transition: all 0.2s ease;
           overflow: visible !important;
         }
         
         .fc-event:hover {
           transform: translateY(-1px);
+          backdrop-filter: blur(10px) saturate(140%) !important;
+          -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
           box-shadow: 
-            0 12px 40px 0 rgba(31, 38, 135, 0.1),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+            0 6px 20px rgba(0, 0, 0, 0.12),
+            0 2px 4px rgba(0, 0, 0, 0.08);
           z-index: 10 !important;
         }
         
@@ -353,7 +575,7 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         /* Amélioration de la lisibilité */
         .fc-event-title {
           font-weight: 500;
-          text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
         
         .fc-event-time {
@@ -403,18 +625,21 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         slotMaxTime="22:00"
         slotDuration="00:30"
         slotLabelInterval="01:00"
-        snapDuration="00:15"
+        snapDuration="00:05"
+        selectMinDistance={0}
         allDaySlot={false}
         expandRows={true}
         nowIndicator={true}
         editable={true}
         selectable={true}
         selectMirror={false}
-        events={events}
+        events={localEvents}
         select={handleDateSelect}
         eventClick={handleEventClick}
         eventDrop={handleEventDrop}
         eventResize={handleEventResize}
+        eventDragStart={(info) => console.log('Drag start:', info)}
+        eventDragStop={(info) => console.log('Drag stop:', info)}
         weekends={true}
         firstDay={1}
         dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
@@ -452,16 +677,29 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         }}
         eventContent={(eventInfo) => {
           const status = eventInfo.event.extendedProps.status;
-          const statusIcon = status === 'Terminé' ? '✓' : status === 'En cours' ? '•' : null;
+          const description = eventInfo.event.extendedProps.description;
           const borderColor = eventInfo.event.borderColor;
+          const task = eventInfo.event.extendedProps.task;
+          
+          // Extraire les deux premiers mots de la description
+          const getDescriptionPreview = (desc) => {
+            if (!desc || desc.trim() === '') return null;
+            const words = desc.trim().split(/\s+/);
+            return words.slice(0, 2).join(' ');
+          };
+          
+          const descPreview = getDescriptionPreview(description);
           
           return (
-            <div style={{ 
-              position: 'relative', 
-              width: '100%', 
-              height: '100%', 
-              paddingLeft: '6px'
-            }}>
+            <div 
+              style={{ 
+                position: 'relative', 
+                width: '100%', 
+                height: '100%', 
+                paddingLeft: '6px',
+                paddingRight: '20px' // Espace pour l'icône
+              }}
+            >
               {/* Ligne verticale colorée */}
               <div style={{
                 position: 'absolute',
@@ -473,34 +711,65 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
                 borderRadius: '0'
               }} />
               
-              <div style={{ 
-                fontSize: '0.75rem', 
-                fontWeight: '500',
-                color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
-                marginLeft: '4px'
-              }}>
-                {eventInfo.event.title}
-              </div>
+              {/* Heure en premier */}
               <div style={{ 
                 fontSize: '0.65rem', 
                 color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
-                opacity: '0.7',
-                marginTop: '1px',
-                marginLeft: '4px'
+                opacity: '0.85',
+                marginLeft: '4px',
+                fontWeight: '600'
               }}>
                 {eventInfo.timeText}
               </div>
               
-              {statusIcon && (
+              {/* Nom de la tâche */}
+              <div style={{ 
+                fontSize: '0.75rem', 
+                fontWeight: '500',
+                color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
+                marginLeft: '4px',
+                marginTop: '1px'
+              }}>
+                {eventInfo.event.title}
+              </div>
+              
+              {/* Aperçu de la description */}
+              {descPreview && (
+                <div style={{ 
+                  fontSize: '0.6rem', 
+                  color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
+                  opacity: '0.6',
+                  marginLeft: '4px',
+                  marginTop: '2px',
+                  fontStyle: 'italic'
+                }}>
+                  {descPreview}...
+                </div>
+              )}
+              
+              {/* Icône de statut - Style Notion */}
+              {status === 'En cours' && (
                 <div style={{ 
                   position: 'absolute', 
-                  bottom: '2px', 
-                  right: '4px', 
-                  fontSize: '0.65rem',
-                  color: 'rgba(107, 114, 128, 0.5)',
-                  fontWeight: 'normal'
+                  top: '-2px',      // Changé de top à bottom pour être en bas
+                  right: '1px',    
+                  fontSize: '0.8rem',
+                  color: 'rgba(0, 0, 0, 0.55)', // Plus transparent (0.25)
+                  fontWeight: '400'
                 }}>
-                  {statusIcon}
+                  ⏱
+                </div>
+              )}
+              {status === 'Terminé' && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '-2px',      // Changé de top à bottom pour être en bas
+                  right: '3px',    
+                  fontSize: '0.9rem',
+                  color: 'rgba(0, 0, 0, 0.35)', // Plus transparent (0.25)
+                  fontWeight: '400'
+                }}>
+                  ✔
                 </div>
               )}
             </div>
@@ -519,99 +788,139 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
           hour12: false
         }}
       />
+      </div>
 
       {/* Modal de création de tâche */}
       {showModal && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => {
-            setShowModal(false);
-            resetForm();
+            if (!showColorPicker) {
+              setShowModal(false);
+              resetForm();
+            }
           }}
         >
           <div 
-            className="bg-white rounded-xl p-6 w-96 shadow-2xl"
+            className="bg-white/90 backdrop-blur-md rounded-2xl w-[420px] shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] ring-1 ring-gray-200/50"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              borderTop: `4px solid ${eventColor}`
+            }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Nouvelle tâche</h3>
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  resetForm();
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                ✕
-              </button>
+            {/* En-tête avec couleur */}
+            <div className="px-6 pt-5 pb-4 border-b border-gray-200/50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800">Nouvelle tâche</h3>
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    resetForm();
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors text-xl leading-none p-1"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             
-            {/* Nom de la tâche */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nom de la tâche
-              </label>
-              <input
-                type="text"
-                value={eventTitle}
-                onChange={(e) => setEventTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Entrez le nom de la tâche"
-                autoFocus
-              />
-            </div>
-
-            {/* Couleur et Statut sur la même ligne */}
-            <div className="mb-4 flex gap-4">
-              {/* Couleur */}
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Couleur
+            <div className="p-6">
+            
+              {/* Nom de la tâche */}
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom de la tâche
                 </label>
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTempColor(eventColor);
-                      setShowColorPicker(!showColorPicker);
-                    }}
-                    className="w-full h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:border-gray-400 transition-colors"
-                    style={{ backgroundColor: eventColor }}
+                <input
+                  type="text"
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Entrez le nom de la tâche"
+                  autoFocus
+                />
+              </div>
+
+              {/* Statut et Couleurs sur la même ligne */}
+              <div className="mb-5 flex gap-4 items-start">
+                {/* Statut à gauche */}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Statut
+                  </label>
+                  <select
+                    value={eventStatus}
+                    onChange={(e) => setEventStatus(e.target.value)}
+                    className="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <span className="text-white text-xs font-medium drop-shadow">
-                      {eventColor}
-                    </span>
-                  </button>
+                    <option value="À faire" className="text-gray-900">À faire</option>
+                    <option value="En cours" className="text-gray-900">En cours</option>
+                    <option value="Terminé" className="text-gray-900">Terminé</option>
+                  </select>
+                </div>
+
+                {/* Couleurs à droite */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Couleur
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {/* Cercles de couleur prédéfinies */}
+                    <button
+                      onClick={() => setEventColor('#9CA3AF')}
+                      className={`w-8 h-8 rounded-full bg-gray-400 hover:scale-110 transition-transform ${eventColor === '#9CA3AF' ? 'ring-2 ring-offset-2 ring-gray-400' : ''}`}
+                    />
+                    <button
+                      onClick={() => setEventColor('#FB923C')}
+                      className={`w-8 h-8 rounded-full bg-orange-400 hover:scale-110 transition-transform ${eventColor === '#FB923C' ? 'ring-2 ring-offset-2 ring-orange-400' : ''}`}
+                    />
+                    <button
+                      onClick={() => setEventColor('#EF4444')}
+                      className={`w-8 h-8 rounded-full bg-red-500 hover:scale-110 transition-transform ${eventColor === '#EF4444' ? 'ring-2 ring-offset-2 ring-red-500' : ''}`}
+                    />
+                    
+                    {/* Bouton stylo pour couleur personnalisée */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTempColor(eventColor);
+                        setShowColorPicker(!showColorPicker);
+                      }}
+                      className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors ml-2"
+                    >
+                      ✏️
+                    </button>
+                    
+                    {/* Carré de couleur actuelle */}
+                    <div 
+                      className="w-8 h-8 rounded border-2 border-gray-300"
+                      style={{ backgroundColor: eventColor }}
+                    />
+                  </div>
                   
+                  {/* Panneau de sélection de couleur */}
                   {showColorPicker && (
                     <div 
-                      className="absolute top-12 right-0 z-[100] p-3 bg-white rounded-lg shadow-xl border border-gray-200"
+                      className="absolute mt-2 z-[100] p-3 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200"
+                      style={{ top: '100%', right: '0' }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
                         type="color"
-                        value={tempColor}
-                        onChange={(e) => setTempColor(e.target.value)}
-                        className="w-32 h-32 cursor-pointer"
+                        value={eventColor}
+                        onChange={(e) => {
+                          setEventColor(e.target.value);
+                          setTempColor(e.target.value);
+                        }}
+                        className="w-32 h-32 cursor-pointer rounded"
                       />
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 text-center">
+                        <p className="text-xs text-gray-500 mb-2">La couleur sera appliquée directement</p>
                         <button
-                          onClick={() => {
-                            setShowColorPicker(false);
-                            setTempColor(eventColor);
-                          }}
-                          className="flex-1 px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                          onClick={() => setShowColorPicker(false)}
+                          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors text-gray-700"
                         >
-                          Annuler
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEventColor(tempColor);
-                            setShowColorPicker(false);
-                          }}
-                          className="flex-1 px-2 py-1 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded transition-colors"
-                        >
-                          Confirmer
+                          Fermer
                         </button>
                       </div>
                     </div>
@@ -619,63 +928,224 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
                 </div>
               </div>
 
-              {/* Statut */}
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Statut
+              {/* Description */}
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (optionnel)
                 </label>
+                <textarea
+                  value={eventDescription}
+                  onChange={(e) => setEventDescription(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows="3"
+                  placeholder="Ajoutez une description..."
+                />
+              </div>
+
+              {/* Heure et date */}
+              {newEvent && (
+                <div className="mb-5 text-sm text-gray-600 bg-gray-50/50 p-3 rounded-lg border border-gray-200/50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-gray-500">📅</span>
+                    <span className="text-gray-700">{new Date(newEvent.start).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">🕐</span>
+                    <span className="text-gray-700">{new Date(newEvent.start).toTimeString().slice(0, 5)} - {new Date(newEvent.end).toTimeString().slice(0, 5)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Boutons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    if (!showColorPicker) {
+                      setShowModal(false);
+                      resetForm();
+                    }
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveEvent}
+                  disabled={!eventTitle.trim()}
+                  className="flex-1 px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed shadow-sm"
+                >
+                  Créer la tâche
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fenêtre de détails - sans portail pour qu'elle reste relative au calendrier */}
+      {showTaskDetails && selectedTask && (
+        <div 
+          className="task-details-window absolute bg-white/95 backdrop-blur-md rounded-2xl w-[320px] shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] z-50 transition-all duration-200 ease-out max-h-[450px] overflow-y-auto"
+          style={{
+            borderLeft: `4px solid ${selectedTask.color || '#9CA3AF'}`,
+            left: `${detailsPosition.x}px`,
+            top: `${detailsPosition.y - 225}px`  // Centrer verticalement
+          }}
+        >
+          {/* En-tête */}
+          <div className="px-5 pt-4 pb-3 border-b border-gray-200/50">
+            <div className="flex items-start justify-between">
+              {isEditingTask ? (
+                <input
+                  type="text"
+                  value={editedTask.name}
+                  onChange={(e) => setEditedTask({...editedTask, name: e.target.value})}
+                  className="text-base font-semibold text-gray-800 bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1 mr-2"
+                  autoFocus
+                />
+              ) : (
+                <h3 className="text-base font-semibold text-gray-800 pr-2">{selectedTask.name}</h3>
+              )}
+              <button
+                onClick={() => {
+                  setShowTaskDetails(false);
+                  setSelectedTask(null);
+                  setIsEditingTask(false);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none p-1"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          
+          {/* Contenu */}
+          <div className="p-5 space-y-4">
+            {/* Statut */}
+            <div className="flex items-center gap-3">
+              <span className="text-gray-500 text-sm">État:</span>
+              {isEditingTask ? (
                 <select
-                  value={eventStatus}
-                  onChange={(e) => setEventStatus(e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editedTask.status}
+                  onChange={(e) => setEditedTask({...editedTask, status: e.target.value})}
+                  className="px-2 py-1 text-sm border border-gray-300 rounded bg-white text-gray-900"
                 >
                   <option value="À faire">À faire</option>
                   <option value="En cours">En cours</option>
                   <option value="Terminé">Terminé</option>
                 </select>
+              ) : (
+                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                  selectedTask.status === 'Terminé' ? 'bg-green-100 text-green-700' :
+                  selectedTask.status === 'En cours' ? 'bg-blue-100 text-blue-700' :
+                  'bg-amber-100 text-amber-700'
+                }`}>
+                  {selectedTask.status}
+                </span>
+              )}
+            </div>
+            
+            {/* Date et heure */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="text-gray-500 text-sm">📅</span>
+                <span className="text-gray-700 text-sm">
+                  {new Date(selectedTask.startDate || selectedTask.date).toLocaleDateString('fr-FR', { 
+                    weekday: 'long', 
+                    day: 'numeric', 
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-gray-500 text-sm">🕐</span>
+                <span className="text-gray-700 text-sm">
+                  {selectedTask.time} {selectedTask.endTime && `- ${selectedTask.endTime}`}
+                </span>
               </div>
             </div>
-
+            
             {/* Description */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description (optionnel)
-              </label>
-              <textarea
-                value={eventDescription}
-                onChange={(e) => setEventDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                rows="3"
-                placeholder="Ajoutez une description..."
-              />
+            <div className="pt-2">
+              <p className="text-gray-500 text-xs mb-1">Description</p>
+              {isEditingTask ? (
+                <textarea
+                  value={editedTask.description || ''}
+                  onChange={(e) => setEditedTask({...editedTask, description: e.target.value})}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white text-gray-900 resize-none"
+                  rows="3"
+                  placeholder="Ajouter une description..."
+                />
+              ) : (
+                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                  {selectedTask.description || <span className="text-gray-400 italic">Pas de description</span>}
+                </p>
+              )}
             </div>
-
-            {/* Heure et date */}
-            {newEvent && (
-              <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                <div>📅 {new Date(newEvent.start).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-                <div>🕐 {new Date(newEvent.start).toTimeString().slice(0, 5)} - {new Date(newEvent.end).toTimeString().slice(0, 5)}</div>
-              </div>
-            )}
-
-            {/* Boutons */}
+            
+            {/* Couleur */}
+            <div className="flex items-center gap-3">
+              <span className="text-gray-500 text-sm">Couleur:</span>
+              {isEditingTask ? (
+                <input
+                  type="color"
+                  value={editedTask.color || '#9CA3AF'}
+                  onChange={(e) => setEditedTask({...editedTask, color: e.target.value})}
+                  className="w-8 h-8 rounded cursor-pointer border border-gray-300"
+                />
+              ) : (
+                <div 
+                  className="w-6 h-6 rounded border-2 border-gray-300"
+                  style={{ backgroundColor: selectedTask.color || '#9CA3AF' }}
+                />
+              )}
+            </div>
+          </div>
+          
+          {/* Actions */}
+          <div className="px-5 pb-4 pt-2 border-t border-gray-100/50">
             <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  resetForm();
-                }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSaveEvent}
-                disabled={!eventTitle.trim()}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Créer la tâche
-              </button>
+              {isEditingTask ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setIsEditingTask(false);
+                      setEditedTask({...selectedTask});
+                    }}
+                    className="flex-1 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveTaskEdit}
+                    className="flex-1 px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  >
+                    Enregistrer
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsEditingTask(true)}
+                    className="flex-1 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors"
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Voulez-vous supprimer "${selectedTask.name}" ?`)) {
+                        onDeleteTask(selectedTask.id);
+                        setShowTaskDetails(false);
+                        setSelectedTask(null);
+                      }
+                    }}
+                    className="px-3 py-2 text-sm text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                  >
+                    🗑️
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
