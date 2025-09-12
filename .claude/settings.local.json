@@ -19,7 +19,8 @@
       "Bash(npm run build:*)",
       "Bash(npm run electron:*)",
       "Bash(del \"C:\\Users\\akram\\Dev\\Git_projets\\application\\src\\components\\plan\\DraggableTable.jsx\")",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

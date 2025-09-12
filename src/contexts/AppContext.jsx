@@ -2,6 +2,7 @@ import React, { createContext, useReducer, useEffect, useMemo, useCallback } fro
 import { loadRadars, saveRadars, loadTasks, saveTasks } from '../services/localStorage';
 import { debounce } from '../utils/debounce';
 import autoSaveService from '../services/autoSave';
+import { addToHistory, isDayArchived } from '../services/historyService';
 
 export const AppContext = createContext();
 
@@ -102,6 +103,73 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     debouncedSaveTasks(state.tasks);
   }, [state.tasks, debouncedSaveTasks]);
+  
+  // Fonction pour archiver les tâches du jour précédent
+  const archivePreviousDayTasks = useCallback(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Vérifier si ce jour a déjà été archivé
+    if (!isDayArchived(yesterday)) {
+      // Récupérer les tâches d'hier (type daily uniquement)
+      const yesterdayTasks = state.tasks.filter(task => {
+        if (task.type !== 'daily' && task.type !== undefined) return false;
+        
+        if (task.date) {
+          try {
+            const taskDate = new Date(task.date);
+            // Vérifier que la date est valide
+            if (isNaN(taskDate.getTime())) {
+              return false;
+            }
+            taskDate.setHours(0, 0, 0, 0);
+            return taskDate.toISOString().split('T')[0] === yesterdayStr;
+          } catch (error) {
+            console.warn('Invalid date in task:', task.date);
+            return false;
+          }
+        }
+        return false;
+      });
+      
+      // S'il y a des tâches à archiver
+      if (yesterdayTasks.length > 0) {
+        addToHistory(yesterday, yesterdayTasks);
+        console.log(`Archived ${yesterdayTasks.length} tasks from ${yesterdayStr}`);
+      }
+    }
+  }, [state.tasks]);
+  
+  // Vérifier à minuit pour archiver les tâches du jour
+  useEffect(() => {
+    // Calculer le temps jusqu'à minuit
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const msUntilMidnight = tomorrow.getTime() - now.getTime();
+    
+    // Timer pour minuit
+    const midnightTimer = setTimeout(() => {
+      archivePreviousDayTasks();
+      
+      // Configurer un intervalle quotidien après le premier déclenchement
+      const dailyInterval = setInterval(archivePreviousDayTasks, 24 * 60 * 60 * 1000);
+      
+      // Nettoyer l'intervalle lors du démontage
+      return () => clearInterval(dailyInterval);
+    }, msUntilMidnight);
+    
+    // Archiver immédiatement les jours passés non archivés
+    archivePreviousDayTasks();
+    
+    // Cleanup
+    return () => clearTimeout(midnightTimer);
+  }, [archivePreviousDayTasks]);
 
   // Actions pour les radars - Optimisées avec useCallback
   const addRadar = useCallback((radar) => {
@@ -129,6 +197,30 @@ export const AppProvider = ({ children }) => {
   const updateTask = useCallback((task) => {
     dispatch({ type: 'UPDATE_TASK', payload: task });
   }, []);
+  
+  // Fonction pour forcer la sauvegarde immédiate (sans debounce)
+  const updateTaskImmediate = useCallback((task) => {
+    console.log('🔄 [AppContext] updateTaskImmediate appelé:', task.id, task.name);
+    
+    // Mettre à jour le state
+    dispatch({ type: 'UPDATE_TASK', payload: task });
+    
+    // Récupérer les tâches actuelles depuis le localStorage
+    // pour éviter les problèmes de synchronisation avec state.tasks
+    const currentTasks = loadTasks();
+    const updatedTasks = currentTasks.map(t => 
+      t.id === task.id ? task : t
+    );
+    
+    // Sauvegarder immédiatement dans localStorage
+    saveTasks(updatedTasks);
+    console.log('✅ [AppContext] Tâche sauvegardée immédiatement');
+    
+    // Annuler le debounce en cours pour éviter l'écrasement
+    if (debouncedSaveTasks.cancel) {
+      debouncedSaveTasks.cancel();
+    }
+  }, [debouncedSaveTasks]);
 
   const deleteTask = useCallback((taskId) => {
     dispatch({ type: 'DELETE_TASK', payload: taskId });
@@ -176,6 +268,7 @@ export const AppProvider = ({ children }) => {
       setRadars,
       addTask,
       updateTask,
+      updateTaskImmediate,
       deleteTask,
       getTasksByDate,
       getWeeklyTasks
@@ -189,6 +282,7 @@ export const AppProvider = ({ children }) => {
       setRadars,
       addTask,
       updateTask,
+      updateTaskImmediate,
       deleteTask,
       getTasksByDate,
       getWeeklyTasks

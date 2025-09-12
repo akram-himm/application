@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
 
-const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTask, currentDate }) => {
+const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask, onDeleteTask, currentDate }) => {
   const [showModal, setShowModal] = useState(false);
   const [newEvent, setNewEvent] = useState(null);
   const [eventTitle, setEventTitle] = useState('');
@@ -20,50 +20,10 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [editedTask, setEditedTask] = useState(null);
   const [detailsPosition, setDetailsPosition] = useState({ x: 0, y: 0 });
-  const [localEvents, setLocalEvents] = useState([]);
-
-  // Convertir les tâches en événements FullCalendar
-  useEffect(() => {
-    const newEvents = tasks
-      .filter(task => {
-        const hasDate = (task.startDate && task.startDate !== '-') || (task.date && task.date !== '-');
-        const hasTime = task.time && task.time !== '-';
-        return hasDate && hasTime;
-      })
-      .map(task => {
-        const taskDate = task.startDate || task.date;
-        const taskEndDate = task.endDate || task.date;
-        
-        // Ajuster l'opacité selon la luminosité de la couleur
-        const adjustOpacity = (color) => {
-          if (!color) return 0.15;
-          const hex = color.replace('#', '');
-          const r = parseInt(hex.slice(0, 2), 16);
-          const g = parseInt(hex.slice(2, 4), 16);
-          const b = parseInt(hex.slice(4, 6), 16);
-          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-          // Plus la couleur est sombre, plus on augmente l'opacité
-          return luminance < 0.5 ? 0.25 : 0.15;
-        };
-
-        return {
-          id: String(task.id),  // S'assurer que l'ID est une chaîne
-          title: task.name,
-          start: `${taskDate}T${task.time}:00`,
-          end: task.endTime ? `${taskEndDate}T${task.endTime}:00` : `${taskEndDate}T${addHour(task.time)}:00`,
-          backgroundColor: task.color ? hexToRgba(task.color, adjustOpacity(task.color)) : 'rgba(156, 163, 175, 0.15)',
-          borderColor: task.color || '#9ca3af',
-          textColor: task.color || 'rgb(75, 85, 99)',
-          editable: true,  // Rendre chaque événement éditable
-          extendedProps: { 
-            task,
-            status: task.status,
-            description: task.description 
-          }
-        };
-      });
-    setLocalEvents(newEvents);
-  }, [tasks]);
+  
+  // Refs pour gérer le drag et le throttling
+  const isDragging = useRef(false);
+  const rafRef = useRef(null);
     
   // Fonction pour ajouter une heure à un temps donné
   function addHour(time) {
@@ -109,6 +69,8 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
     
     // Calculer la position de la fenêtre de détails relative au calendrier
     const eventElement = clickInfo.el;
+    if (!eventElement) return;
+    
     const rect = eventElement.getBoundingClientRect();
     
     // Obtenir la position du conteneur parent (calendrier)
@@ -164,9 +126,16 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
     }
   };
 
+
   // Gérer le déplacement d'un événement
   const handleEventDrop = (dropInfo) => {
-    console.log('EventDrop déclenché!', dropInfo);
+    console.log('🎯 EventDrop déclenché!', {
+      id: dropInfo.event.id,
+      oldStart: dropInfo.oldEvent.start?.toISOString(),
+      newStart: dropInfo.event.start?.toISOString(),
+      delta: dropInfo.delta
+    });
+    
     const task = dropInfo.event.extendedProps.task;
     const newDate = dropInfo.event.start.toISOString().split('T')[0];
     const newTime = dropInfo.event.start.toTimeString().slice(0, 5);
@@ -177,47 +146,38 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
       endTime = dropInfo.event.end.toTimeString().slice(0, 5);
     }
     
-    console.log('Mise à jour de la tâche:', {
+    const updatedTask = {
       ...task,
+      id: task.id, // Préserver l'ID
       startDate: newDate,
       endDate: newDate,
-      time: newTime,
-      endTime: endTime
-    });
-    
-    // Mettre à jour localement d'abord
-    const updatedEvents = localEvents.map(evt => {
-      if (evt.id === dropInfo.event.id) {
-        return {
-          ...evt,
-          start: dropInfo.event.startStr,
-          end: dropInfo.event.endStr
-        };
-      }
-      return evt;
-    });
-    setLocalEvents(updatedEvents);
-    
-    // Puis mettre à jour dans le contexte global
-    onUpdateTask({
-      ...task,
-      startDate: newDate,
-      endDate: newDate,
+      date: newDate,
       time: newTime,
       endTime: endTime || task.endTime
-    });
+    };
+    
+    console.log('📝 Mise à jour de la tâche:', updatedTask);
+    
+    // Mise à jour via le callback parent
+    onUpdateTask(updatedTask);
   };
 
   // Gérer le redimensionnement d'un événement
-  const handleEventResize = (resizeInfo) => {
+  const handleEventResize = useCallback((resizeInfo) => {
     const task = resizeInfo.event.extendedProps.task;
     const endTime = resizeInfo.event.end.toTimeString().slice(0, 5);
     
-    onUpdateTask({
+    const updatedTask = {
       ...task,
+      id: task.id, // S'assurer que l'ID est préservé
       endTime: endTime
-    });
-  };
+    };
+    
+    console.log('📝 Redimensionnement de la tâche:', updatedTask);
+    
+    // Mise à jour via le callback parent (qui gère maintenant la persistance immédiate)
+    onUpdateTask(updatedTask);
+  }, [onUpdateTask]);
 
   // Sauvegarder la nouvelle tâche
   const handleSaveEvent = () => {
@@ -254,63 +214,139 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
     setShowColorPicker(false);
   };
 
-  // Gérer le mouvement de la souris sur le calendrier
+  // Gérer le mouvement de la souris sur le calendrier avec throttling
   const handleMouseMove = (e) => {
-    const calendarEl = e.currentTarget;
-    const rect = calendarEl.getBoundingClientRect();
-    
-    // Trouver la grille des heures
-    const timeGrid = calendarEl.querySelector('.fc-timegrid-slots');
-    if (!timeGrid) return;
-    
-    const timeGridRect = timeGrid.getBoundingClientRect();
-    const relativeY = e.clientY - timeGridRect.top;
-    
-    // Calculer l'heure précise en fonction de la position Y
-    const slotHeight = 48; // 3rem = 48px (hauteur d'un slot de 30 minutes)
-    const minutesPerPixel = 30 / slotHeight; // Combien de minutes par pixel
-    const totalMinutes = relativeY * minutesPerPixel; // Total des minutes depuis 6h00
-    
-    if (relativeY >= 0 && totalMinutes <= 960) { // 960 minutes = 16 heures (de 6h à 22h)
-      const startHour = 6; // Commence à 6h
-      const hours = Math.floor(totalMinutes / 60) + startHour;
-      const minutes = Math.floor(totalMinutes % 60);
-      
-      // Arrondir aux 5 minutes les plus proches
-      const roundedMinutes = Math.round(minutes / 5) * 5;
-      const finalMinutes = roundedMinutes === 60 ? 0 : roundedMinutes;
-      const finalHours = roundedMinutes === 60 ? hours + 1 : hours;
-      
-      const timeString = `${finalHours.toString().padStart(2, '0')}:${finalMinutes.toString().padStart(2, '0')}`;
-      
-      // Utiliser les coordonnées relatives au conteneur au lieu de la fenêtre
-      const relativeX = e.clientX - rect.left;
-      const relativeYMouse = e.clientY - rect.top;
-      
-      setMousePosition({
-        x: relativeX,
-        y: relativeYMouse,
-        time: timeString,
-        show: true
-      });
+    // NE PAS mettre à jour pendant un drag
+    if (isDragging.current) {
+      return;
     }
+    
+    // Throttle avec requestAnimationFrame
+    if (rafRef.current) return;
+    
+    // Capturer les valeurs nécessaires avant requestAnimationFrame
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    const currentTarget = e.currentTarget;
+    
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      
+      // Vérifier que nous avons toujours le currentTarget
+      if (!currentTarget) {
+        return;
+      }
+      
+      // Chercher le calendrier FullCalendar dans le DOM
+      const fullCalendar = currentTarget.querySelector('.fc');
+      if (!fullCalendar) {
+        return;
+      }
+      
+      // Trouver la grille des heures
+      const timeGrid = fullCalendar.querySelector('.fc-timegrid-slots');
+      if (!timeGrid) {
+        return;
+      }
+      
+      const timeGridRect = timeGrid.getBoundingClientRect();
+      const relativeY = clientY - timeGridRect.top;
+      
+      // Calculer l'heure précise en fonction de la position Y
+      const slotHeight = 48; // 3rem = 48px (hauteur d'un slot de 30 minutes)
+      const minutesPerPixel = 30 / slotHeight; // Combien de minutes par pixel
+      const totalMinutes = relativeY * minutesPerPixel; // Total des minutes depuis 6h00
+      
+      if (relativeY >= 0 && totalMinutes <= 960) { // 960 minutes = 16 heures (de 6h à 22h)
+        const startHour = 6; // Commence à 6h
+        const hours = Math.floor(totalMinutes / 60) + startHour;
+        const minutes = Math.floor(totalMinutes % 60);
+        
+        // Arrondir aux 5 minutes les plus proches
+        const roundedMinutes = Math.round(minutes / 5) * 5;
+        const finalMinutes = roundedMinutes === 60 ? 0 : roundedMinutes;
+        const finalHours = roundedMinutes === 60 ? hours + 1 : hours;
+        
+        const timeString = `${finalHours.toString().padStart(2, '0')}:${finalMinutes.toString().padStart(2, '0')}`;
+        
+        // Utiliser les coordonnées globales de la souris pour position: fixed
+        setMousePosition({
+          x: clientX,
+          y: clientY,
+          time: timeString,
+          show: true
+        });
+      }
+    });
   };
 
   const handleMouseLeave = () => {
-    setMousePosition({ ...mousePosition, show: false });
+    setMousePosition({ x: 0, y: 0, time: null, show: false });
   };
+  
+  // Cleanup pour requestAnimationFrame
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+  
+  // Référence pour accéder à l'API FullCalendar
+  const calendarRef = useRef(null);
+  
+  // Mémoriser la liste des événements pour éviter les re-renders inutiles
+  const events = useMemo(() => {
+    return tasks
+      .filter(task => {
+        const hasDate = (task.startDate && task.startDate !== '-') || (task.date && task.date !== '-');
+        const hasTime = task.time && task.time !== '-';
+        return hasDate && hasTime;
+      })
+      .map(task => {
+        const taskDate = task.startDate || task.date;
+        const taskEndDate = task.endDate || task.date;
+        
+        const adjustOpacity = (color) => {
+          if (!color) return 0.15;
+          const hex = color.replace('#', '');
+          const r = parseInt(hex.slice(0, 2), 16);
+          const g = parseInt(hex.slice(2, 4), 16);
+          const b = parseInt(hex.slice(4, 6), 16);
+          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+          return luminance < 0.5 ? 0.25 : 0.15;
+        };
+
+        return {
+          id: String(task.id),
+          title: task.name,
+          start: `${taskDate}T${task.time}:00`,
+          end: task.endTime ? `${taskEndDate}T${task.endTime}:00` : `${taskEndDate}T${addHour(task.time)}:00`,
+          backgroundColor: task.color ? hexToRgba(task.color, adjustOpacity(task.color)) : 'rgba(75, 85, 99, 0.18)',
+          borderColor: task.color || '#374151',
+          textColor: task.color || 'rgb(31, 41, 55)',
+          extendedProps: { 
+            task,
+            status: task.status,
+            description: task.description 
+          }
+        };
+      });
+  }, [tasks]); // Recalculer seulement si tasks change
   
   // Naviguer vers la date actuelle quand currentDate change
   useEffect(() => {
-    if (currentDate && typeof window !== 'undefined' && document.querySelector('.fc')) {
-      // Attendre que FullCalendar soit monté
-      setTimeout(() => {
-        const calendarEl = document.querySelector('.fc');
-        if (calendarEl && calendarEl.__fullCalendar) {
-          const calendarApi = calendarEl.__fullCalendar;
+    if (currentDate && calendarRef.current) {
+      // Utiliser setTimeout pour éviter le warning flushSync
+      const timeoutId = setTimeout(() => {
+        if (calendarRef.current) {
+          const calendarApi = calendarRef.current.getApi();
           calendarApi.gotoDate(currentDate);
         }
-      }, 100);
+      }, 0);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [currentDate]);
 
@@ -356,34 +392,35 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         onMouseLeave={handleMouseLeave}
         style={{ position: 'relative' }}
       >
-        {/* Indicateur d'heure qui suit la souris - caché quand le modal est ouvert */}
-        {mousePosition.show && mousePosition.time && !showModal && (
+        {/* Indicateur d'heure qui suit la souris - rendu via un portail */}
+        {mousePosition.show && mousePosition.time && !showModal && ReactDOM.createPortal(
           <div
             style={{
-              position: 'absolute',
-              left: `${mousePosition.x + 6}px`,
-              top: `${mousePosition.y +6}px`,
-              backgroundColor: 'rgba(207, 207, 207, 0.49)',
-              color: 'gray',
-              padding: '2px 6px',
+              position: 'fixed',
+              left: `${mousePosition.x}px`,
+              top: `${mousePosition.y}px`,
+              transform: 'translate(-50%, -100%) translateY(-5px)',
+              backgroundColor: 'rgba(75, 85, 99, 0.95)',
+              color: 'white',
+              padding: '3px 8px',
               borderRadius: '4px',
               fontSize: '0.7rem',
               fontWeight: '600',
               pointerEvents: 'none',
-              zIndex: 1000,
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
-              transform: 'translateY(-100%)',
+              zIndex: 99999,
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
               whiteSpace: 'nowrap'
             }}
           >
             {mousePosition.time}
-          </div>
+          </div>,
+          document.body
         )}
-      <style>{`
-        /* Style neumorphique pour FullCalendar */
-        .fc {
-          font-family: inherit;
-          background: transparent;
+        <style>{`
+          /* Style neumorphique pour FullCalendar */
+          .fc {
+            font-family: inherit;
+            background: transparent;
         }
         
         /* Conteneur principal du calendrier - Style neumorphique */
@@ -627,37 +664,50 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
         .fc-scrollgrid-section-body::-webkit-scrollbar-thumb:hover {
           background: rgba(0, 0, 0, 0.3);
         }
-      `}</style>
-      
-      <FullCalendar
-        plugins={[timeGridPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
-        locale={frLocale}
-        headerToolbar={false}
-        height="auto"
-        slotMinTime="06:00"
-        slotMaxTime="22:00"
-        slotDuration="00:30"
-        slotLabelInterval="01:00"
-        snapDuration="00:05"
-        selectMinDistance={0}
-        allDaySlot={false}
-        expandRows={true}
-        nowIndicator={true}
-        editable={true}
-        selectable={true}
-        selectMirror={false}
-        events={localEvents}
-        select={handleDateSelect}
-        eventClick={handleEventClick}
-        eventDrop={handleEventDrop}
-        eventResize={handleEventResize}
-        eventDragStart={(info) => console.log('Drag start:', info)}
-        eventDragStop={(info) => console.log('Drag stop:', info)}
-        weekends={true}
-        firstDay={1}
-        dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
-        dayHeaderContent={(arg) => {
+        `}</style>
+        
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[timeGridPlugin, interactionPlugin]}
+          initialView="timeGridWeek"
+          locale={frLocale}
+          headerToolbar={false}
+          height="auto"
+          slotMinTime="06:00"
+          slotMaxTime="22:00"
+          slotDuration="00:30"
+          slotLabelInterval="01:00"
+          snapDuration="00:05"
+          selectMinDistance={0}
+          allDaySlot={false}
+          expandRows={true}
+          nowIndicator={true}
+          editable={true}
+          droppable={true}
+          selectable={true}
+          selectMirror={false}
+          eventStartEditable={true}
+          eventDurationEditable={true}
+          events={events}
+          dragRevertDuration={0}
+          dragScroll={true}
+          unselectAuto={true}
+          select={handleDateSelect}
+          eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
+          eventResize={handleEventResize}
+          eventDragStart={() => { 
+            isDragging.current = true;
+            console.log('🏁 Drag started, blocking mouse updates');
+          }}
+          eventDragStop={() => { 
+            isDragging.current = false;
+            console.log('🎯 Drag stopped, re-enabling mouse updates');
+          }}
+          weekends={true}
+          firstDay={1}
+          dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+          dayHeaderContent={(arg) => {
           const date = arg.date;
           const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
           const dayNumber = date.getDate();
@@ -688,12 +738,17 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
               </div>
             </div>
           );
-        }}
-        eventContent={(eventInfo) => {
+          }}
+          eventContent={(eventInfo) => {
           const status = eventInfo.event.extendedProps.status;
           const description = eventInfo.event.extendedProps.description;
           const borderColor = eventInfo.event.borderColor;
           const task = eventInfo.event.extendedProps.task;
+          
+          // Calculer la hauteur de l'événement
+          const eventEl = eventInfo.el;
+          const eventHeight = eventEl ? eventEl.offsetHeight : 100;
+          const isSmall = eventHeight < 40; // Si moins de 40px, considéré comme petit
           
           // Extraire les deux premiers mots de la description
           const getDescriptionPreview = (desc) => {
@@ -725,39 +780,64 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
                 borderRadius: '0'
               }} />
               
-              {/* Heure en premier */}
-              <div style={{ 
-                fontSize: '0.65rem', 
-                color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
-                opacity: '0.85',
-                marginLeft: '4px',
-                fontWeight: '600'
-              }}>
-                {eventInfo.timeText}
-              </div>
-              
-              {/* Nom de la tâche */}
-              <div style={{ 
-                fontSize: '0.75rem', 
-                fontWeight: '500',
-                color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
-                marginLeft: '4px',
-                marginTop: '1px'
-              }}>
-                {eventInfo.event.title}
-              </div>
-              
-              {/* Aperçu de la description */}
-              {descPreview && (
+              {/* Afficher le contenu seulement si l'événement n'est pas trop petit */}
+              {!isSmall ? (
+                <>
+                  {/* Heure en premier */}
+                  <div style={{ 
+                    fontSize: '0.65rem', 
+                    color: eventInfo.event.textColor || 'rgb(31, 41, 55)',
+                    opacity: '0.85',
+                    marginLeft: '4px',
+                    fontWeight: '600'
+                  }}>
+                    {eventInfo.timeText}
+                  </div>
+                  
+                  {/* Nom de la tâche avec ellipsis */}
+                  <div style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: '500',
+                    color: eventInfo.event.textColor || 'rgb(31, 41, 55)',
+                    marginLeft: '4px',
+                    marginTop: '1px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: 'calc(100% - 25px)'
+                  }}>
+                    {eventInfo.event.title}
+                  </div>
+                  
+                  {/* Description avec ellipsis simple - seulement si assez de place */}
+                  {description && description.trim() !== '' && eventHeight > 60 && (
+                    <div style={{ 
+                      fontSize: '0.6rem', 
+                      color: eventInfo.event.textColor || 'rgb(31, 41, 55)',
+                      opacity: '0.65',
+                      marginLeft: '4px',
+                      marginTop: '2px',
+                      fontStyle: 'italic',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: 'calc(100% - 25px)'
+                    }}>
+                      {description}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Pour les petits événements, afficher seulement un point ou rien */
                 <div style={{ 
-                  fontSize: '0.6rem', 
-                  color: eventInfo.event.textColor || 'rgb(75, 85, 99)',
-                  opacity: '0.6',
-                  marginLeft: '4px',
-                  marginTop: '2px',
-                  fontStyle: 'italic'
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '100%',
+                  fontSize: '0.5rem',
+                  opacity: '0.5'
                 }}>
-                  {descPreview}...
+                  •
                 </div>
               )}
               
@@ -788,20 +868,20 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
               )}
             </div>
           );
-        }}
-        eventTimeFormat={{
+          }}
+          eventTimeFormat={{
           hour: '2-digit',
           minute: '2-digit',
           meridiem: false,
           hour12: false
-        }}
-        slotLabelFormat={{
+          }}
+          slotLabelFormat={{
           hour: 'numeric',
           minute: '2-digit',
           meridiem: false,
           hour12: false
-        }}
-      />
+          }}
+        />
       </div>
 
       {/* Modal de création de tâche */}
@@ -1166,6 +1246,8 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
       )}
     </div>
   );
-};
+});
+
+WeeklyCalendarFullCalendar.displayName = 'WeeklyCalendarFullCalendar';
 
 export default WeeklyCalendarFullCalendar;
