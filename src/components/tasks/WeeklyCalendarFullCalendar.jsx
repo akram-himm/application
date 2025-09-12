@@ -5,7 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
 
-const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTask }) => {
+const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTask, currentDate }) => {
   const [showModal, setShowModal] = useState(false);
   const [newEvent, setNewEvent] = useState(null);
   const [eventTitle, setEventTitle] = useState('');
@@ -299,6 +299,20 @@ const WeeklyCalendarFullCalendar = ({ tasks, onAddTask, onUpdateTask, onDeleteTa
   const handleMouseLeave = () => {
     setMousePosition({ ...mousePosition, show: false });
   };
+  
+  // Naviguer vers la date actuelle quand currentDate change
+  useEffect(() => {
+    if (currentDate && typeof window !== 'undefined' && document.querySelector('.fc')) {
+      // Attendre que FullCalendar soit monté
+      setTimeout(() => {
+        const calendarEl = document.querySelector('.fc');
+        if (calendarEl && calendarEl.__fullCalendar) {
+          const calendarApi = calendarEl.__fullCalendar;
+          calendarApi.gotoDate(currentDate);
+        }
+      }, 100);
+    }
+  }, [currentDate]);
 
   // Gérer la fermeture avec Escape et clic extérieur
   useEffect(() => {

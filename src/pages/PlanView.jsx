@@ -1,7 +1,6 @@
 import React, { useState, useContext, useEffect, memo, useCallback, useMemo } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import DraggableTable from '../components/tasks/DraggableTable';
-import WeeklyCalendarFullCalendar from '../components/tasks/WeeklyCalendarFullCalendar';
 import TaskContextMenu from '../components/tasks/TaskContextMenu';
 import TaskEditModal from '../components/tasks/TaskEditModal';
 import TaskFilters from '../components/tasks/TaskFilters';
@@ -13,24 +12,6 @@ const PlanView = memo(() => {
   
   // Vérifier si on doit inverser les styles
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
-  
-  // État pour les modes d'affichage
-  const [viewMode, setViewMode] = useState({
-    showDaily: true,
-    showWeekly: false
-  });
-  
-  // Fonction pour gérer le changement des modes d'affichage
-  const handleViewModeChange = (mode, checked) => {
-    setViewMode(prev => {
-      const newMode = { ...prev, [mode]: checked };
-      // Empêcher de tout décocher
-      if (!newMode.showDaily && !newMode.showWeekly) {
-        return { ...prev, [mode]: true };
-      }
-      return newMode;
-    });
-  };
   
   // États
   const [filters, setFilters] = useState({
@@ -323,34 +304,10 @@ const PlanView = memo(() => {
       {/* Effet de fond subtil - supprimé car le gradient est sur le body */}
       
       <div className="max-w-7xl mx-auto p-8 space-y-6">
-        {/* En-tête avec titre et boutons */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-800 tracking-tight">
-            Planification
-          </h1>
-          
-          {/* Boutons radio pour choisir la vue */}
-          <div className="flex items-center gap-3 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={viewMode.showDaily}
-                onChange={(e) => handleViewModeChange('showDaily', e.target.checked)}
-                className="w-4 h-4 text-blue-500 bg-white/70 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Jour</span>
-            </label>
-            <div className="w-px h-4 bg-gray-300"></div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={viewMode.showWeekly}
-                onChange={(e) => handleViewModeChange('showWeekly', e.target.checked)}
-                className="w-4 h-4 text-blue-500 bg-white/70 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Semaine</span>
-            </label>
-          </div>
+        {/* En-tête */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-light text-gray-800">Gestion des tâches</h1>
+          <p className="text-sm text-gray-500 mt-1">Organisez vos tâches quotidiennes</p>
         </div>
 
         {/* Filtres */}
@@ -360,39 +317,21 @@ const PlanView = memo(() => {
           radars={radars}
         />
 
-        {/* Tableaux selon le mode d'affichage */}
-        <div className="space-y-10">
-          {/* Tâches du jour */}
-          {viewMode.showDaily && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-medium text-gray-700">Tâches du jour</h2>
-              <DraggableTable
-                key="daily-table"
-                title=""
-                tasks={dailyTasks}
-                columns={dailyColumns}
-                onUpdateTasks={handleUpdateDailyTasks}
-                onAddTask={handleAddDailyTask}
-                onUpdateTask={updateTask}
-                onDoubleClick={(task, cellIndex) => handleDoubleClick(task, cellIndex, false)}
-                onContextMenu={(e, task) => handleContextMenu(e, task, false)}
-                onDeleteTasks={deleteTask}
-              />
-            </div>
-          )}
-
-          {/* Planning hebdomadaire */}
-          {viewMode.showWeekly && (
-            <div>
-              <h2 className="text-xl font-semibold text-[#1E1F22] mb-4">Planning de la semaine</h2>
-              <WeeklyCalendarFullCalendar
-                tasks={weeklyTasks}
-                onAddTask={handleAddWeeklyTask}
-                onUpdateTask={updateTask}
-                onDeleteTask={deleteTask}
-              />
-            </div>
-          )}
+        {/* Tableau des tâches du jour */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-medium text-gray-700">Tâches du jour</h2>
+          <DraggableTable
+            key="daily-table"
+            title=""
+            tasks={dailyTasks}
+            columns={dailyColumns}
+            onUpdateTasks={handleUpdateDailyTasks}
+            onAddTask={handleAddDailyTask}
+            onUpdateTask={updateTask}
+            onDoubleClick={(task, cellIndex) => handleDoubleClick(task, cellIndex, false)}
+            onContextMenu={(e, task) => handleContextMenu(e, task, false)}
+            onDeleteTasks={deleteTask}
+          />
         </div>
 
         {/* Indicateurs d'aide */}
