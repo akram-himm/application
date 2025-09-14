@@ -256,6 +256,10 @@ export const AppProvider = ({ children }) => {
     dispatch({ type: 'SET_RADARS', payload: radars });
   }, []);
 
+  const setTasks = useCallback((tasks) => {
+    dispatch({ type: 'SET_TASKS', payload: tasks });
+  }, []);
+
   // Optimiser la valeur du contexte avec useMemo
   // Cela évite de recréer l'objet à chaque render
   const value = useMemo(
@@ -266,6 +270,7 @@ export const AppProvider = ({ children }) => {
       updateRadar,
       deleteRadar,
       setRadars,
+      setTasks,
       addTask,
       updateTask,
       updateTaskImmediate,
@@ -280,6 +285,7 @@ export const AppProvider = ({ children }) => {
       updateRadar,
       deleteRadar,
       setRadars,
+      setTasks,
       addTask,
       updateTask,
       updateTaskImmediate,

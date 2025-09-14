@@ -19,12 +19,15 @@ const CalendarView = () => {
       // Inclure les tâches weekly
       if (task.type === 'weekly') return true;
       
+      // Inclure les tâches daily (sans heure obligatoire)
+      if (task.type === 'daily') return true;
+      
       // Inclure les tâches avec des dates valides
       const hasValidDate = (task.startDate && task.startDate !== '-') || 
                           (task.date && task.date !== '-');
-      const hasValidTime = task.time && task.time !== '-';
       
-      return hasValidDate && hasValidTime;
+      // Pour la vue calendrier, on accepte les tâches avec ou sans heure
+      return hasValidDate;
     });
   }, [tasks]);
   
@@ -32,9 +35,10 @@ const CalendarView = () => {
   const handleAddCalendarTask = useCallback((taskData) => {
     const newTask = {
       ...taskData,
-      type: 'weekly',
+      type: 'daily', // Utiliser 'daily' pour que les tâches apparaissent dans To-Do
       status: taskData.status || 'À faire',
-      priority: taskData.priority || 'Normal'
+      priority: taskData.priority || 'Normal',
+      color: taskData.color || '#9ca3af'
     };
     addTask(newTask);
   }, [addTask]);

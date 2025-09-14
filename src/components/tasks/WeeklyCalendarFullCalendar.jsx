@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useContext } from 'react';
 import ReactDOM from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
+import { AppContext } from '../../contexts/AppContext';
+import TaskAutocomplete from './TaskAutocomplete';
 
 const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask, onDeleteTask, currentDate }) => {
+  const { radars } = useContext(AppContext);
   const [showModal, setShowModal] = useState(false);
   const [newEvent, setNewEvent] = useState(null);
   const [eventTitle, setEventTitle] = useState('');
@@ -14,6 +17,10 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
   const [tempColor, setTempColor] = useState('#9ca3af');
   const [eventStatus, setEventStatus] = useState('À faire');
   const [eventDescription, setEventDescription] = useState('');
+  const [eventRadar, setEventRadar] = useState(null);
+  const [eventRadarName, setEventRadarName] = useState(null);
+  const [eventSubject, setEventSubject] = useState(null);
+  const [eventSubjectName, setEventSubjectName] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0, time: null, show: false });
   const [showTaskDetails, setShowTaskDetails] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -78,6 +85,7 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
     const containerRect = calendarContainer ? calendarContainer.getBoundingClientRect() : { left: 0, top: 0 };
     
     const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
     const detailsWidth = 320;
     const detailsHeight = 450;
     
@@ -103,8 +111,23 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
       }
     }
     
-    // Position verticale - centrer par rapport à la tâche (relative au conteneur)
-    let yPosition = relativeTop + (rect.height / 2);
+    // Position verticale - centrer par rapport à la tâche
+    let yPosition = relativeTop + (rect.height / 2) - (detailsHeight / 2);
+    
+    // Vérifier que le popup ne sort pas en haut de la vue
+    if (rect.top - (detailsHeight / 2) < 0) {
+      // Si le popup sortirait en haut, le positionner en dessous de la tâche
+      yPosition = relativeTop + rect.height + 8;
+    }
+    
+    // Vérifier que le popup ne sort pas en bas de la vue
+    if (rect.bottom + (detailsHeight / 2) > windowHeight) {
+      // Si le popup sortirait en bas, le positionner au-dessus de la tâche
+      yPosition = relativeTop - detailsHeight - 8;
+    }
+    
+    // S'assurer que le popup reste dans les limites du calendrier
+    yPosition = Math.max(10, yPosition);
     
     setDetailsPosition({ x: xPosition, y: yPosition });
   };
@@ -196,7 +219,11 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
       time: startDate.toTimeString().slice(0, 5),
       endTime: endDate.toTimeString().slice(0, 5),
       color: eventColor,
-      description: eventDescription
+      description: eventDescription,
+      radar: eventRadar,
+      radarName: eventRadarName,
+      subject: eventSubject,
+      subjectName: eventSubjectName
     };
     
     onAddTask(newTask);
@@ -210,6 +237,10 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
     setTempColor('#9ca3af');
     setEventStatus('À faire');
     setEventDescription('');
+    setEventRadar(null);
+    setEventRadarName(null);
+    setEventSubject(null);
+    setEventSubjectName(null);
     setNewEvent(null);
     setShowColorPicker(false);
   };
@@ -314,18 +345,31 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
           const r = parseInt(hex.slice(0, 2), 16);
           const g = parseInt(hex.slice(2, 4), 16);
           const b = parseInt(hex.slice(4, 6), 16);
+          
+          // Vérifier si c'est une couleur grise (quand R, G et B sont proches)
+          const isGray = Math.abs(r - g) < 25 && Math.abs(g - b) < 25 && Math.abs(r - b) < 25;
+          if (isGray) {
+            return 0.30; // Opacité réduite pour les gris-beige plus clairs
+          }
+          
           const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
           return luminance < 0.5 ? 0.25 : 0.15;
         };
 
+        // Ajuster la couleur grise pour qu'elle soit légèrement beige et très claire
+        let adjustedColor = task.color;
+        if (task.color === '#9ca3af') {
+          adjustedColor = '#e7e5e4'; // Gris-beige très clair (stone-200)
+        }
+        
         return {
           id: String(task.id),
           title: task.name,
           start: `${taskDate}T${task.time}:00`,
           end: task.endTime ? `${taskEndDate}T${task.endTime}:00` : `${taskEndDate}T${addHour(task.time)}:00`,
-          backgroundColor: task.color ? hexToRgba(task.color, adjustOpacity(task.color)) : 'rgba(75, 85, 99, 0.18)',
-          borderColor: task.color || '#374151',
-          textColor: task.color || 'rgb(31, 41, 55)',
+          backgroundColor: adjustedColor ? hexToRgba(adjustedColor, adjustOpacity(adjustedColor)) : 'rgba(75, 85, 99, 0.18)',
+          borderColor: '#000000', // Bordure noire pour toutes les tâches
+          textColor: '#000000', // Texte noir
           extendedProps: { 
             task,
             status: task.status,
@@ -809,8 +853,28 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
                     {eventInfo.event.title}
                   </div>
                   
+                  {/* Radar/Subject tag - comme dans To-Do */}
+                  {task.radarName && eventHeight > 50 && (
+                    <div style={{ 
+                      fontSize: '0.55rem', 
+                      color: '#3b82f6',
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      marginLeft: '4px',
+                      marginTop: '3px',
+                      padding: '1px 4px',
+                      borderRadius: '3px',
+                      display: 'inline-block',
+                      maxWidth: 'calc(100% - 25px)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {task.subjectName ? `${task.radarName} › ${task.subjectName}` : task.radarName}
+                    </div>
+                  )}
+                  
                   {/* Description avec ellipsis simple - seulement si assez de place */}
-                  {description && description.trim() !== '' && eventHeight > 60 && (
+                  {description && description.trim() !== '' && eventHeight > 75 && (
                     <div style={{ 
                       fontSize: '0.6rem', 
                       color: eventInfo.event.textColor || 'rgb(31, 41, 55)',
@@ -884,10 +948,17 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
         />
       </div>
 
-      {/* Modal de création de tâche */}
-      {showModal && (
+      {/* Modal de création de tâche - rendu via portail pour garantir le centrage */}
+      {showModal && ReactDOM.createPortal(
         <div 
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[9999]"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
           onClick={() => {
             if (!showColorPicker) {
               setShowModal(false);
@@ -925,14 +996,21 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nom de la tâche
                 </label>
-                <input
-                  type="text"
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Entrez le nom de la tâche"
-                  autoFocus
-                />
+                <div className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                  <TaskAutocomplete
+                    value={eventTitle}
+                    onChange={(value) => setEventTitle(value)}
+                    onSubmit={(taskData) => {
+                      setEventTitle(taskData.name);
+                      setEventRadar(taskData.radar || null);
+                      setEventRadarName(taskData.radarName || null);
+                      setEventSubject(taskData.subject || null);
+                      setEventSubjectName(taskData.subjectName || null);
+                    }}
+                    radars={radars}
+                    placeholder="Entrez le nom de la tâche"
+                  />
+                </div>
               </div>
 
               {/* Statut et Couleurs sur la même ligne */}
@@ -1073,7 +1151,8 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Fenêtre de détails - sans portail pour qu'elle reste relative au calendrier */}
@@ -1083,7 +1162,7 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
           style={{
             borderLeft: `4px solid ${selectedTask.color || '#9CA3AF'}`,
             left: `${detailsPosition.x}px`,
-            top: `${detailsPosition.y - 225}px`  // Centrer verticalement
+            top: `${detailsPosition.y}px`
           }}
         >
           {/* En-tête */}

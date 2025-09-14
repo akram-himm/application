@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AppContext } from '../../contexts/AppContext';
+import TaskAutocomplete from '../tasks/TaskAutocomplete';
 
 const TaskSidebar = ({ 
   isOpen, 
@@ -11,6 +13,7 @@ const TaskSidebar = ({
   onAddTask,
   onNavigateToWeek 
 }) => {
+  const { radars } = useContext(AppContext);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [formData, setFormData] = useState({});
@@ -23,7 +26,12 @@ const TaskSidebar = ({
   const dayTasks = selectedDate ? tasks.filter(task => {
     const taskDate = task.date || task.startDate;
     if (!taskDate || taskDate === '-') return false;
-    return taskDate === selectedDate.toISOString().split('T')[0];
+    // Formater la date sélectionnée en format local YYYY-MM-DD
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    const selectedDateStr = `${year}-${month}-${day}`;
+    return taskDate === selectedDateStr;
   }) : [];
 
   // Réinitialiser quand on change de date
@@ -55,7 +63,11 @@ const TaskSidebar = ({
       time: task.time || '',
       endTime: task.endTime || '',
       description: task.description || '',
-      color: task.color || '#3b82f6'
+      color: task.color || '#3b82f6',
+      radar: task.radar || null,
+      radarName: task.radarName || null,
+      subject: task.subject || null,
+      subjectName: task.subjectName || null
     });
   };
 
@@ -63,21 +75,73 @@ const TaskSidebar = ({
   const handleSave = () => {
     if (editingTask) {
       const task = tasks.find(t => t.id === editingTask);
+      // Formater la date en format local YYYY-MM-DD sans conversion UTC
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       onUpdateTask({
         ...task,
         ...formData,
-        date: selectedDate.toISOString().split('T')[0]
+        date: dateStr,
+        startDate: dateStr
       });
       setEditingTask(null);
     } else if (showAddForm) {
-      onAddTask({
-        ...formData,
-        date: selectedDate.toISOString().split('T')[0],
-        type: 'daily'
-      });
+      // Définir les valeurs par défaut si non renseignées
+      // Formater la date en format local YYYY-MM-DD sans conversion UTC
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      const newTask = {
+        name: formData.name || '',
+        description: formData.description || '',
+        status: formData.status || 'À faire',
+        priority: formData.priority || 'Normal',
+        time: formData.time || '-', // Si pas d'heure, mettre un tiret
+        endTime: formData.endTime || '',
+        date: dateStr,
+        startDate: dateStr,
+        type: 'daily', // Toujours 'daily' pour que les tâches apparaissent dans To-Do
+        color: formData.color || '#9ca3af', // Inclure la couleur (RGB 156,163,175)
+        radar: formData.radar || null,
+        radarName: formData.radarName || null,
+        subject: formData.subject || null,
+        subjectName: formData.subjectName || null
+      };
+      
+      onAddTask(newTask);
       setShowAddForm(false);
       setFormData({});
     }
+  };
+
+  // Gérer la soumission du formulaire d'ajout avec autocomplete
+  const handleAutocompleteSubmit = (taskData) => {
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    const newTask = {
+      ...taskData,
+      description: formData.description || '',
+      status: formData.status || 'À faire',
+      priority: formData.priority || 'Normal',
+      time: formData.time || '-',
+      endTime: formData.endTime || '',
+      date: dateStr,
+      startDate: dateStr,
+      type: 'daily',
+      color: formData.color || '#9ca3af'
+    };
+    
+    onAddTask(newTask);
+    setShowAddForm(false);
+    setFormData({});
   };
 
   // Annuler les modifications
@@ -215,12 +279,24 @@ const TaskSidebar = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
-              />
+              <div className="px-3 py-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
+                <TaskAutocomplete
+                  value={formData.name}
+                  onChange={(value) => setFormData({ ...formData, name: value })}
+                  onSubmit={(taskData) => {
+                    setFormData({ 
+                      ...formData, 
+                      name: taskData.name,
+                      radar: taskData.radar || formData.radar,
+                      radarName: taskData.radarName || formData.radarName,
+                      subject: taskData.subject || formData.subject,
+                      subjectName: taskData.subjectName || formData.subjectName
+                    });
+                  }}
+                  radars={radars}
+                  placeholder="Nom de la tâche"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -435,7 +511,19 @@ const TaskSidebar = ({
             {/* Bouton ajouter une tâche */}
             {!showAddForm && !selectMode && (
               <button
-                onClick={() => setShowAddForm(true)}
+                onClick={() => {
+                  setShowAddForm(true);
+                  // Initialiser avec les valeurs par défaut
+                  setFormData({
+                    name: '',
+                    description: '',
+                    status: 'À faire',
+                    priority: 'Normal',
+                    time: '',
+                    endTime: '',
+                    color: '#9ca3af'
+                  });
+                }}
                 className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
               >
                 + Ajouter une tâche
@@ -445,21 +533,80 @@ const TaskSidebar = ({
             {/* Formulaire d'ajout */}
             {showAddForm && (
               <div className="p-4 bg-gray-50 rounded-lg space-y-3">
-                <input
-                  type="text"
-                  placeholder="Nom de la tâche"
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                <div className="px-3 py-2 border border-gray-300 rounded-lg bg-white">
+                  <TaskAutocomplete
+                    value={formData.name || ''}
+                    onChange={(value) => setFormData({ ...formData, name: value })}
+                    onSubmit={(taskData) => {
+                      // Si on appuie sur Entrée avec du texte, on ajoute directement la tâche
+                      if (taskData.name) {
+                        handleAutocompleteSubmit(taskData);
+                      }
+                    }}
+                    radars={radars}
+                    placeholder="Nom de la tâche"
+                  />
+                </div>
+                
+                <textarea
+                  placeholder="Description (optionnel)"
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
-                  autoFocus
                 />
-                <input
-                  type="time"
-                  placeholder="Heure"
-                  value={formData.time || ''}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
-                />
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="time"
+                    placeholder="Heure début"
+                    value={formData.time || ''}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                  />
+                  <input
+                    type="time"
+                    placeholder="Heure fin"
+                    value={formData.endTime || ''}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={formData.status || 'À faire'}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                  >
+                    <option value="À faire">À faire</option>
+                    <option value="En cours">En cours</option>
+                    <option value="Terminé">Terminé</option>
+                  </select>
+                  
+                  <select
+                    value={formData.priority || 'Normal'}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                  >
+                    <option value="Pas de panique">Pas de panique</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Important">Important</option>
+                    <option value="Très important">Très important</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Couleur:</label>
+                  <input
+                    type="color"
+                    value={formData.color || '#9ca3af'}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="w-12 h-8 border border-gray-300 rounded cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-500">{formData.color || '#9ca3af'}</span>
+                </div>
+                
                 <div className="flex gap-2">
                   <button
                     onClick={handleSave}

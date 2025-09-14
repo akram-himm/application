@@ -6,12 +6,19 @@ import TaskEditModal from '../components/tasks/TaskEditModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ConfirmModal from '../components/tasks/ConfirmModal';
 import { HeaderCard } from '../components/ui/Card';
+import { initTaskRotation, isRotationBlocked, setRotationBlocked, forceRotation } from '../services/taskRotationService';
 
 const PlanView = memo(() => {
-  const { tasks, addTask, updateTask, deleteTask, radars } = useContext(AppContext);
+  const { tasks, addTask, updateTask, deleteTask, radars, setTasks } = useContext(AppContext);
   
   // Vérifier si on doit inverser les styles
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
+  
+  // État pour le blocage de rotation
+  const [rotationBlocked, setRotationBlockedState] = useState(isRotationBlocked());
+  
+  // État pour la recherche
+  const [searchQuery, setSearchQuery] = useState('');
   
   // États
   const [filters, setFilters] = useState({
@@ -41,6 +48,17 @@ const PlanView = memo(() => {
   const applyFilters = useCallback((taskList) => {
     let filtered = taskList;
     
+    // Filtre de recherche
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(task => {
+        // Rechercher dans le nom et la description
+        const inName = task.name?.toLowerCase().includes(query);
+        const inDescription = task.description?.toLowerCase().includes(query);
+        return inName || inDescription;
+      });
+    }
+    
     if (filters.priority !== 'all') {
       filtered = filtered.filter(task => task.priority === filters.priority);
     }
@@ -58,22 +76,49 @@ const PlanView = memo(() => {
     }
     
     return filtered;
-  }, [filters]);
+  }, [filters, searchQuery]);
+
+  // Obtenir la date d'aujourd'hui au format YYYY-MM-DD
+  const getTodayStr = useCallback(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
 
   // Optimiser le calcul des tâches filtrées avec useMemo
-  const dailyTasks = useMemo(() => 
-    applyFilters(
-      tasks.filter(task => !task.type || task.type === 'daily')
-    ).sort((a, b) => (a.order || 0) - (b.order || 0)),
-    [tasks, applyFilters]
-  );
+  // Afficher seulement les tâches du jour actuel, routines ou sans date
+  const dailyTasks = useMemo(() => {
+    const todayStr = getTodayStr();
+    return applyFilters(
+      tasks.filter(task => {
+        // Tâches routine (toujours visibles)
+        if (task.type === 'routine') {
+          return true;
+        }
+        // Tâches sans date (tâches To-Do classiques)
+        if (!task.date || task.date === '-') {
+          return task.type === 'today' || !task.type || task.type === 'daily';
+        }
+        // Tâches avec date = aujourd'hui
+        return task.date === todayStr && (task.type === 'today' || task.type === 'planned' || !task.type || task.type === 'daily');
+      })
+    ).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [tasks, applyFilters, getTodayStr]);
   
-  const weeklyTasks = useMemo(() =>
-    applyFilters(
-      tasks.filter(task => task.type === 'weekly')
-    ).sort((a, b) => (a.order || 0) - (b.order || 0)),
-    [tasks, applyFilters]
-  );
+  const weeklyTasks = useMemo(() => {
+    const todayStr = getTodayStr();
+    return applyFilters(
+      tasks.filter(task => {
+        if (task.type !== 'weekly') return false;
+        // Pour les tâches weekly, vérifier si aujourd'hui est dans la période
+        if (!task.startDate || task.startDate === '-') return true;
+        const endDate = task.endDate || task.startDate;
+        return task.startDate <= todayStr && endDate >= todayStr;
+      })
+    ).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [tasks, applyFilters, getTodayStr]);
 
   // Colonnes pour les tableaux
   const dailyColumns = [
@@ -95,26 +140,28 @@ const PlanView = memo(() => {
 
   // Gestion des tâches quotidiennes
   const handleAddDailyTask = (taskData) => {
+    const todayStr = getTodayStr();
+    
     // Si c'est une string (ancien comportement)
     if (typeof taskData === 'string') {
       const newTask = {
         name: taskData,
-        type: 'daily',
+        type: 'today', // Par défaut type 'today'
         status: 'À faire',
         priority: 'Pas de panique',
-        date: '-',
+        date: todayStr,
         time: '-'
       };
       addTask(newTask);
     } else {
-      // Nouveau comportement avec radar/matière
+      // Nouveau comportement avec type spécifié
       const newTask = {
         name: taskData.name,
-        type: 'daily',
+        type: taskData.type || 'today', // Utiliser le type fourni ou 'today' par défaut
         status: 'À faire',
         priority: 'Pas de panique',
-        date: '-',
-        time: '-',
+        date: taskData.type === 'routine' ? '-' : todayStr, // Pas de date pour les routines
+        time: taskData.time || '-',
         radar: taskData.radar || null,
         radarName: taskData.radarName || null,
         subject: taskData.subject || null,
@@ -258,18 +305,31 @@ const PlanView = memo(() => {
     setEditModal({ show: false, task: null, isWeekly: false });
   };
 
-  // Transfert automatique des tâches du jour - désactivé pour éviter les boucles infinies
-  // Cette fonctionnalité devrait être déclenchée par une action utilisateur ou au chargement initial
+  // Initialiser le système de rotation automatique
+  useEffect(() => {
+    if (setTasks) {
+      const cleanup = initTaskRotation(tasks, setTasks);
+      return cleanup; // Nettoyer l'intervalle au démontage
+    }
+  }, []); // Initialiser une seule fois au montage
+
+  // Gérer le changement du blocage de rotation
+  const handleToggleRotationBlock = () => {
+    const newState = !rotationBlocked;
+    setRotationBlocked(newState);
+    setRotationBlockedState(newState);
+  };
+
+  // Forcer la rotation manuellement
+  const handleForceRotation = () => {
+    if (setTasks) {
+      forceRotation(tasks, setTasks);
+    }
+  };
+
   // useEffect(() => {
   //   const today = new Date();
   //   today.setHours(0, 0, 0, 0);
-  //   
-  //   // Chercher les tâches hebdomadaires dont la date est aujourd'hui
-  //   const tasksToTransfer = weeklyTasks.filter(task => {
-  //     if (!task.date) return false;
-  //     const taskDate = new Date(task.date);
-  //     taskDate.setHours(0, 0, 0, 0);
-  //     return taskDate.getTime() === today.getTime() && task.autoTransfer !== false;
   //   });
   //   
   //   // Les marquer comme transférées pour éviter les boucles infinies
@@ -304,22 +364,95 @@ const PlanView = memo(() => {
       {/* Effet de fond subtil - supprimé car le gradient est sur le body */}
       
       <div className="max-w-7xl mx-auto p-8 space-y-6">
-        {/* En-tête */}
+        {/* En-tête avec contrôles de rotation */}
         <div className="mb-6">
-          <h1 className="text-2xl font-light text-gray-800">Gestion des tâches</h1>
-          <p className="text-sm text-gray-500 mt-1">Organisez vos tâches quotidiennes</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-light text-gray-800">Gestion des tâches</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Tâches du {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+            
+            {/* Contrôles de rotation automatique */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">Rotation automatique à minuit</label>
+                <button
+                  onClick={handleToggleRotationBlock}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    !rotationBlocked ? 'bg-blue-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    !rotationBlocked ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+                <span className="text-xs text-gray-500">
+                  {rotationBlocked ? 'Bloquée' : 'Active'}
+                </span>
+              </div>
+              
+              <button
+                onClick={handleForceRotation}
+                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                title="Forcer la rotation maintenant"
+              >
+                🔄 Rotation manuelle
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Filtres */}
-        <TaskFilters 
-          filters={filters}
-          onFiltersChange={setFilters}
-          radars={radars}
-        />
+        {/* Barre de recherche et Filtres */}
+        <div className="space-y-4">
+          {/* Barre de recherche */}
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher une tâche..."
+              className="w-full px-4 py-2 pl-10 pr-10 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <svg 
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          
+          {/* Filtres */}
+          <TaskFilters 
+            filters={filters}
+            onFiltersChange={setFilters}
+            radars={radars}
+          />
+        </div>
 
         {/* Tableau des tâches du jour */}
         <div className="space-y-3">
-          <h2 className="text-lg font-medium text-gray-700">Tâches du jour</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium text-gray-700">Tâches du jour</h2>
+            {searchQuery && (
+              <span className="text-sm text-gray-500">
+                {dailyTasks.length} résultat{dailyTasks.length > 1 ? 's' : ''} trouvé{dailyTasks.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <DraggableTable
             key="daily-table"
             title=""

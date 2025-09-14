@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 
 const MonthlyCalendar = ({ tasks, currentDate, onDayClick, onAddTask, onTaskClick, onDeleteTask }) => {
   const [hoveredDay, setHoveredDay] = useState(null);
@@ -50,7 +51,12 @@ const MonthlyCalendar = ({ tasks, currentDate, onDayClick, onAddTask, onTaskClic
 
   // Obtenir les tâches pour un jour donné
   const getTasksForDay = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    // Formater la date en format local YYYY-MM-DD sans conversion UTC
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     return tasks.filter(task => {
       const taskDate = task.date || task.startDate;
       if (!taskDate || taskDate === '-') return false;
@@ -83,12 +89,17 @@ const MonthlyCalendar = ({ tasks, currentDate, onDayClick, onAddTask, onTaskClic
     const dayTasks = getTasksForDay(day.date);
     if (dayTasks.length === 0) return;
     
-    // Obtenir la position du carré cliqué
+    // Obtenir la position exacte du carré cliqué
     const rect = e.currentTarget.getBoundingClientRect();
     
+    // Position centrée sous le carré
+    const menuWidth = 200;
+    const leftPosition = rect.left + (rect.width / 2) - (menuWidth / 2);
+    const topPosition = rect.bottom + 5;
+    
     setContextMenu({
-      x: rect.left + (rect.width / 2) - 100, // Centrer horizontalement (menu width ~200px)
-      y: rect.bottom + 5, // Juste en dessous du carré avec un petit espace
+      x: leftPosition,
+      y: topPosition,
       day: day,
       tasks: dayTasks
     });
@@ -191,15 +202,19 @@ const MonthlyCalendar = ({ tasks, currentDate, onDayClick, onAddTask, onTaskClic
                   {dayTasks.slice(0, 3).map((task, i) => (
                     <div
                       key={i}
-                      className={`text-xs p-1 rounded truncate ${
+                      className={`text-xs p-1 rounded truncate relative ${
                         task.status === 'Terminé' 
                           ? 'bg-green-100 text-green-700' 
                           : task.status === 'En cours'
                           ? 'bg-blue-100 text-blue-700'
                           : 'bg-orange-100 text-orange-700'
                       }`}
-                      title={task.name}
+                      title={`${task.name}${task.radarName ? ` - ${task.radarName}${task.subjectName ? ' › ' + task.subjectName : ''}` : ''}`}
                     >
+                      {/* Indicateur de radar - petit point bleu */}
+                      {task.radarName && (
+                        <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full mr-1" />
+                      )}
                       {task.time && task.time !== '-' && (
                         <span className="font-medium mr-1">{task.time}</span>
                       )}
@@ -218,16 +233,16 @@ const MonthlyCalendar = ({ tasks, currentDate, onDayClick, onAddTask, onTaskClic
         })}
       </div>
 
-      {/* Menu contextuel */}
-      {contextMenu && (
+      {/* Menu contextuel - Rendu avec un portail pour éviter les problèmes de positionnement */}
+      {contextMenu && ReactDOM.createPortal(
         <div
           style={{
             position: 'fixed',
-            left: Math.max(10, Math.min(contextMenu.x, window.innerWidth - 210)), // Éviter de dépasser les bords
-            top: Math.min(contextMenu.y, window.innerHeight - 100), // Éviter de dépasser en bas
+            left: Math.max(10, Math.min(contextMenu.x, window.innerWidth - 210)),
+            top: Math.min(contextMenu.y, window.innerHeight - 100),
             zIndex: 1000
           }}
-          className="bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[200px] animate-in fade-in slide-in-from-top-1 duration-200"
+          className="bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[200px]"
         >
           <button
             onClick={handleDeleteAllTasks}
@@ -238,7 +253,8 @@ const MonthlyCalendar = ({ tasks, currentDate, onDayClick, onAddTask, onTaskClic
             </svg>
             Supprimer toutes les tâches ({contextMenu.tasks.length})
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Dialogue de confirmation */}

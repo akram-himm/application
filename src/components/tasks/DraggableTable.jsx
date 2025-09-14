@@ -476,7 +476,9 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
             <div className="flex items-start gap-2">
               <div 
                 className="w-1 h-5 rounded-full flex-shrink-0 mt-0.5"
-                style={{ background: getPriorityColor(task.priority) }}
+                style={{ 
+                  background: task.type === 'routine' ? '#9333ea' : getPriorityColor(task.priority) 
+                }}
               />
               <div className="flex-1">
                 <span 
@@ -631,6 +633,7 @@ const DraggableTable = ({
 }) => {
   const { radars } = useContext(AppContext);
   const [newTaskName, setNewTaskName] = useState('');
+  const [isRoutine, setIsRoutine] = useState(false); // État pour la case routine
   const [editingCell, setEditingCell] = useState(null);
   const [selectedTasks, setSelectedTasks] = useState(new Set());
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -835,13 +838,21 @@ const DraggableTable = ({
     if (typeof taskData === 'string') {
       // Ancien comportement pour compatibilité
       if (taskData.trim()) {
-        onAddTask(taskData.trim());
+        onAddTask({
+          name: taskData.trim(),
+          type: isRoutine ? 'routine' : 'today'
+        });
         setNewTaskName('');
+        setIsRoutine(false); // Réinitialiser la case
       }
     } else {
       // Nouveau comportement avec radar/matière
-      onAddTask(taskData);
+      onAddTask({
+        ...taskData,
+        type: isRoutine ? 'routine' : 'today'
+      });
       setNewTaskName('');
+      setIsRoutine(false); // Réinitialiser la case
     }
   };
 
@@ -1040,7 +1051,7 @@ const DraggableTable = ({
               {/* Ligne d'ajout avec autocomplétion */}
               <tr className="border-t border-gray-200">
                 <td colSpan={columns.filter(col => col.key !== 'tag').length} className="px-6 py-3 relative border-b border-gray-200">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <span className="text-blue-500 text-lg">+</span>
                     <TaskAutocomplete
                       value={newTaskName}
@@ -1049,6 +1060,15 @@ const DraggableTable = ({
                       radars={radars}
                       placeholder="Ajouter une tâche..."
                     />
+                    <label className="flex items-center gap-1.5 text-sm text-gray-600 whitespace-nowrap cursor-pointer hover:text-purple-600 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isRoutine}
+                        onChange={(e) => setIsRoutine(e.target.checked)}
+                        className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
+                      />
+                      <span>Routine</span>
+                    </label>
                   </div>
                 </td>
               </tr>

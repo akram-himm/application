@@ -1,7 +1,8 @@
-import React, { useState, useContext, useEffect, useMemo } from 'react';
+import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
+import { exportHistory, importHistory } from '../services/historyService';
 
 const HistoryView = () => {
   const { tasks } = useContext(AppContext);
@@ -10,6 +11,8 @@ const HistoryView = () => {
   const [selectedWeek, setSelectedWeek] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
   const [visibleMonths, setVisibleMonths] = useState(3); // Nombre de mois visibles
+  const [showImportSuccess, setShowImportSuccess] = useState(false);
+  const fileInputRef = useRef(null);
   
   // Icônes minimalistes style Monday.com
   const icons = {
@@ -219,6 +222,62 @@ const HistoryView = () => {
     if (total >= 8) return 'opacity-50';
     if (total > 0) return 'opacity-30';
     return 'opacity-10';
+  };
+
+  // Gérer l'export de toutes les données
+  const handleExportAll = () => {
+    // Créer un objet avec toutes les données
+    const exportData = {
+      tasks: tasks,
+      history: localStorage.getItem('gestion_history') ? JSON.parse(localStorage.getItem('gestion_history')) : [],
+      radars: localStorage.getItem('gestion_radars') ? JSON.parse(localStorage.getItem('gestion_radars')) : [],
+      exportDate: new Date().toISOString(),
+      version: '1.0'
+    };
+    
+    // Convertir en JSON et télécharger
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportName = `backup_complet_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportName);
+    linkElement.click();
+  };
+
+  // Gérer l'import des données
+  const handleImport = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        
+        // Sauvegarder les données importées
+        if (importedData.tasks) {
+          localStorage.setItem('gestion_tasks', JSON.stringify(importedData.tasks));
+        }
+        if (importedData.history) {
+          localStorage.setItem('gestion_history', JSON.stringify(importedData.history));
+        }
+        if (importedData.radars) {
+          localStorage.setItem('gestion_radars', JSON.stringify(importedData.radars));
+        }
+        
+        setShowImportSuccess(true);
+        setTimeout(() => {
+          setShowImportSuccess(false);
+          window.location.reload(); // Recharger pour appliquer les changements
+        }, 2000);
+      } catch (error) {
+        alert('Erreur lors de l\'import : fichier invalide');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Réinitialiser l'input
   };
   
   // Vue hebdomadaire détaillée
@@ -607,16 +666,29 @@ const HistoryView = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
+      {/* Notification de succès d'import */}
+      {showImportSuccess && (
+        <div className="fixed top-4 right-4 bg-white/95 backdrop-blur-sm text-gray-700 px-4 py-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-gray-200 z-50 flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+            <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span className="text-sm font-light">Données importées avec succès</span>
+        </div>
+      )}
+      
       <div className="max-w-7xl mx-auto px-8 py-10">
-        {/* Breadcrumb minimal */}
+        {/* En-tête avec breadcrumb et boutons export/import */}
         <div className="mb-8">
-          <nav className="flex items-center gap-2 text-sm">
-            <button 
-              onClick={() => setSelectedView('overview')}
-              className={`${selectedView === 'overview' ? 'text-gray-700' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
-            >
-              Historique
-            </button>
+          <div className="flex items-center justify-between">
+            <nav className="flex items-center gap-2 text-sm">
+              <button 
+                onClick={() => setSelectedView('overview')}
+                className={`${selectedView === 'overview' ? 'text-gray-700' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
+              >
+                Historique
+              </button>
             {selectedView !== 'overview' && (
               <>
                 <span className="text-gray-300">{icons.arrow}</span>
@@ -636,7 +708,39 @@ const HistoryView = () => {
                 </span>
               </>
             )}
-          </nav>
+            </nav>
+            
+            {/* Boutons Export/Import */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportAll}
+                className="px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all flex items-center gap-1.5 text-sm ring-1 ring-gray-200"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                <span className="font-light">Exporter</span>
+              </button>
+              
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all flex items-center gap-1.5 text-sm ring-1 ring-gray-200"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span className="font-light">Importer</span>
+              </button>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                className="hidden"
+              />
+            </div>
+          </div>
         </div>
         
         {/* Titre de la page */}
