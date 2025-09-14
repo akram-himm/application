@@ -134,8 +134,68 @@ const RadarView = () => {
           </p>
         </div>
 
-        {/* Bouton d'action */}
-        <div className="flex justify-end mb-6">
+        {/* Section des statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-4 border border-blue-200/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-blue-600 font-medium mb-1">Progression globale</p>
+                <p className="text-2xl font-light text-blue-900">{progress}%</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                  <path fillRule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 100 4h2a2 2 0 100 4h2a1 1 0 100 2 2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4 border border-green-200/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-green-600 font-medium mb-1">Matières actives</p>
+                <p className="text-2xl font-light text-green-900">{subjects.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-purple-600 font-medium mb-1">Objectif atteint</p>
+                <p className="text-2xl font-light text-purple-900">
+                  {subjects.filter(s => s.value >= 80).length}/{subjects.length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Boutons d'action et filtres */}
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex gap-2">
+            <button className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all">
+              Tout
+            </button>
+            <button className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all">
+              En cours
+            </button>
+            <button className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all">
+              Complété
+            </button>
+          </div>
+          
           <button
             onClick={handleAddSubject}
             className={'flex items-center gap-2 ' + uniformStyles.button.primary}
@@ -147,16 +207,68 @@ const RadarView = () => {
           </button>
         </div>
       
-        {/* Radar Chart */}
-        <div className="relative animate-fadeIn">
-        <RadarChart
-          subjects={subjects}
-          hoveredSubject={hoveredSubject}
-          onHoverSubject={setHoveredSubject}
-          onSelectSubject={handleSubjectClick}
-          onContextMenu={handleContextMenu}
-        />
-      </div>
+        {/* Contenu principal avec radar et liste */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Radar Chart - 2/3 de l'espace */}
+          <div className="lg:col-span-2">
+            <RadarChart
+              subjects={subjects}
+              hoveredSubject={hoveredSubject}
+              onHoverSubject={setHoveredSubject}
+              onSelectSubject={handleSubjectClick}
+              onContextMenu={handleContextMenu}
+            />
+          </div>
+          
+          {/* Liste des matières - 1/3 de l'espace */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-gray-700 mb-4">Détail des matières</h3>
+            {subjects.length === 0 ? (
+              <div className="bg-gray-50 rounded-xl p-8 text-center">
+                <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd"/>
+                </svg>
+                <p className="text-gray-500 text-sm">Aucune matière ajoutée</p>
+                <p className="text-gray-400 text-xs mt-1">Cliquez sur "Ajouter une matière" pour commencer</p>
+              </div>
+            ) : (
+              subjects.map((subject, index) => {
+                const penalty = penalties.find(p => p.subjectId === subject.id);
+                const actualValue = penalty ? Math.max(0, subject.value - penalty.penaltyValue) : subject.value;
+                
+                return (
+                  <div
+                    key={subject.id}
+                    className="bg-gradient-to-r from-gray-50 to-gray-100/50 hover:from-gray-100 hover:to-gray-150/50 rounded-xl p-4 transition-all cursor-pointer border border-gray-200/50"
+                    onClick={() => handleSubjectClick(index)}
+                    onContextMenu={(e) => handleContextMenu(e, index)}
+                    onMouseEnter={() => setHoveredSubject(index)}
+                    onMouseLeave={() => setHoveredSubject(null)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">{subject.name}</span>
+                      <span className="text-lg font-light text-gray-900">{actualValue}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-500"
+                        style={{ width: `${actualValue}%` }}
+                      />
+                    </div>
+                    {penalty && (
+                      <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                        <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
+                          <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 12a1 1 0 110-2 1 1 0 010 2zm0-3a1 1 0 01-1-1V5a1 1 0 012 0v4a1 1 0 01-1 1z"/>
+                        </svg>
+                        Pénalité: -{penalty.penaltyValue}%
+                      </p>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       
       {/* Floating Alert */}
       <FloatingAlert />
