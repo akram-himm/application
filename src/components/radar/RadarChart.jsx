@@ -55,8 +55,8 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     
     const angleStep = (Math.PI * 2) / AXES_COUNT;
 
-    // Grilles circulaires - couleurs adaptées au thème light
-    ctx.strokeStyle = 'rgba(156, 163, 175, 0.3)'; // gray-400 à 30%
+    // Grilles circulaires - style simple et cohérent
+    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)'; // Gris léger
     ctx.lineWidth = 1;
     
     for (let i = 1; i <= 5; i++) {
@@ -79,8 +79,8 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       ctx.stroke();
     }
     
-    // Axes radiaux
-    ctx.strokeStyle = 'rgba(107, 114, 128, 0.4)'; // gray-500 à 40%
+    // Axes radiaux - lignes discrètes
+    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)'; // Même gris que les cercles
     ctx.lineWidth = 1;
     
     for (let i = 0; i < AXES_COUNT; i++) {
@@ -97,10 +97,10 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     
     // Forme du radar (seulement pour les matières existantes)
     if (subjects.length > 0) {
-      // Forme remplie
+      // Forme remplie - couleur simple
       ctx.beginPath();
       ctx.globalAlpha = 0.15 * animationProgress;
-      ctx.fillStyle = 'rgb(35, 131, 226)';
+      ctx.fillStyle = 'rgb(59, 130, 246)'; // Bleu cohérent
       
       subjects.forEach((subject, index) => {
         const angle = index * angleStep - Math.PI / 2;
@@ -124,11 +124,11 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       ctx.closePath();
       ctx.fill();
       
-      // Bordure de la forme
+      // Bordure de la forme - ligne simple
       ctx.beginPath();
       ctx.globalAlpha = 1 * animationProgress;
-      ctx.strokeStyle = 'rgb(35, 131, 226)';
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgb(59, 130, 246)';
+      ctx.lineWidth = 2;
       
       subjects.forEach((subject, index) => {
         const angle = index * angleStep - Math.PI / 2;

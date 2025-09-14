@@ -126,10 +126,14 @@ const RadarView = () => {
       <div className="max-w-7xl mx-auto p-8">
         {/* Titre de la page */}
         <div className={uniformStyles.pageHeader.container}>
-          <h1 className={uniformStyles.text.pageTitle}>{radar?.name || 'Radar'}</h1>
-          <p className={uniformStyles.text.pageSubtitle}>{radar?.description || 'Suivez votre progression dans ce domaine'}</p>
+          <h1 className={uniformStyles.text.pageTitle}>
+            {radar?.name || 'Radar'}
+          </h1>
+          <p className={uniformStyles.text.pageSubtitle}>
+            {radar?.description || 'Suivez votre progression dans ce domaine'}
+          </p>
         </div>
-        
+
         {/* Bouton d'action */}
         <div className="flex justify-end mb-6">
           <button
@@ -139,20 +143,63 @@ const RadarView = () => {
             <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
             </svg>
-            Ajouter une matière
+            Nouvelle matière
           </button>
         </div>
-      
-        {/* Radar Chart */}
-        <div className="relative animate-fadeIn">
-        <RadarChart
-          subjects={subjects}
-          hoveredSubject={hoveredSubject}
-          onHoverSubject={setHoveredSubject}
-          onSelectSubject={handleSubjectClick}
-          onContextMenu={handleContextMenu}
-        />
-      </div>
+        
+        {/* Contenu principal */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Radar Chart */}
+          <div className={uniformStyles.card.default + ' ' + uniformStyles.card.padding}>
+            <RadarChart
+              subjects={subjects}
+              hoveredSubject={hoveredSubject}
+              onHoverSubject={setHoveredSubject}
+              onSelectSubject={handleSubjectClick}
+              onContextMenu={handleContextMenu}
+            />
+          </div>
+          
+          {/* Liste des matières */}
+          <div className={uniformStyles.card.default + ' ' + uniformStyles.card.padding}>
+            <h2 className="text-lg font-light text-gray-700 mb-4">Matières</h2>
+            <div className="space-y-3">
+              {subjects.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">Aucune matière ajoutée</p>
+              ) : (
+                subjects.map((subject, index) => {
+                  const penalty = penalties.find(p => p.subjectId === subject.id);
+                  const actualValue = penalty ? Math.max(0, subject.value - penalty.penaltyValue) : subject.value;
+                  
+                  return (
+                    <div
+                      key={subject.id}
+                      className="p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                      onClick={() => handleSubjectClick(index)}
+                      onContextMenu={(e) => handleContextMenu(e, index)}
+                      onMouseEnter={() => setHoveredSubject(index)}
+                      onMouseLeave={() => setHoveredSubject(null)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">{subject.name}</span>
+                        <span className="text-sm font-semibold text-gray-800">{actualValue}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                          style={{ width: `${actualValue}%` }}
+                        />
+                      </div>
+                      {penalty && (
+                        <p className="text-xs text-red-500 mt-1">Pénalité: -{penalty.penaltyValue}%</p>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
       
       {/* Floating Alert */}
       <FloatingAlert />
@@ -160,28 +207,32 @@ const RadarView = () => {
       {/* Akram Control */}
       <AkramControl />
       
-      {/* Context Menu */}
+      {/* Context Menu - Style professionnel */}
       {contextMenu.show && (
         <div
-          className="fixed z-[100] bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden min-w-[200px]"
+          className="fixed z-[100] bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden min-w-[180px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={handleEditSubject}
-            className="w-full px-4 py-3 text-left text-gray-200 hover:bg-gray-700/50 hover:text-white transition-colors flex items-center gap-3"
+            className="w-full px-4 py-3 text-left text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all flex items-center gap-3 text-sm"
           >
-            <span className="text-lg">✏️</span>
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
             <span>Modifier</span>
           </button>
-          
-          <div className="h-px bg-gray-700/50" />
-          
+
+          <div className="h-px bg-gray-200" />
+
           <button
             onClick={handleDeleteSubject}
-            className="w-full px-4 py-3 text-left text-gray-200 hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center gap-3"
+            className="w-full px-4 py-3 text-left text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all flex items-center gap-3 text-sm"
           >
-            <span className="text-lg">🗑️</span>
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
             <span>Supprimer</span>
           </button>
         </div>
