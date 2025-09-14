@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 import RadarModal from '../components/dashboard/RadarModal';
-import Card, { HeaderCard } from '../components/ui/Card';
+import Card from '../components/ui/Card';
 
 const Improvements = () => {
   const navigate = useNavigate();
@@ -130,20 +130,14 @@ const Improvements = () => {
 
   return (
     <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
-      <div className="max-w-7xl mx-auto p-8 space-y-10">
-        {/* Header héro premium */}
-        <HeaderCard>
-          <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">Améliorations</h1>
-          <p className="text-gray-600 mt-3 text-lg">Gérez vos <span className="text-blue-500 font-semibold">différents domaines</span> de vie</p>
-        </HeaderCard>
-
-        {/* Toolbar */}
-        <div className="flex items-center mb-6 gap-3">
+      <div className="max-w-7xl mx-auto p-8">
+        {/* Bouton d'action uniquement */}
+        <div className="flex justify-end mb-6">
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 shadow-sm transition-all duration-150"
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200"
           >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
             </svg>
             Nouveau radar

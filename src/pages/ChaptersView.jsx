@@ -278,27 +278,9 @@ const ChaptersView = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
-      {/* Header simplifié */}
+      {/* Bouton d'action uniquement */}
       <div className="px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => navigate(`/radar/${radarId}`)}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M10.78 12.78a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 1 1 1.06 1.06L6.56 8l4.22 4.22a.75.75 0 0 1 0 1.06z" />
-            </svg>
-            Retour
-          </button>
-        </div>
-        
-        {/* Titre et progression */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-light text-gray-800">{subject.name}</h1>
-            <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-lg font-medium">{progress}%</span>
-          </div>
-          
+        <div className="flex justify-end">
           <button
             onClick={openAddChapterModal}
             className="flex items-center gap-2 px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200"

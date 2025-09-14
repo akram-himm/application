@@ -123,37 +123,17 @@ const RadarView = () => {
   return (
     <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
       <div className="max-w-7xl mx-auto p-8">
-        {/* Navigation */}
-        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-500">
-          <button onClick={() => navigate('/')} className="hover:text-blue-500 transition-colors">
-            Tableau de bord
+        {/* Bouton d'action uniquement */}
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={handleAddSubject}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
+            </svg>
+            Ajouter une matière
           </button>
-          <span>/</span>
-          <button onClick={() => navigate('/improvements')} className="hover:text-blue-500 transition-colors">
-            Améliorations
-          </button>
-          <span>/</span>
-          <span className="text-[#1E1F22] font-medium">{radar.name}</span>
-        </nav>
-      
-        {/* Titre simple et élégant */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{radar.icon}</span>
-              <h1 className="text-2xl font-light text-gray-800">{radar.name}</h1>
-              <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-lg font-medium">{progress}%</span>
-            </div>
-            <button
-              onClick={handleAddSubject}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
-              </svg>
-              Ajouter une matière
-            </button>
-          </div>
         </div>
       
         {/* Radar Chart */}
