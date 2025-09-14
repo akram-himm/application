@@ -180,6 +180,8 @@ const PlanView = memo(() => {
 
   // Gestion des tâches hebdomadaires
   const handleAddWeeklyTask = (taskData) => {
+    const todayStr = getTodayStr();
+    
     // Si c'est une string (ancien comportement)
     if (typeof taskData === 'string') {
       const newTask = {
@@ -187,8 +189,8 @@ const PlanView = memo(() => {
         type: 'weekly',
         status: 'À faire',
         priority: 'Pas de panique',
-        startDate: '-',
-        endDate: '-',
+        startDate: todayStr, // Date du jour par défaut
+        endDate: todayStr,   // Date du jour par défaut
         time: '-'
       };
       addTask(newTask);
@@ -198,8 +200,8 @@ const PlanView = memo(() => {
         type: 'weekly',
         status: 'À faire',
         priority: 'Pas de panique',
-        startDate: '-',
-        endDate: '-',
+        startDate: todayStr, // Date du jour par défaut
+        endDate: todayStr,   // Date du jour par défaut
         time: '-',
         radar: null,
         radarName: null,
