@@ -279,8 +279,14 @@ const ChaptersView = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
-      {/* Bouton d'action uniquement */}
       <div className="px-6 py-4">
+        {/* Titre de la page */}
+        <div className={uniformStyles.pageHeader.container + ' px-6'}>
+          <h1 className={uniformStyles.text.pageTitle}>{subject?.name || 'Chapitres'}</h1>
+          <p className={uniformStyles.text.pageSubtitle}>Organisez vos chapitres et sous-chapitres</p>
+        </div>
+        
+        {/* Bouton d'action */}
         <div className="flex justify-end">
           <button
             onClick={openAddChapterModal}

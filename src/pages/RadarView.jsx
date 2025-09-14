@@ -124,7 +124,13 @@ const RadarView = () => {
   return (
     <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
       <div className="max-w-7xl mx-auto p-8">
-        {/* Bouton d'action uniquement */}
+        {/* Titre de la page */}
+        <div className={uniformStyles.pageHeader.container}>
+          <h1 className={uniformStyles.text.pageTitle}>{radar?.name || 'Radar'}</h1>
+          <p className={uniformStyles.text.pageSubtitle}>{radar?.description || 'Suivez votre progression dans ce domaine'}</p>
+        </div>
+        
+        {/* Bouton d'action */}
         <div className="flex justify-end mb-6">
           <button
             onClick={handleAddSubject}

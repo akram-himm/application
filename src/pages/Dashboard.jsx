@@ -117,7 +117,11 @@ const Dashboard = memo(() => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
       <div className="max-w-7xl mx-auto p-8 space-y-10">
-        {/* Removed header for uniform design */}
+        {/* Titre de la page */}
+        <div className={uniformStyles.pageHeader.container}>
+          <h1 className={uniformStyles.text.pageTitle}>Tableau de bord</h1>
+          <p className={uniformStyles.text.pageSubtitle}>Vue d'ensemble de votre progression</p>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

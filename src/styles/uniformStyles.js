@@ -48,7 +48,15 @@ export const uniformStyles = {
     title: 'text-2xl font-light text-gray-800',
     subtitle: 'text-sm text-gray-500',
     label: 'block text-sm text-gray-600 mb-1',
-    body: 'text-sm text-gray-700'
+    body: 'text-sm text-gray-700',
+    // Page headers
+    pageTitle: 'text-3xl font-light text-gray-700 tracking-tight',
+    pageSubtitle: 'text-gray-400 mt-2 text-sm'
+  },
+  
+  // Page header container
+  pageHeader: {
+    container: 'mb-10'
   },
   
   // Badges

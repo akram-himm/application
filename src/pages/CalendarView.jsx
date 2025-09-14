@@ -161,7 +161,11 @@ const CalendarView = () => {
   return (
     <div className="min-h-screen bg-white/70 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto p-8">
-        {/* Removed header for uniform design */}
+        {/* Titre de la page */}
+        <div className={uniformStyles.pageHeader.container}>
+          <h1 className={uniformStyles.text.pageTitle}>Calendrier</h1>
+          <p className={uniformStyles.text.pageSubtitle}>Planifiez et organisez vos tâches de la semaine</p>
+        </div>
         
         {/* Barre de navigation du calendrier */}
         <div className={uniformStyles.card.default + ' ' + uniformStyles.card.padding + ' mb-6'}>

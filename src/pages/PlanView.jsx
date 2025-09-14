@@ -370,7 +370,8 @@ const PlanView = memo(() => {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              {/* Removed title for uniform design */}
+              <h1 className={uniformStyles.text.pageTitle}>Plan de travail</h1>
+              <p className={uniformStyles.text.pageSubtitle}>Gérez vos tâches quotidiennes et organisez votre agenda</p>
             </div>
             
             {/* Contrôles de rotation automatique */}

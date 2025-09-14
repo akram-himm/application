@@ -5,7 +5,11 @@ const NotesView = () => {
   return (
     <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
       <div className="max-w-7xl mx-auto p-8 space-y-10">
-        {/* Removed header for uniform design */}
+        {/* Titre de la page */}
+        <div className={uniformStyles.pageHeader.container}>
+          <h1 className={uniformStyles.text.pageTitle}>Notes</h1>
+          <p className={uniformStyles.text.pageSubtitle}>Vos notes et documents - En cours de développement</p>
+        </div>
         
         {/* Contenu */}
         <div className={'flex items-center justify-center py-20 ' + uniformStyles.card.default}>

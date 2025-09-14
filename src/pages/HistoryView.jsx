@@ -743,7 +743,11 @@ const HistoryView = () => {
           </div>
         </div>
         
-        {/* Removed title for uniform design */}
+        {/* Titre de la page */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-light text-gray-700 tracking-tight">Historique</h1>
+          <p className="text-gray-400 mt-2 text-sm">Analyse de votre progression</p>
+        </div>
         
         {/* Vue principale */}
         {selectedView === 'overview' && (
