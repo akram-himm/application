@@ -13,12 +13,69 @@ const Sidebar = () => {
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
 
   const menuItems = [
-    { id: 'dashboard', label: 'Tableau de bord', icon: '□', path: '/' },
-    { id: 'history', label: 'Historique', icon: '📊', path: '/history' },
-    { id: 'progression', label: 'Progression', icon: '→', path: '/improvements', accent: true },
-    { id: 'todo', label: 'To do', icon: '✓', path: '/plan' },
-    { id: 'calendar', label: 'Calendrier', icon: '○', path: '/calendar' },
-    { id: 'notes', label: 'Notes', icon: '≡', path: '/notes' }
+    { 
+      id: 'dashboard', 
+      label: 'Tableau de bord', 
+      path: '/',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M6 1H1v14h5V1zm9 0h-5v5h5V1zm0 9h-5v5h5v-5z" opacity="0.9"/>
+        </svg>
+      )
+    },
+    { 
+      id: 'history', 
+      label: 'Historique', 
+      path: '/history',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5ZM4 8.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-4Zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-4Zm3.5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5Z" />
+        </svg>
+      )
+    },
+    { 
+      id: 'progression', 
+      label: 'Progression', 
+      path: '/improvements', 
+      accent: true,
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M2 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V7zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V2z" />
+        </svg>
+      )
+    },
+    { 
+      id: 'todo', 
+      label: 'To do', 
+      path: '/plan',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z" />
+          <path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.235.235 0 0 1 .02-.022z" />
+        </svg>
+      )
+    },
+    { 
+      id: 'calendar', 
+      label: 'Calendrier', 
+      path: '/calendar',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z" />
+        </svg>
+      )
+    },
+    { 
+      id: 'notes', 
+      label: 'Notes', 
+      path: '/notes',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zM5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1H5z" />
+          <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z" />
+        </svg>
+      )
+    }
   ];
 
   const toggleRadar = (radarId) => {
@@ -70,7 +127,7 @@ const Sidebar = () => {
                   : 'text-gray-600 hover:bg-white/60'
               }`}
             >
-              <span className={`text-base ${isActive(item.path) ? 'text-blue-500' : 'text-gray-400'}`}>{item.icon}</span>
+              <span className={isActive(item.path) ? 'text-blue-500' : 'text-gray-400'}>{item.icon}</span>
               {!isCollapsed && <span>{item.label}</span>}
             </button>
           ))}
