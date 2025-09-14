@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
-import Card, { HeaderCard, StatCard, ClickableCard } from '../components/ui/Card';
+import { uniformStyles } from '../styles/uniformStyles';
 
 const Dashboard = memo(() => {
   const navigate = useNavigate();
@@ -117,43 +117,39 @@ const Dashboard = memo(() => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
       <div className="max-w-7xl mx-auto p-8 space-y-10">
-        {/* Header héro premium */}
-        <HeaderCard>
-          <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">Tableau de bord</h1>
-          <p className="text-gray-600 mt-3 text-lg">Vue d'ensemble de votre progression</p>
-        </HeaderCard>
+        {/* Removed header for uniform design */}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Progression globale */}
-          <Card>
+          <div className={uniformStyles.card.default + ' ' + uniformStyles.card.padding}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[#1E1F22]">Progression globale</h3>
               <span className="text-2xl text-blue-500">📊</span>
             </div>
             <div className="text-4xl font-bold text-blue-500 mb-2">{stats.total}%</div>
             <p className="text-sm text-gray-600">Moyenne de tous les radars</p>
-          </Card>
+          </div>
 
           {/* Tâches aujourd'hui */}
-          <Card>
+          <div className={uniformStyles.card.default + ' ' + uniformStyles.card.padding}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[#1E1F22]">Tâches du jour</h3>
               <span className="text-2xl text-amber-500">📋</span>
             </div>
             <div className="text-4xl font-bold text-amber-500 mb-2">{todayTasks.length}</div>
             <p className="text-sm text-gray-600">À accomplir aujourd'hui</p>
-          </Card>
+          </div>
 
           {/* Taux de complétion */}
-          <Card>
+          <div className={uniformStyles.card.default + ' ' + uniformStyles.card.padding}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[#1E1F22]">Taux de complétion</h3>
               <span className="text-2xl text-green-500">✅</span>
             </div>
             <div className="text-4xl font-bold text-green-500 mb-2">{taskCompletionRate}%</div>
             <p className="text-sm text-gray-600">{completedTasks} sur {tasks.length} tâches</p>
-          </Card>
+          </div>
         </div>
 
         {/* Main Content */}
@@ -180,7 +176,7 @@ const Dashboard = memo(() => {
                   <p className="text-gray-600">Aucun radar créé</p>
                   <button
                     onClick={() => navigate('/improvements')}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-sm transition-colors"
+                    className={"mt-4 " + uniformStyles.button.primary}
                   >
                     Créer un radar
                   </button>
@@ -219,32 +215,32 @@ const Dashboard = memo(() => {
 
         {/* Actions rapides */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ClickableCard
+          <div
             onClick={() => navigate('/improvements')}
-            className="text-left"
+            className={uniformStyles.card.hover + ' ' + uniformStyles.card.padding + ' cursor-pointer text-left'}
           >
             <span className="text-2xl mb-3 block">🎯</span>
             <h4 className="text-[#1E1F22] font-medium mb-1">Gérer les radars</h4>
             <p className="text-sm text-gray-600">Créer et organiser vos domaines</p>
-          </ClickableCard>
+          </div>
 
-          <ClickableCard
+          <div
             onClick={() => navigate('/plan')}
-            className="text-left"
+            className={uniformStyles.card.hover + ' ' + uniformStyles.card.padding + ' cursor-pointer text-left'}
           >
             <span className="text-2xl mb-3 block">📝</span>
             <h4 className="text-[#1E1F22] font-medium mb-1">Planifier</h4>
             <p className="text-sm text-gray-600">Organiser vos tâches</p>
-          </ClickableCard>
+          </div>
 
-          <ClickableCard
+          <div
             onClick={() => navigate('/calendar')}
-            className="text-left"
+            className={uniformStyles.card.hover + ' ' + uniformStyles.card.padding + ' cursor-pointer text-left'}
           >
             <span className="text-2xl mb-3 block">📅</span>
             <h4 className="text-[#1E1F22] font-medium mb-1">Calendrier</h4>
             <p className="text-sm text-gray-600">Vue mensuelle (bientôt)</p>
-          </ClickableCard>
+          </div>
         </div>
       </div>
     </div>

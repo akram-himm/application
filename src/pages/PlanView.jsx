@@ -5,7 +5,7 @@ import TaskContextMenu from '../components/tasks/TaskContextMenu';
 import TaskEditModal from '../components/tasks/TaskEditModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ConfirmModal from '../components/tasks/ConfirmModal';
-import { HeaderCard } from '../components/ui/Card';
+import { uniformStyles } from '../styles/uniformStyles';
 import { initTaskRotation, isRotationBlocked, setRotationBlocked, forceRotation } from '../services/taskRotationService';
 
 const PlanView = memo(() => {
@@ -370,10 +370,7 @@ const PlanView = memo(() => {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-light text-gray-800">Gestion des tâches</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Tâches du {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              </p>
+              {/* Removed title for uniform design */}
             </div>
             
             {/* Contrôles de rotation automatique */}
@@ -397,7 +394,7 @@ const PlanView = memo(() => {
               
               <button
                 onClick={handleForceRotation}
-                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className={uniformStyles.button.secondary}
                 title="Forcer la rotation maintenant"
               >
                 🔄 Rotation manuelle
@@ -415,7 +412,7 @@ const PlanView = memo(() => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Rechercher une tâche..."
-              className="w-full px-4 py-2 pl-10 pr-10 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={"w-full pl-10 pr-10 " + uniformStyles.input.default}
             />
             <svg 
               className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"

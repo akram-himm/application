@@ -4,6 +4,7 @@ import WeeklyCalendarFullCalendar from '../components/tasks/WeeklyCalendarFullCa
 import MonthlyCalendar from '../components/calendar/MonthlyCalendar';
 import YearlyCalendar from '../components/calendar/YearlyCalendar';
 import TaskSidebar from '../components/calendar/TaskSidebar';
+import { uniformStyles } from '../styles/uniformStyles';
 
 const CalendarView = () => {
   const { tasks, addTask, updateTask, updateTaskImmediate, deleteTask } = useContext(AppContext);
@@ -160,19 +161,15 @@ const CalendarView = () => {
   return (
     <div className="min-h-screen bg-white/70 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto p-8">
-        {/* En-tête */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-light text-gray-800">Calendrier</h1>
-          <p className="text-sm text-gray-500 mt-1">Planifiez et organisez vos tâches de la semaine</p>
-        </div>
+        {/* Removed header for uniform design */}
         
         {/* Barre de navigation du calendrier */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+        <div className={uniformStyles.card.default + ' ' + uniformStyles.card.padding + ' mb-6'}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleNavigate('prev')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className={uniformStyles.button.icon}
                 title={viewMode === 'week' ? 'Semaine précédente' : viewMode === 'month' ? 'Mois précédent' : 'Année précédente'}
               >
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,14 +179,14 @@ const CalendarView = () => {
               
               <button
                 onClick={() => handleNavigate('today')}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className={uniformStyles.button.secondary}
               >
                 Aujourd'hui
               </button>
               
               <button
                 onClick={() => handleNavigate('next')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className={uniformStyles.button.icon}
                 title={viewMode === 'week' ? 'Semaine suivante' : viewMode === 'month' ? 'Mois suivant' : 'Année suivante'}
               >
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { uniformStyles } from '../../styles/uniformStyles';
 
 const ChapterModal = ({ isOpen, onClose, onSave, editingItem, editingType }) => {
   const [formData, setFormData] = useState({
@@ -53,19 +54,19 @@ const ChapterModal = ({ isOpen, onClose, onSave, editingItem, editingType }) => 
   
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4"
+      className={uniformStyles.modal.darkOverlay}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-lg p-6 w-full max-w-[500px] shadow-2xl">
-        <h2 className="text-xl font-semibold text-white/81 mb-5">
+      <div className={uniformStyles.modal.darkContainer}>
+        <h2 className={uniformStyles.modal.darkTitle}>
           {isEditing ? 'Modifier' : 'Nouveau'} {isChapter ? 'chapitre' : 'sous-chapitre'}
         </h2>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block mb-2 text-white/46 text-sm font-medium">
+            <label className={uniformStyles.modal.darkLabel}>
               Nom
             </label>
             <input
@@ -73,7 +74,7 @@ const ChapterModal = ({ isOpen, onClose, onSave, editingItem, editingType }) => 
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder={isChapter ? 'Ex: Algèbre' : 'Ex: Équations du second degré'}
-              className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150"
+              className={uniformStyles.modal.darkInput}
               autoFocus
             />
           </div>
@@ -81,7 +82,7 @@ const ChapterModal = ({ isOpen, onClose, onSave, editingItem, editingType }) => 
           {!isChapter && (
             <>
               <div className="mb-4">
-                <label className="block mb-2 text-white/46 text-sm font-medium">
+                <label className={uniformStyles.modal.darkLabel}>
                   Icône
                 </label>
                 <input
@@ -90,12 +91,12 @@ const ChapterModal = ({ isOpen, onClose, onSave, editingItem, editingType }) => 
                   onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                   placeholder="Ex: 📐"
                   maxLength={2}
-                  className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150"
+                  className={uniformStyles.modal.darkInput}
                 />
               </div>
               
               <div className="mb-4">
-                <label className="block mb-2 text-white/46 text-sm font-medium">
+                <label className={uniformStyles.modal.darkLabel}>
                   Priorité
                 </label>
                 <select
@@ -110,7 +111,7 @@ const ChapterModal = ({ isOpen, onClose, onSave, editingItem, editingType }) => 
               </div>
               
               <div className="mb-4">
-                <label className="block mb-2 text-white/46 text-sm font-medium">
+                <label className={uniformStyles.modal.darkLabel}>
                   Date de début
                 </label>
                 <input
@@ -122,7 +123,7 @@ const ChapterModal = ({ isOpen, onClose, onSave, editingItem, editingType }) => 
               </div>
               
               <div className="mb-4">
-                <label className="block mb-2 text-white/46 text-sm font-medium">
+                <label className={uniformStyles.modal.darkLabel}>
                   Date limite
                 </label>
                 <input
@@ -139,13 +140,13 @@ const ChapterModal = ({ isOpen, onClose, onSave, editingItem, editingType }) => 
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 bg-white/[0.055] text-white/46 border border-white/[0.094] rounded-md text-sm font-medium hover:bg-white/[0.08] transition-all duration-150"
+              className={uniformStyles.modal.darkButtonCancel}
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-3 py-1.5 bg-[rgb(35,131,226)] text-white rounded-md text-sm font-medium hover:bg-[rgb(28,104,181)] transition-all duration-150"
+              className={uniformStyles.modal.darkButtonSubmit}
             >
               Sauvegarder
             </button>

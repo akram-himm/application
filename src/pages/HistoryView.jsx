@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import Card from '../components/ui/Card';
+import { uniformStyles } from '../styles/uniformStyles';
 import { exportHistory, importHistory } from '../services/historyService';
 
 const HistoryView = () => {
@@ -301,7 +301,7 @@ const HistoryView = () => {
     const maxDayValue = Math.max(...days.map(d => d.metrics.total), 5);
     
     return (
-      <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-8">
+      <div className={uniformStyles.card.default + ' p-8'}>
         <div className="mb-8">
           <h3 className="text-xl font-light text-gray-700">
             Semaine {week.weekNumber}
@@ -518,7 +518,7 @@ const HistoryView = () => {
     };
     
     return (
-      <div className="rounded-2xl bg-white/70 ring-1 ring-gray-200 shadow-[18px_18px_36px_rgba(0,0,0,0.08),_-10px_-10px_28px_rgba(255,255,255,0.60)] p-8">
+      <div className={uniformStyles.card.default + ' p-8'}>
         <div className="mb-8">
           <h3 className="text-xl font-light text-gray-700">
             {day.dayName}
@@ -922,7 +922,7 @@ const HistoryView = () => {
                               setSelectedWeek(week);
                               setSelectedView('week');
                             }}
-                            className="bg-white/70 ring-1 ring-gray-200 shadow-sm hover:shadow-md rounded-lg p-3 cursor-pointer transition-all group relative"
+                            className={uniformStyles.card.hover + ' p-3 cursor-pointer group relative'}
                           >
                             {/* Badge En cours */}
                             {week.isCurrent && (

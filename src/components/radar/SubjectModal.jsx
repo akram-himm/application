@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { uniformStyles } from '../../styles/uniformStyles';
 
 const SubjectModal = ({ isOpen, onClose, onSave, editingSubject }) => {
   const [formData, setFormData] = useState({
@@ -51,20 +52,20 @@ const SubjectModal = ({ isOpen, onClose, onSave, editingSubject }) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1000] flex items-center justify-center animate-fadeIn"
+      className={uniformStyles.modal.darkOverlay + ' animate-fadeIn'}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
       onKeyDown={handleKeyDown}
     >
-      <div className="bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-xl p-6 w-full max-w-[400px] shadow-2xl animate-scaleIn">
-        <h2 className="text-xl font-semibold text-white/81 mb-5">
+      <div className={uniformStyles.modal.darkContainer + ' animate-scaleIn'}>
+        <h2 className={uniformStyles.modal.darkTitle}>
           {editingSubject ? 'Modifier la matière' : 'Nouvelle matière'}
         </h2>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block mb-2 text-white/46 text-sm font-medium">
+            <label className={uniformStyles.modal.darkLabel}>
               Nom
             </label>
             <input
@@ -73,13 +74,13 @@ const SubjectModal = ({ isOpen, onClose, onSave, editingSubject }) => {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Ex: Mathématiques"
-              className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150"
+              className={uniformStyles.modal.darkInput}
               maxLength={30}
             />
           </div>
           
           <div className="mb-4">
-            <label className="block mb-2 text-white/46 text-sm font-medium">
+            <label className={uniformStyles.modal.darkLabel}>
               Progression initiale (%)
             </label>
             <div className="flex items-center gap-3">
@@ -101,7 +102,7 @@ const SubjectModal = ({ isOpen, onClose, onSave, editingSubject }) => {
                 onChange={(e) => setFormData({ ...formData, value: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })}
                 min="0"
                 max="100"
-                className="w-16 px-2 py-1 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-center focus:outline-none focus:border-white/20 transition-all duration-150"
+                className={'w-16 px-2 py-1 text-center ' + uniformStyles.modal.darkInput}
               />
             </div>
             <p className="text-xs text-white/46 mt-2">
@@ -113,13 +114,13 @@ const SubjectModal = ({ isOpen, onClose, onSave, editingSubject }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 bg-white/[0.055] text-white/46 border border-white/[0.094] rounded-md text-sm font-medium hover:bg-white/[0.08] transition-all duration-150"
+              className={uniformStyles.modal.darkButtonCancel}
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-3 py-1.5 bg-[rgb(35,131,226)] text-white rounded-md text-sm font-medium hover:bg-[rgb(28,104,181)] transition-all duration-150"
+              className={uniformStyles.modal.darkButtonSubmit}
             >
               {editingSubject ? 'Sauvegarder' : 'Créer'}
             </button>

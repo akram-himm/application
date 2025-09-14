@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { uniformStyles } from '../../styles/uniformStyles';
 
 const RadarModal = ({ isOpen, onClose, onSave, editingRadar }) => {
   const [formData, setFormData] = useState({
@@ -49,19 +50,19 @@ const RadarModal = ({ isOpen, onClose, onSave, editingRadar }) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center"
+      className={uniformStyles.modal.darkOverlay}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-lg p-6 w-full max-w-[400px] shadow-2xl">
-        <h2 className="text-xl font-semibold text-white/81 mb-5">
+      <div className={uniformStyles.modal.darkContainer}>
+        <h2 className={uniformStyles.modal.darkTitle}>
           {editingRadar ? 'Modifier le radar' : 'Nouveau radar'}
         </h2>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block mb-2 text-white/46 text-sm font-medium">
+            <label className={uniformStyles.modal.darkLabel}>
               Nom
             </label>
             <input
@@ -69,13 +70,13 @@ const RadarModal = ({ isOpen, onClose, onSave, editingRadar }) => {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Ex: Développement Web"
-              className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150"
+              className={uniformStyles.modal.darkInput}
               autoFocus
             />
           </div>
           
           <div className="mb-4">
-            <label className="block mb-2 text-white/46 text-sm font-medium">
+            <label className={uniformStyles.modal.darkLabel}>
               Icône
             </label>
             <input
@@ -84,12 +85,12 @@ const RadarModal = ({ isOpen, onClose, onSave, editingRadar }) => {
               onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
               placeholder="Ex: 💻"
               maxLength={2}
-              className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150"
+              className={uniformStyles.modal.darkInput}
             />
           </div>
           
           <div className="mb-4">
-            <label className="block mb-2 text-white/46 text-sm font-medium">
+            <label className={uniformStyles.modal.darkLabel}>
               Description
             </label>
             <input
@@ -97,7 +98,7 @@ const RadarModal = ({ isOpen, onClose, onSave, editingRadar }) => {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Description courte"
-              className="w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150"
+              className={uniformStyles.modal.darkInput}
             />
           </div>
           
@@ -105,13 +106,13 @@ const RadarModal = ({ isOpen, onClose, onSave, editingRadar }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 bg-white/[0.055] text-white/46 border border-white/[0.094] rounded-md text-sm font-medium hover:bg-white/[0.08] transition-all duration-150"
+              className={uniformStyles.modal.darkButtonCancel}
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-3 py-1.5 bg-[rgb(35,131,226)] text-white rounded-md text-sm font-medium hover:bg-[rgb(28,104,181)] transition-all duration-150"
+              className={uniformStyles.modal.darkButtonSubmit}
             >
               {editingRadar ? 'Sauvegarder' : 'Créer'}
             </button>
