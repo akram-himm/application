@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 import ChaptersKanban from '../components/chapters/ChaptersKanban';
 import ChapterModal from '../components/chapters/ChapterModal';
+import { uniformStyles } from '../styles/uniformStyles';
 
 const ChaptersView = () => {
   const { radarId, subjectId } = useParams();
@@ -283,7 +284,7 @@ const ChaptersView = () => {
         <div className="flex justify-end">
           <button
             onClick={openAddChapterModal}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200"
+            className={'flex items-center gap-2 ' + uniformStyles.button.primary}
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
@@ -308,7 +309,7 @@ const ChaptersView = () => {
             placeholder="Rechercher des chapitres ou sous-chapitres..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white/70 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150"
+            className={'w-full pl-9 pr-4 ' + uniformStyles.input.default}
           />
         </div>
       </div>

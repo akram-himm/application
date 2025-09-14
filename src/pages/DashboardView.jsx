@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { AppContext } from '../contexts/AppContext';
+import { uniformStyles } from '../styles/uniformStyles';
 
 const DashboardView = () => {
   const { tasks, radars } = useContext(AppContext);
@@ -163,21 +164,12 @@ const DashboardView = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <div className="max-w-7xl mx-auto p-6 lg:p-8">
-        {/* Header avec gradient */}
-        <div className="mb-8 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10 blur-3xl" />
-          <div className="relative">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-2">
-              Dashboard
-            </h1>
-            <p className="text-gray-500">Suivez votre progression semaine après semaine</p>
-          </div>
-        </div>
+        {/* Removed header for uniform design */}
         
         {/* Cards principales */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Card principale - Graphique */}
-          <div className="lg:col-span-2 bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-8 border border-gray-100">
+          <div className={'lg:col-span-2 p-8 ' + uniformStyles.card.default}>
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Performance hebdomadaire</h2>
@@ -329,7 +321,7 @@ const DashboardView = () => {
         </div>
         
         {/* Répartition par catégorie */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-8 border border-gray-100">
+        <div className={'p-8 ' + uniformStyles.card.default}>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Répartition par domaine</h2>
           
           {Object.keys(currentWeekMetrics.byCategory).length > 0 ? (

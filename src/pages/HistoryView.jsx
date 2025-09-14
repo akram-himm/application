@@ -714,7 +714,7 @@ const HistoryView = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleExportAll}
-                className="px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all flex items-center gap-1.5 text-sm ring-1 ring-gray-200"
+                className={'flex items-center gap-1.5 ' + uniformStyles.button.primary}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -724,7 +724,7 @@ const HistoryView = () => {
               
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all flex items-center gap-1.5 text-sm ring-1 ring-gray-200"
+                className={'flex items-center gap-1.5 ' + uniformStyles.button.primary}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -743,11 +743,7 @@ const HistoryView = () => {
           </div>
         </div>
         
-        {/* Titre de la page */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-light text-gray-700 tracking-tight">Historique</h1>
-          <p className="text-gray-400 mt-2 text-sm">Analyse de votre progression</p>
-        </div>
+        {/* Removed title for uniform design */}
         
         {/* Vue principale */}
         {selectedView === 'overview' && (
@@ -966,7 +962,7 @@ const HistoryView = () => {
             <div className="mt-12 text-center">
               <button
                 onClick={() => setVisibleMonths(visibleMonths + 3)}
-                className="px-6 py-3 bg-white/70 text-gray-600 font-medium rounded-xl ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-all"
+                className={uniformStyles.button.primary + ' px-6 py-3'}
               >
                 Afficher plus
               </button>

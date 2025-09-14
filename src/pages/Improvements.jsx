@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 import RadarModal from '../components/dashboard/RadarModal';
 import Card from '../components/ui/Card';
+import { uniformStyles } from '../styles/uniformStyles';
 
 const Improvements = () => {
   const navigate = useNavigate();
@@ -135,7 +136,7 @@ const Improvements = () => {
         <div className="flex justify-end mb-6">
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200"
+            className={'flex items-center gap-2 ' + uniformStyles.button.primary}
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
@@ -176,7 +177,7 @@ const Improvements = () => {
                 <div className="absolute top-3 right-3 flex gap-1">
                   <button
                     onClick={(e) => handleEditRadar(e, radar)}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-150"
+                    className={uniformStyles.button.icon}
                   >
                     <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 16" fill="currentColor">
                       <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.226 13.25a4.25 4.25 0 0 1-1.154.734l-2.72.906a.75.75 0 0 1-.95-.95l.906-2.72c.141-.424.415-.81.734-1.154l8.258-8.262zm1.414 1.06a.25.25 0 0 0-.353 0L10.53 5.119l.707.707 1.545-1.545a.25.25 0 0 0 0-.354l-.354-.353zM9.822 5.826 4.31 11.338a2.75 2.75 0 0 0-.475.748l-.51 1.53 1.53-.51a2.75 2.75 0 0 0 .748-.475l5.512-5.512-.707-.707z" />
@@ -184,7 +185,7 @@ const Improvements = () => {
                   </button>
                   <button
                     onClick={(e) => handleDeleteRadar(e, radar.id)}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-150"
+                    className={uniformStyles.button.icon}
                   >
                     <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 16" fill="currentColor">
                       <path d="M6.5 5.5a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5zm4.25 0a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5z" />
