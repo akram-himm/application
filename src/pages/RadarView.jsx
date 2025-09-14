@@ -6,7 +6,6 @@ import RadarChart from '../components/radar/RadarChart';
 import AkramControl from '../components/radar/AkramControl';
 import FloatingAlert from '../components/radar/FloatingAlert';
 import SubjectModal from '../components/radar/SubjectModal';
-import { HeaderCard } from '../components/ui/Card';
 
 const RadarView = () => {
   const { radarId } = useParams();
@@ -137,39 +136,24 @@ const RadarView = () => {
           <span className="text-[#1E1F22] font-medium">{radar.name}</span>
         </nav>
       
-        {/* Header héro premium */}
-        <HeaderCard className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <span className="text-5xl">{radar.icon}</span>
-            <div>
-              <h1 className="text-[40px] font-bold tracking-tight text-[#1E1F22]">{radar.name}</h1>
-              <p className="text-gray-600 mt-2">{radar.description}</p>
+        {/* Titre simple et élégant */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{radar.icon}</span>
+              <h1 className="text-2xl font-light text-gray-800">{radar.name}</h1>
+              <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-lg font-medium">{progress}%</span>
             </div>
+            <button
+              onClick={handleAddSubject}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
+              </svg>
+              Ajouter une matière
+            </button>
           </div>
-          
-          {/* Progress Bar */}
-          <div className="flex items-center gap-4 mt-6">
-            <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <span className="text-lg font-bold text-blue-500">{progress}%</span>
-          </div>
-        </HeaderCard>
-      
-        {/* Actions */}
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={handleAddSubject}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 shadow-sm transition-all duration-150"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
-            </svg>
-            Ajouter une matière
-          </button>
         </div>
       
         {/* Radar Chart */}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
-import ChaptersTable from '../components/chapters/ChaptersTable';
 import ChaptersKanban from '../components/chapters/ChaptersKanban';
 import ChapterModal from '../components/chapters/ChapterModal';
 
@@ -10,7 +9,6 @@ const ChaptersView = () => {
   const navigate = useNavigate();
   const { radars, updateRadar } = useContext(AppContext);
   
-  const [currentView, setCurrentView] = useState('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -280,77 +278,38 @@ const ChaptersView = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
-      {/* Header */}
-      <header className="bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-sm px-6 py-4 sticky top-0 z-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(`/radar/${radarId}`)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-all duration-150"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M10.78 12.78a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 1 1 1.06 1.06L6.56 8l4.22 4.22a.75.75 0 0 1 0 1.06z" />
-              </svg>
-              Retour
-            </button>
-          </div>
-          
-          <div className="flex-1 text-center">
-            <h1 className="text-2xl font-bold text-[#1E1F22] mb-2">{subject.name}</h1>
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-[200px] h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="text-sm text-gray-600">Progression: {progress}%</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* View Switcher */}
-            <div className="flex bg-gray-100 border border-gray-200 rounded-md p-0.5">
-              <button
-                className={`px-2 py-1 rounded flex items-center gap-1 text-sm transition-all duration-150 ${
-                  currentView === 'table'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => setCurrentView('table')}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M1.5 3.5v9a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-11a1 1 0 0 0-1 1zm1 2h11v6h-11v-6zm0-1v-1h3.75v1H2.5zm4.75 0v-1h7.25v1H7.25z" />
-                </svg>
-                Tableau
-              </button>
-              <button
-                className={`px-2 py-1 rounded flex items-center gap-1 text-sm transition-all duration-150 ${
-                  currentView === 'kanban'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => setCurrentView('kanban')}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h2A1.5 1.5 0 0 1 7 3.5v9A1.5 1.5 0 0 1 5.5 14h-2A1.5 1.5 0 0 1 2 12.5v-9zm7 0A1.5 1.5 0 0 1 10.5 2h2A1.5 1.5 0 0 1 14 3.5v5a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 9 8.5v-5zM3.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-2zm7 0a.5.5 0 0 0-.5.5v5a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-5a.5.5 0 0 0-.5-.5h-2z" />
-                </svg>
-                Kanban
-              </button>
-            </div>
-            
-            <button
-              onClick={openAddChapterModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white hover:bg-blue-600 rounded-md transition-all duration-150"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
-              </svg>
-              Ajouter
-            </button>
-          </div>
+      {/* Header simplifié */}
+      <div className="px-6 py-4">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigate(`/radar/${radarId}`)}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M10.78 12.78a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 1 1 1.06 1.06L6.56 8l4.22 4.22a.75.75 0 0 1 0 1.06z" />
+            </svg>
+            Retour
+          </button>
         </div>
-      </header>
+        
+        {/* Titre et progression */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-light text-gray-800">{subject.name}</h1>
+            <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-lg font-medium">{progress}%</span>
+          </div>
+          
+          <button
+            onClick={openAddChapterModal}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74" />
+            </svg>
+            Ajouter un chapitre
+          </button>
+        </div>
+      </div>
       
       {/* Search Bar */}
       <div className="px-6 py-4 max-w-[1000px] mx-auto">
@@ -372,26 +331,12 @@ const ChaptersView = () => {
         </div>
       </div>
       
-      {/* Main Content */}
-      <div className="max-w-[1000px] mx-auto px-6 pb-6">
-        {currentView === 'table' ? (
-          <ChaptersTable
-            chapters={chapters}
-            searchQuery={searchQuery}
-            onToggleChapter={handleUpdateChapter}
-            onUpdateSubtopic={handleUpdateSubtopic}
-            onEditChapter={openEditChapterModal}
-            onDeleteChapter={handleDeleteChapter}
-            onEditSubtopic={openEditSubtopicModal}
-            onDeleteSubtopic={handleDeleteSubtopic}
-            onAddSubtopic={openAddSubtopicModal}
-          />
-        ) : (
-          <ChaptersKanban
-            chapters={chapters}
-            onUpdateSubtopic={handleUpdateSubtopic}
-          />
-        )}
+      {/* Main Content - Kanban seulement */}
+      <div className="max-w-[1200px] mx-auto px-6 pb-6">
+        <ChaptersKanban
+          chapters={chapters}
+          onUpdateSubtopic={handleUpdateSubtopic}
+        />
       </div>
       
       {/* Modal */}
