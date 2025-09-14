@@ -130,7 +130,7 @@ const Improvements = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]">
+    <div className={uniformStyles.layout.page}>
       <div className="max-w-7xl mx-auto p-8">
         {/* Titre de la page */}
         <div className={uniformStyles.pageHeader.container}>

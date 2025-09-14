@@ -70,7 +70,8 @@ export const uniformStyles = {
   
   // Layout
   layout: {
-    page: 'min-h-screen bg-white/70 backdrop-blur-sm',
+    page: 'min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]',
+    pageAlt: 'min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]',
     container: 'max-w-7xl mx-auto p-6',
     section: 'mb-6'
   }

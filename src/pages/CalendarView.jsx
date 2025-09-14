@@ -159,7 +159,7 @@ const CalendarView = () => {
   };
   
   return (
-    <div className="min-h-screen bg-white/70 backdrop-blur-sm">
+    <div className={uniformStyles.layout.page}>
       <div className="max-w-7xl mx-auto p-8">
         {/* Titre de la page */}
         <div className={uniformStyles.pageHeader.container}>

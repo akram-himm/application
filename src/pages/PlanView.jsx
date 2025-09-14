@@ -362,7 +362,7 @@ const PlanView = memo(() => {
   }, []);
 
   return (
-    <div className={`min-h-screen ${altStyle ? 'bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]' : 'bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]'}`}>
+    <div className={altStyle ? uniformStyles.layout.pageAlt : uniformStyles.layout.page}>
       {/* Effet de fond subtil - supprimé car le gradient est sur le body */}
       
       <div className="max-w-7xl mx-auto p-8 space-y-6">

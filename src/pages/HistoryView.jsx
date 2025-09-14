@@ -665,7 +665,7 @@ const HistoryView = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
+    <div className={uniformStyles.layout.page}>
       {/* Notification de succès d'import */}
       {showImportSuccess && (
         <div className="fixed top-4 right-4 bg-white/95 backdrop-blur-sm text-gray-700 px-4 py-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-gray-200 z-50 flex items-center gap-2">

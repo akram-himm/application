@@ -271,14 +271,14 @@ const ChaptersView = () => {
   
   if (!radar || !subject) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9] flex items-center justify-center">
+      <div className={uniformStyles.layout.page + ' flex items-center justify-center'}>
         <div className="text-gray-600">Chargement...</div>
       </div>
     );
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
+    <div className={uniformStyles.layout.page}>
       <div className="px-6 py-4">
         {/* Titre de la page */}
         <div className={uniformStyles.pageHeader.container + ' px-6'}>
