@@ -268,6 +268,11 @@ const NotionEditor = ({ subjectId, radarId, subjectName, onSave, onAddToKanban }
     const block = blocks.find(b => b.id === blockId);
     if (!block) return;
 
+    // Si le contenu n'a pas changé, ne pas mettre à jour pour éviter la resynchronisation
+    if (block.content === text) {
+      return;
+    }
+
     // Détecter le slash menu
     if (text === '/') {
       const rect = e.target.getBoundingClientRect();
@@ -303,18 +308,34 @@ const NotionEditor = ({ subjectId, radarId, subjectName, onSave, onAddToKanban }
       if (text === shortcut || (text.startsWith(shortcut) && block.type === 'text')) {
         e.preventDefault();
         const newContent = text.replace(shortcut, '').trim();
+
+        // Marquer qu'on est en train de faire un changement de type
+        e.target.dataset.changingType = 'true';
+
         updateBlock(blockId, { type, content: newContent });
 
         // Vider le contenu et refocus
         e.target.textContent = newContent;
 
         // Replacer le curseur
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(e.target);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
+        setTimeout(() => {
+          const selection = window.getSelection();
+          const range = document.createRange();
+
+          if (e.target.firstChild) {
+            range.setStart(e.target.firstChild, newContent.length);
+            range.setEnd(e.target.firstChild, newContent.length);
+          } else {
+            range.selectNodeContents(e.target);
+            range.collapse(false);
+          }
+
+          selection.removeAllRanges();
+          selection.addRange(range);
+
+          delete e.target.dataset.changingType;
+        }, 0);
+
         return;
       }
     }
@@ -517,27 +538,27 @@ const NotionEditor = ({ subjectId, radarId, subjectName, onSave, onAddToKanban }
     blocks.forEach(block => {
       const el = blockRefs.current[block.id];
       if (el && el.textContent !== block.content) {
-        // Sauvegarder la position du curseur
+        // Ignorer si on est en train de changer le type
+        if (el.dataset.changingType === 'true') {
+          return;
+        }
+
+        // Ne pas synchroniser si l'élément a le focus et qu'on est en train de taper
+        const hasFocus = document.activeElement === el;
         const selection = window.getSelection();
         const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-        const startOffset = range && range.startContainer === el.firstChild ? range.startOffset : -1;
 
-        // Mettre à jour le contenu
-        el.textContent = block.content;
-
-        // Restaurer la position du curseur si l'élément avait le focus
-        if (document.activeElement === el && startOffset !== -1) {
-          const newRange = document.createRange();
-          if (el.firstChild) {
-            newRange.setStart(el.firstChild, Math.min(startOffset, block.content.length));
-            newRange.setEnd(el.firstChild, Math.min(startOffset, block.content.length));
-          } else {
-            newRange.selectNodeContents(el);
-            newRange.collapse(true);
+        // Si l'utilisateur est en train de taper (focus + curseur dans l'élément), ne pas synchroniser
+        if (hasFocus && range && el.contains(range.startContainer)) {
+          // Sauf si le bloc est complètement vide mais que l'élément a du contenu (cas de suppression)
+          if (block.content === '' && el.textContent !== '') {
+            el.textContent = '';
           }
-          selection.removeAllRanges();
-          selection.addRange(newRange);
+          return;
         }
+
+        // Synchroniser uniquement si l'élément n'a pas le focus
+        el.textContent = block.content;
       }
     });
   }, [blocks]);
