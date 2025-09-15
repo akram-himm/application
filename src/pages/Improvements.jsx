@@ -165,7 +165,8 @@ const Improvements = () => {
                 key={radar.id}
                 data-index={index}
                 variant="hover"
-                className="radar-card relative cursor-pointer"
+                padding="medium"
+                className="radar-card relative cursor-pointer h-[280px]"
                 draggable
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnd={handleDragEnd}
@@ -178,9 +179,9 @@ const Improvements = () => {
                 {/* Drop indicators */}
                 <div className="drop-indicator left absolute left-0 top-0 bottom-0 w-1 bg-[rgb(35,131,226)] opacity-0 transition-opacity duration-150"></div>
                 <div className="drop-indicator right absolute right-0 top-0 bottom-0 w-1 bg-[rgb(35,131,226)] opacity-0 transition-opacity duration-150"></div>
-                
+
                 {/* Actions */}
-                <div className="absolute top-3 right-3 flex gap-1">
+                <div className="absolute top-4 right-4 flex gap-1 z-10">
                   <button
                     onClick={(e) => handleEditRadar(e, radar)}
                     className={uniformStyles.button.icon}
@@ -200,21 +201,74 @@ const Improvements = () => {
                   </button>
                 </div>
 
-                {/* Card Content */}
-                <div className="w-12 h-12 mb-4 flex items-center justify-center text-[32px] bg-blue-50 rounded-xl">
-                  {radar.icon}
-                </div>
-                <h3 className="text-lg font-semibold text-[#1E1F22] mb-2">{radar.name}</h3>
-                <p className="text-sm text-gray-600 mb-4">{radar.description}</p>
-                
-                <div className="flex gap-6 pt-4 border-t border-gray-200">
-                  <div className="flex-1">
-                    <div className="text-xl font-bold text-blue-500">{calculateRadarProgress(radar)}%</div>
-                    <div className="text-xs text-gray-500 mt-0.5">Progression</div>
+                {/* Card Content - Professional Business Style */}
+                <div className="flex flex-col h-full">
+                  {/* Header with icon and name */}
+                  <div className="flex items-start gap-3 mb-6">
+                    {/* Icon on the left */}
+                    <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+
+                    {/* Name and metadata */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-gray-900 truncate mb-1">
+                        {radar.name}
+                      </h3>
+                      <div className="flex items-center gap-1 text-gray-500">
+                        <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-xs">
+                          {radar.subjects?.length || 0} matières
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-xl font-bold text-[#1E1F22]">{radar.subjects?.length || 0}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">Catégories</div>
+
+                  {/* Main content area */}
+                  <div className="flex-grow flex flex-col justify-center">
+                    {/* Large progress display */}
+                    <div className="mb-6">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-light text-gray-900">
+                          {calculateRadarProgress(radar)}
+                        </span>
+                        <span className="text-lg text-gray-400">%</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Progression moyenne
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="space-y-3">
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div
+                          className="bg-gray-800 h-2 rounded-full transition-all duration-700 ease-out"
+                          style={{ width: `${calculateRadarProgress(radar)}%` }}
+                        />
+                      </div>
+
+                      {/* Quick stats */}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>0%</span>
+                        <span className="font-medium text-gray-700">{calculateRadarProgress(radar)}% atteint</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer status */}
+                  <div className="pt-3 mt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">
+                        Dernière mise à jour: Aujourd'hui
+                      </span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" title="Actif" />
+                    </div>
                   </div>
                 </div>
               </Card>

@@ -17,6 +17,8 @@ import ChaptersView from './pages/ChaptersView';
 import PlanView from './pages/PlanView';
 import CalendarView from './pages/CalendarView';
 import NotesView from './pages/NotesView';
+import NotionTodoView from './notion-integration/NotionTodoView';
+import NotionCalendarView from './notion-integration/NotionCalendarView';
 import './App.css';
 
 function App() {
@@ -42,6 +44,8 @@ function App() {
                       <Route path="/plan" element={<PlanView />} />
                       <Route path="/calendar" element={<CalendarView />} />
                       <Route path="/notes" element={<NotesView />} />
+                      <Route path="/notion-todo" element={<NotionTodoView />} />
+                      <Route path="/notion-calendar" element={<NotionCalendarView />} />
                     </Routes>
                   </ErrorBoundary>
                 </main>

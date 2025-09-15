@@ -66,22 +66,90 @@ const RadarView = () => {
       setContextMenu({ show: false, x: 0, y: 0 });
     }
   };
+
+  const handleTogglePause = () => {
+    if (selectedSubjectIndex !== null) {
+      const subject = subjects[selectedSubjectIndex];
+      const now = new Date();
+      const periodMs = 3 * 24 * 60 * 60 * 1000; // Utiliser la période configurée
+
+      let newSubjects;
+      if (!subject.isPaused) {
+        // PAUSER : Calculer le temps restant avant pénalité
+        const lastProgressDate = new Date(subject.lastProgress);
+        const timeSinceProgress = now - lastProgressDate;
+        const remainingTime = periodMs - timeSinceProgress;
+        const remainingDays = Math.max(0, Math.ceil(remainingTime / (24 * 60 * 60 * 1000)));
+
+        newSubjects = subjects.map((s, index) => {
+          if (index === selectedSubjectIndex) {
+            return {
+              ...s,
+              isPaused: true,
+              pausedAt: now.toISOString(),
+              remainingDaysBeforePenalty: remainingDays
+            };
+          }
+          return s;
+        });
+      } else {
+        // REPRENDRE : Recalculer la date de dernière progression
+        const remainingMs = (subject.remainingDaysBeforePenalty || 0) * 24 * 60 * 60 * 1000;
+        const newLastProgress = new Date(now.getTime() - (periodMs - remainingMs));
+
+        newSubjects = subjects.map((s, index) => {
+          if (index === selectedSubjectIndex) {
+            return {
+              ...s,
+              isPaused: false,
+              pausedAt: null,
+              remainingDaysBeforePenalty: null,
+              lastProgress: newLastProgress.toISOString() // Ajuster la date
+            };
+          }
+          return s;
+        });
+      }
+
+      updateRadar({ ...radar, subjects: newSubjects });
+      setContextMenu({ show: false, x: 0, y: 0 });
+    }
+  };
   
   const handleSaveSubject = (subjectData) => {
     let newSubjects;
-    
+
     if (editingSubject) {
-      newSubjects = subjects.map(subject =>
-        subject.id === editingSubject.id ? 
-          { ...subject, ...subjectData, lastProgress: new Date().toISOString() } : 
-          subject
-      );
+      newSubjects = subjects.map(subject => {
+        if (subject.id === editingSubject.id) {
+          // Si la valeur a changé (progression), mettre à jour la date et stocker l'ancienne valeur
+          const hasProgressed = subjectData.value > subject.value;
+          return {
+            ...subject,
+            ...subjectData,
+            lastProgress: hasProgressed ? new Date().toISOString() : subject.lastProgress,
+            lastProgressValue: hasProgressed ? subjectData.value : subject.lastProgressValue,
+            // Stocker l'historique des pénalités appliquées
+            appliedPenalties: hasProgressed ? 0 : (subject.appliedPenalties || 0),
+            // Conserver l'état de pause si existant
+            isPaused: subject.isPaused || false,
+            pausedAt: subject.pausedAt || null,
+            remainingDaysBeforePenalty: subject.remainingDaysBeforePenalty || null
+          };
+        }
+        return subject;
+      });
     } else {
       const newSubject = {
         ...subjectData,
         id: subjectData.name.toLowerCase().replace(/\s+/g, '-'),
         max: 100,
-        lastProgress: new Date().toISOString()
+        lastProgress: new Date().toISOString(),
+        lastProgressValue: subjectData.value, // Stocker la valeur initiale
+        appliedPenalties: 0, // Aucune pénalité au départ
+        isPaused: false, // Non pausé par défaut
+        pausedAt: null,
+        remainingDaysBeforePenalty: null
       };
       newSubjects = [...subjects, newSubject];
     }
@@ -178,9 +246,28 @@ const RadarView = () => {
             <span className="text-lg">✏️</span>
             <span>Modifier</span>
           </button>
-          
+
           <div className="h-px bg-gray-700/50" />
-          
+
+          <button
+            onClick={handleTogglePause}
+            className="w-full px-4 py-3 text-left text-gray-200 hover:bg-gray-700/50 hover:text-white transition-colors flex items-center gap-3"
+          >
+            {selectedSubjectIndex !== null && subjects[selectedSubjectIndex]?.isPaused ? (
+              <>
+                <span className="text-lg">▶️</span>
+                <span>Reprendre</span>
+              </>
+            ) : (
+              <>
+                <span className="text-lg">⏸️</span>
+                <span>Mettre en pause</span>
+              </>
+            )}
+          </button>
+
+          <div className="h-px bg-gray-700/50" />
+
           <button
             onClick={handleDeleteSubject}
             className="w-full px-4 py-3 text-left text-gray-200 hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center gap-3"

@@ -19,9 +19,11 @@ const FloatingAlert = () => {
   
   const getAlertMessage = () => {
     if (penalties.length === 1) {
-      return `${penalties[0].subjectName} n'a pas progressé depuis ${penalties[0].daysSince} jours`;
+      const penalty = penalties[0];
+      return `${penalty.subjectName} n'a pas progressé depuis ${penalty.daysSince} jours (-${penalty.penaltyValue}%)`;
     } else {
-      return `${penalties.length} matières n'ont pas progressé récemment`;
+      const totalPenalty = penalties.reduce((sum, p) => sum + p.penaltyValue, 0);
+      return `${penalties.length} matières en retard (Total: -${totalPenalty}%)`;
     }
   };
   

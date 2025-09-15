@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AkramContext } from '../../contexts/AkramContext';
 
 const AkramControl = () => {
-  const { akramPeriod, setAkramPeriod, getDelayedSubjectsCount } = useContext(AkramContext);
+  const { akramPeriod, setAkramPeriod, penaltyPercentage, setPenaltyPercentage, getDelayedSubjectsCount } = useContext(AkramContext);
   const [isHidden, setIsHidden] = useState(false);
   
   const delayedCount = getDelayedSubjectsCount();
@@ -27,18 +27,41 @@ const AkramControl = () => {
         }`}
       >
         <span className="text-sm text-white/81 font-medium">Système d'Akram</span>
-        
-        <select
-          value={akramPeriod}
-          onChange={(e) => setAkramPeriod(Number(e.target.value))}
-          className="px-3 py-1.5 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-sm cursor-pointer transition-all duration-150 hover:bg-white/[0.08] hover:border-white/20 focus:outline-none focus:border-[rgb(35,131,226)]"
-        >
-          <option value="0">Désactivé</option>
-          <option value="1">1 jour</option>
-          <option value="3">3 jours</option>
-          <option value="7">7 jours</option>
-          <option value="14">14 jours</option>
-        </select>
+
+        {/* Sélecteur de période */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-white/46">Période:</span>
+          <select
+            value={akramPeriod}
+            onChange={(e) => setAkramPeriod(Number(e.target.value))}
+            className="px-3 py-1.5 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-sm cursor-pointer transition-all duration-150 hover:bg-white/[0.08] hover:border-white/20 focus:outline-none focus:border-[rgb(35,131,226)]"
+          >
+            <option value="0">Désactivé</option>
+            <option value="1">1 jour</option>
+            <option value="2">2 jours</option>
+            <option value="3">3 jours</option>
+            <option value="7">7 jours</option>
+            <option value="14">14 jours</option>
+          </select>
+        </div>
+
+        {/* Sélecteur de pénalité */}
+        {akramPeriod > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/46">Pénalité:</span>
+            <select
+              value={penaltyPercentage}
+              onChange={(e) => setPenaltyPercentage(Number(e.target.value))}
+              className="px-3 py-1.5 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-sm cursor-pointer transition-all duration-150 hover:bg-white/[0.08] hover:border-white/20 focus:outline-none focus:border-[rgb(35,131,226)]"
+            >
+              <option value="1">1%</option>
+              <option value="2">2%</option>
+              <option value="3">3%</option>
+              <option value="5">5%</option>
+              <option value="10">10%</option>
+            </select>
+          </div>
+        )}
         
         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium ${
           getStatusClass() === 'active' ? 'bg-[rgb(34,197,94)]/10 text-[rgb(34,197,94)]' :

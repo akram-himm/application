@@ -5,6 +5,7 @@ import TaskContextMenu from '../components/tasks/TaskContextMenu';
 import TaskEditModal from '../components/tasks/TaskEditModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ConfirmModal from '../components/tasks/ConfirmModal';
+import NotionSync from '../components/NotionSync';
 import { uniformStyles } from '../styles/uniformStyles';
 import { initTaskRotation, isRotationBlocked, setRotationBlocked, forceRotation } from '../services/taskRotationService';
 
@@ -402,6 +403,11 @@ const PlanView = memo(() => {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Bouton de synchronisation Notion */}
+        <div className="mb-4 flex justify-end">
+          <NotionSync tasks={tasks} />
         </div>
 
         {/* Barre de recherche et Filtres */}

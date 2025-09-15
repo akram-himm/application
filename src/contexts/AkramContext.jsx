@@ -4,9 +4,11 @@ import { AppContext } from './AppContext';
 export const AkramContext = createContext();
 
 export const AkramProvider = ({ children }) => {
-  const { radars } = useContext(AppContext);
+  const { radars, updateRadar } = useContext(AppContext);
   const [akramPeriod, setAkramPeriod] = useState(3); // Jours par défaut
+  const [penaltyPercentage, setPenaltyPercentage] = useState(2); // Pourcentage de pénalité par période
   const [penalties, setPenalties] = useState([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Calculer les pénalités basées sur le système d'Akram
   useEffect(() => {
@@ -22,35 +24,84 @@ export const AkramProvider = ({ children }) => {
 
       radars.forEach(radar => {
         radar.subjects?.forEach(subject => {
+          // Ignorer les matières en pause
+          if (subject.isPaused) {
+            return; // Pas de pénalité pour les matières pausées
+          }
+
           if (subject.lastProgress) {
             const lastProgressDate = new Date(subject.lastProgress);
             const timeSinceProgress = now - lastProgressDate;
 
-            if (timeSinceProgress > periodMs) {
-              const daysSince = Math.floor(timeSinceProgress / (24 * 60 * 60 * 1000));
-              const penaltyValue = Math.min(daysSince * 2, 20); // Max 20% de pénalité
+            // Récupérer la dernière valeur de progression stockée
+            const lastValue = subject.lastProgressValue || subject.value;
+            const currentValue = subject.value;
 
-              newPenalties.push({
-                radarId: radar.id,
-                subjectId: subject.id,
-                subjectName: subject.name,
-                daysSince,
-                penaltyValue
-              });
+            // Si la valeur a augmenté, c'est qu'il y a eu progression
+            const hasProgressed = currentValue > lastValue;
+
+            if (!hasProgressed && timeSinceProgress >= periodMs) {
+              // Calculer combien de périodes complètes se sont écoulées depuis la dernière vraie progression
+              const periodsElapsed = Math.floor(timeSinceProgress / periodMs);
+
+              // Récupérer les pénalités déjà appliquées pour éviter de les réappliquer
+              const previouslyAppliedPenalties = subject.appliedPenalties || 0;
+
+              // Calculer les nouvelles pénalités à appliquer
+              const totalPenaltyPeriods = periodsElapsed;
+              const newPenaltyPeriods = totalPenaltyPeriods - Math.floor(previouslyAppliedPenalties / penaltyPercentage);
+
+              // Appliquer seulement les nouvelles pénalités
+              const penaltyValue = newPenaltyPeriods > 0 ? newPenaltyPeriods * penaltyPercentage : 0;
+
+              if (penaltyValue > 0) {
+                newPenalties.push({
+                  radarId: radar.id,
+                  subjectId: subject.id,
+                  subjectName: subject.name,
+                  periodsElapsed: totalPenaltyPeriods,
+                  daysSince: Math.floor(timeSinceProgress / (24 * 60 * 60 * 1000)),
+                  penaltyValue: totalPenaltyPeriods * penaltyPercentage, // Total des pénalités
+                  actualPenaltyToApply: penaltyValue // Pénalité réelle à appliquer maintenant
+                });
+              }
             }
           }
         });
       });
 
       setPenalties(newPenalties);
+
+      // Appliquer les pénalités permanentes et sauvegarder
+      if (!hasInitialized && newPenalties.length > 0) {
+        radars.forEach(radar => {
+          let radarUpdated = false;
+          const updatedSubjects = radar.subjects?.map(subject => {
+            const penalty = newPenalties.find(p => p.radarId === radar.id && p.subjectId === subject.id);
+            if (penalty) {
+              radarUpdated = true;
+              return {
+                ...subject,
+                appliedPenalties: (subject.appliedPenalties || 0) + penalty.actualPenaltyToApply
+              };
+            }
+            return subject;
+          });
+
+          if (radarUpdated) {
+            updateRadar({ ...radar, subjects: updatedSubjects });
+          }
+        });
+        setHasInitialized(true);
+      }
     };
 
     calculatePenalties();
-    
-    // Recalculer toutes les heures
-    const interval = setInterval(calculatePenalties, 60 * 60 * 1000);
+
+    // Recalculer toutes les minutes pour vérifier les pénalités
+    const interval = setInterval(calculatePenalties, 60 * 1000);
     return () => clearInterval(interval);
-  }, [radars, akramPeriod]);
+  }, [radars, akramPeriod, penaltyPercentage, hasInitialized, updateRadar]);
 
   // Obtenir la pénalité pour une matière spécifique
   const getPenaltyForSubject = (radarId, subjectId) => {
@@ -72,6 +123,8 @@ export const AkramProvider = ({ children }) => {
   const value = {
     akramPeriod,
     setAkramPeriod,
+    penaltyPercentage,
+    setPenaltyPercentage,
     penalties,
     getPenaltyForSubject,
     getDelayedSubjectsCount,

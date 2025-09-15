@@ -79,12 +79,17 @@ const ChaptersKanban = ({ chapters, onUpdateSubtopic }) => {
         draggable
         onDragStart={(e) => handleDragStart(e, chapterId, subtopic)}
         onDragEnd={handleDragEnd}
-        className="bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-md p-3 ml-4 cursor-grab active:cursor-grabbing hover:bg-[rgb(45,45,45)] transition-all duration-150"
+        className="bg-white/70 border border-gray-200 rounded-md p-2 ml-3 cursor-grab active:cursor-grabbing hover:bg-white hover:shadow-sm transition-all duration-150 text-xs"
       >
-        <div className="font-medium text-sm text-white/81 mb-2">
+        <div className="font-medium text-sm text-gray-800 mb-2">
           {subtopic.icon} {subtopic.name}
+          {subtopic.parentName && (
+            <span className="text-xs text-gray-500 ml-2">
+              ({subtopic.parentName})
+            </span>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2 text-xs text-white/46">
+        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
           <div className="flex items-center gap-1">
             {priorityIcons[subtopic.priority]} {priorityLabels[subtopic.priority]}
           </div>
@@ -103,24 +108,24 @@ const ChaptersKanban = ({ chapters, onUpdateSubtopic }) => {
   
   const renderColumn = (title, status, tasksByChapter) => {
     const count = countTasks(tasksByChapter);
-    
+
     return (
-      <div className="flex-1 min-w-[300px] bg-[rgb(32,32,32)] border border-[rgb(47,47,47)] rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.055]">
-          <h3 className="text-base font-semibold text-white/81">{title}</h3>
-          <span className="text-sm text-white/46 bg-white/[0.055] px-2 py-0.5 rounded-xl">
+      <div className="flex-1 min-w-[280px] bg-white/50 border border-gray-200 rounded-lg p-3">
+        <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
+          <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
             {count}
           </span>
         </div>
-        
+
         <div
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, status)}
-          className="flex flex-col gap-3 min-h-[100px]"
+          className="flex flex-col gap-2 min-h-[60px] max-h-[250px] overflow-y-auto"
         >
           {Object.entries(tasksByChapter).map(([chapterId, chapterData]) => (
             <div key={chapterId} className="mb-3">
-              <div className="text-sm font-semibold text-white/81 mb-1.5 pl-1">
+              <div className="text-sm font-semibold text-gray-700 mb-1.5 pl-1">
                 {chapterData.name}
               </div>
               {chapterData.tasks.map(task => renderTask(chapterId, task))}
@@ -128,7 +133,7 @@ const ChaptersKanban = ({ chapters, onUpdateSubtopic }) => {
           ))}
           
           {count === 0 && (
-            <div className="text-center py-8 text-white/30 text-sm">
+            <div className="text-center py-2 text-gray-400 text-xs">
               Aucune tâche
             </div>
           )}
@@ -138,7 +143,7 @@ const ChaptersKanban = ({ chapters, onUpdateSubtopic }) => {
   };
   
   return (
-    <div className="flex gap-4 overflow-x-auto pb-5">
+    <div className="flex gap-4 overflow-x-auto pb-3">
       {renderColumn('Non commencé', 'not-started', notStartedTasks)}
       {renderColumn('En cours', 'in-progress', inProgressTasks)}
       {renderColumn('Terminé', 'done', doneTasks)}

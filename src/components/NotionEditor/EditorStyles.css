@@ -1,0 +1,436 @@
+/* Variables CSS */
+:root {
+  --notion-bg: #ffffff;
+  --notion-text: #37352f;
+  --notion-text-gray: #9b9a97;
+  --notion-border: #e9e9e7;
+  --notion-hover: rgba(55, 53, 47, 0.08);
+  --notion-selection: rgba(35, 131, 226, 0.14);
+
+  --block-spacing: 2px;
+  --content-padding: 96px;
+  --mobile-padding: 24px;
+
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-size-base: 16px;
+  --line-height-base: 1.5;
+}
+
+/* Editor Container */
+.notion-editor {
+  min-height: 100vh;
+  background: var(--notion-bg);
+  font-family: var(--font-family);
+  color: var(--notion-text);
+}
+
+/* Editor Header */
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--notion-border);
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-button {
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--notion-text-gray);
+  transition: background 0.2s;
+}
+
+.icon-button:hover {
+  background: var(--notion-hover);
+}
+
+.breadcrumb {
+  color: var(--notion-text-gray);
+  font-size: 14px;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-button {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid var(--notion-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.share-button:hover {
+  background: var(--notion-hover);
+}
+
+/* Editor Body */
+.editor-body {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 var(--content-padding);
+}
+
+.editor-content {
+  padding: 40px 0 200px;
+}
+
+/* Page Header Section */
+.page-header-section {
+  margin-bottom: 24px;
+}
+
+.page-icon-wrapper {
+  margin-bottom: 8px;
+}
+
+.page-icon {
+  font-size: 78px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: opacity 0.2s;
+}
+
+.page-icon:hover {
+  opacity: 0.8;
+}
+
+.page-title {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.2;
+  outline: none;
+  border: none;
+  margin: 0;
+  padding: 3px 2px;
+}
+
+.page-title:empty:before {
+  content: attr(placeholder);
+  color: var(--notion-text-gray);
+}
+
+/* Blocks Container */
+.blocks-container {
+  position: relative;
+}
+
+/* Block Wrapper */
+.block-wrapper {
+  position: relative;
+  margin: var(--block-spacing) 0;
+  padding: 3px 0;
+  min-height: 28px;
+}
+
+.block-wrapper:hover .block-handle {
+  opacity: 1;
+}
+
+/* Block Handle */
+.block-handle {
+  position: absolute;
+  left: -44px;
+  top: 2px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.drag-handle {
+  width: 24px;
+  height: 24px;
+  cursor: grab;
+  color: #a0a0a0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.drag-handle:hover {
+  background: var(--notion-hover);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.add-block {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  color: #a0a0a0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.add-block:hover {
+  background: var(--notion-hover);
+}
+
+/* Block Content */
+.block-content {
+  position: relative;
+}
+
+/* Text Block */
+.text-block {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--notion-text);
+  outline: none;
+  min-height: 1em;
+  padding: 3px 2px;
+}
+
+.text-block:empty:before {
+  content: attr(placeholder);
+  color: #e0e0e0;
+  pointer-events: none;
+}
+
+/* Heading Blocks */
+.heading-block {
+  outline: none;
+  padding: 3px 2px;
+}
+
+.heading-1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 24px 0 8px;
+}
+
+.heading-2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 20px 0 6px;
+}
+
+.heading-3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 16px 0 4px;
+}
+
+.heading-block:empty:before {
+  content: attr(placeholder);
+  color: #e0e0e0;
+}
+
+/* List Blocks */
+.bullet-list-block,
+.numbered-list-block {
+  display: flex;
+  align-items: flex-start;
+  margin: 2px 0;
+}
+
+.bullet,
+.number {
+  flex-shrink: 0;
+  width: 24px;
+  padding-right: 4px;
+  color: var(--notion-text);
+  user-select: none;
+}
+
+.list-content {
+  flex: 1;
+  outline: none;
+  min-height: 1em;
+  padding: 3px 2px;
+}
+
+.list-content:empty:before {
+  content: attr(placeholder);
+  color: #e0e0e0;
+}
+
+/* Todo Block */
+.todo-block {
+  display: flex;
+  align-items: flex-start;
+  margin: 4px 0;
+}
+
+.todo-checkbox {
+  margin-right: 8px;
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.todo-content {
+  flex: 1;
+  outline: none;
+  min-height: 1em;
+  padding: 3px 2px;
+}
+
+.todo-content.checked {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.todo-content:empty:before {
+  content: attr(placeholder);
+  color: #e0e0e0;
+}
+
+/* Slash Menu */
+.slash-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid var(--notion-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 8px 0;
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.slash-menu-header {
+  padding: 4px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--notion-text-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.slash-menu-items {
+  padding: 4px 0;
+}
+
+.slash-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.slash-menu-item:hover,
+.slash-menu-item.selected {
+  background: var(--notion-hover);
+}
+
+.item-icon {
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--notion-text);
+}
+
+.item-label {
+  flex: 1;
+  color: var(--notion-text);
+}
+
+.item-shortcut {
+  color: var(--notion-text-gray);
+  font-size: 12px;
+}
+
+/* Save Indicator */
+.save-indicator {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid var(--notion-border);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--notion-text-gray);
+  opacity: 0;
+  animation: fadeSave 2s ease;
+}
+
+@keyframes fadeSave {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Empty Editor Prompt */
+.empty-editor-prompt {
+  padding: 12px;
+  color: var(--notion-text-gray);
+  cursor: text;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .editor-body {
+    padding: 0 var(--mobile-padding);
+  }
+
+  .block-handle {
+    display: none;
+  }
+
+  .page-title {
+    font-size: 28px;
+  }
+
+  .slash-menu {
+    width: 280px;
+  }
+}
+
+/* Dragging State */
+.block-wrapper.dragging {
+  opacity: 0.5;
+}
+
+.block-wrapper.drag-over {
+  border-top: 2px solid #2383e2;
+}

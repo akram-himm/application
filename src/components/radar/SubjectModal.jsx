@@ -4,7 +4,7 @@ import { uniformStyles } from '../../styles/uniformStyles';
 const SubjectModal = ({ isOpen, onClose, onSave, editingSubject }) => {
   const [formData, setFormData] = useState({
     name: '',
-    value: 50 // Valeur par défaut à 50% pour éviter l'empilement au centre
+    value: 0 // Valeur par défaut à 0% pour les nouvelles matières
   });
   
   const inputRef = useRef(null);
@@ -13,12 +13,12 @@ const SubjectModal = ({ isOpen, onClose, onSave, editingSubject }) => {
     if (editingSubject) {
       setFormData({
         name: editingSubject.name || '',
-        value: editingSubject.value || 50
+        value: editingSubject.value || 0
       });
     } else {
       setFormData({
         name: '',
-        value: 50
+        value: 0
       });
     }
   }, [editingSubject]);
@@ -79,33 +79,36 @@ const SubjectModal = ({ isOpen, onClose, onSave, editingSubject }) => {
             />
           </div>
 
-          <div className="mb-6">
-            <label className={uniformStyles.modal.darkLabel}>
-              Progression initiale (%)
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: parseInt(e.target.value) })}
-                min="0"
-                max="100"
-                step="5"
-                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, rgb(59, 130, 246) 0%, rgb(59, 130, 246) ${formData.value}%, rgb(229, 231, 235) ${formData.value}%, rgb(229, 231, 235) 100%)`
-                }}
-              />
-              <input
-                type="number"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })}
-                min="0"
-                max="100"
-                className={'w-16 px-2 py-1 text-center ' + uniformStyles.modal.darkInput}
-              />
+          {/* Suppression du champ de progression initiale - la valeur sera toujours 0 */}
+          {editingSubject && (
+            <div className="mb-6">
+              <label className={uniformStyles.modal.darkLabel}>
+                Progression actuelle (%)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  value={formData.value}
+                  onChange={(e) => setFormData({ ...formData, value: parseInt(e.target.value) })}
+                  min="0"
+                  max="100"
+                  step="5"
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, rgb(107, 114, 128) 0%, rgb(107, 114, 128) ${formData.value}%, rgb(229, 231, 235) ${formData.value}%, rgb(229, 231, 235) 100%)`
+                  }}
+                />
+                <input
+                  type="number"
+                  value={formData.value}
+                  onChange={(e) => setFormData({ ...formData, value: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })}
+                  min="0"
+                  max="100"
+                  className={'w-16 px-2 py-1 text-center ' + uniformStyles.modal.darkInput}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-2 justify-end">
             <button

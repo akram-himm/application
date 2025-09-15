@@ -56,7 +56,7 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     const angleStep = (Math.PI * 2) / AXES_COUNT;
 
     // Grilles circulaires - style simple et cohérent
-    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)'; // Gris léger
+    ctx.strokeStyle = 'rgba(156, 163, 175, 0.2)'; // gray-400 avec opacité
     ctx.lineWidth = 1;
     
     for (let i = 1; i <= 5; i++) {
@@ -80,7 +80,7 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     }
     
     // Axes radiaux - lignes discrètes
-    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)'; // Même gris que les cercles
+    ctx.strokeStyle = 'rgba(156, 163, 175, 0.2)'; // gray-400 avec opacité
     ctx.lineWidth = 1;
     
     for (let i = 0; i < AXES_COUNT; i++) {
@@ -99,8 +99,8 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     if (subjects.length > 0) {
       // Forme remplie - couleur simple
       ctx.beginPath();
-      ctx.globalAlpha = 0.15 * animationProgress;
-      ctx.fillStyle = 'rgb(59, 130, 246)'; // Bleu cohérent
+      ctx.globalAlpha = 0.25 * animationProgress; // Opacité augmentée
+      ctx.fillStyle = 'rgb(107, 114, 128)'; // gray-500 pour cohérence
       
       subjects.forEach((subject, index) => {
         const angle = index * angleStep - Math.PI / 2;
@@ -127,7 +127,7 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       // Bordure de la forme - ligne simple
       ctx.beginPath();
       ctx.globalAlpha = 1 * animationProgress;
-      ctx.strokeStyle = 'rgb(59, 130, 246)';
+      ctx.strokeStyle = 'rgb(55, 65, 81)'; // gray-700 pour un look sérieux
       ctx.lineWidth = 2;
       
       subjects.forEach((subject, index) => {
@@ -177,11 +177,11 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
         // Point intérieur coloré
         ctx.beginPath();
         if (hasPenalty) {
-          ctx.fillStyle = 'rgb(251, 191, 36)';
+          ctx.fillStyle = 'rgb(251, 191, 36)'; // Orange pour pénalités
         } else if (index === hoveredSubject) {
-          ctx.fillStyle = 'rgb(35, 131, 226)';
+          ctx.fillStyle = 'rgb(55, 65, 81)'; // gray-700 au survol
         } else {
-          ctx.fillStyle = 'rgb(59, 130, 246)';
+          ctx.fillStyle = 'rgb(107, 114, 128)'; // gray-500 par défaut
         }
         ctx.arc(x, y, index === hoveredSubject ? 7 : 5, 0, Math.PI * 2);
         ctx.fill();
@@ -228,19 +228,23 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       if (i < subjects.length) {
         const subject = subjects[i];
         const penalty = penalties.find(p => p.subjectId === subject.id);
-        
-        if (penalty) {
-          ctx.fillStyle = 'rgb(251, 191, 36)';
+
+        // Tous les labels en gris pour cohérence (avec indication de pause)
+        if (subject.isPaused) {
+          ctx.fillStyle = 'rgb(156, 163, 175)'; // gray-400 pour les pausés
         } else if (i === hoveredSubject) {
-          ctx.fillStyle = 'rgb(35, 131, 226)';
+          ctx.fillStyle = 'rgb(55, 65, 81)'; // gray-700 plus foncé au survol
         } else {
-          ctx.fillStyle = 'rgb(75, 85, 99)'; // gray-600
+          ctx.fillStyle = 'rgb(107, 114, 128)'; // gray-500 par défaut
         }
         
         // Tronquer le texte s'il est trop long
         let text = subject.name;
-        if (text.length > 12) {
-          text = text.substring(0, 10) + '...';
+        if (subject.isPaused) {
+          text = `⏸ ${text}`; // Ajouter l'icône pause
+        }
+        if (text.length > 15) {
+          text = text.substring(0, 13) + '...';
         }
         ctx.fillText(text, x, y);
       } else {
