@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 import { AkramContext } from '../contexts/AkramContext';
@@ -169,12 +170,23 @@ const RadarView = () => {
     if (e && e.preventDefault && typeof e.preventDefault === 'function') {
       e.preventDefault();
     }
-    
+
     setSelectedSubjectIndex(index);
+
+    // Calculer la position en tenant compte du menu et de la fenêtre
+    const menuWidth = 200; // largeur approximative du menu
+    const menuHeight = 200; // hauteur approximative du menu
+    const x = e.clientX || e.x;
+    const y = e.clientY || e.y;
+
+    // Ajuster si le menu dépasse les bords de la fenêtre
+    const adjustedX = x + menuWidth > window.innerWidth ? window.innerWidth - menuWidth - 10 : x;
+    const adjustedY = y + menuHeight > window.innerHeight ? window.innerHeight - menuHeight - 10 : y;
+
     setContextMenu({
       show: true,
-      x: e.clientX || e.x,
-      y: e.clientY || e.y
+      x: adjustedX,
+      y: adjustedY
     });
   };
   
@@ -232,11 +244,15 @@ const RadarView = () => {
       {/* Akram Control */}
       <AkramControl />
       
-      {/* Context Menu */}
-      {contextMenu.show && (
+      {/* Context Menu - Rendered with Portal */}
+      {contextMenu.show && ReactDOM.createPortal(
         <div
-          className="fixed z-[100] bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden min-w-[200px]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          className="fixed bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden min-w-[200px]"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            zIndex: 99999
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -275,7 +291,8 @@ const RadarView = () => {
             <span className="text-lg">🗑️</span>
             <span>Supprimer</span>
           </button>
-        </div>
+        </div>,
+        document.body
       )}
       
       {/* Subject Modal */}

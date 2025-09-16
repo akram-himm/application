@@ -3,3 +3,28 @@
   min-height: 100vh;
   width: 100%;
 }
+
+/* Custom scrollbar styles for Kanban */
+.kanban-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.kanban-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.kanban-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Firefox scrollbar */
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}

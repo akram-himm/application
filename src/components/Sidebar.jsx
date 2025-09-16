@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 
@@ -8,11 +8,13 @@ const Sidebar = () => {
   const { radars } = useContext(AppContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedRadars, setExpandedRadars] = useState({});
-  
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
   // Vérifier si on doit inverser les styles
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
 
-  const menuItems = [
+  const initialMenuItems = [
     { 
       id: 'dashboard', 
       label: 'Tableau de bord', 
@@ -75,30 +77,64 @@ const Sidebar = () => {
           <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z" />
         </svg>
       )
-    },
-    {
-      id: 'notion-todo',
-      label: 'Todo Notion',
-      path: '/notion-todo',
-      icon: (
-        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z" />
-          <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
-        </svg>
-      )
-    },
-    {
-      id: 'notion-calendar',
-      label: 'Calendrier Notion',
-      path: '/notion-calendar',
-      icon: (
-        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z" />
-          <path d="M8 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM4 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm8 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
-        </svg>
-      )
     }
   ];
+
+  // État pour stocker l'ordre des menus
+  const [menuItems, setMenuItems] = useState(() => {
+    // Charger l'ordre depuis localStorage
+    const saved = localStorage.getItem('sidebar-menu-order');
+    if (saved) {
+      try {
+        const savedOrder = JSON.parse(saved);
+        // Réorganiser les items selon l'ordre sauvegardé
+        return savedOrder.map(id => initialMenuItems.find(item => item.id === id)).filter(Boolean);
+      } catch (e) {
+        return initialMenuItems;
+      }
+    }
+    return initialMenuItems;
+  });
+
+  // Sauvegarder l'ordre dans localStorage
+  useEffect(() => {
+    const order = menuItems.map(item => item.id);
+    localStorage.setItem('sidebar-menu-order', JSON.stringify(order));
+  }, [menuItems]);
+
+  // Gestion du drag & drop
+  const handleDragStart = (e, index) => {
+    setDraggedItem(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedItem === null || draggedItem === dropIndex) return;
+
+    const newItems = [...menuItems];
+    const draggedContent = newItems[draggedItem];
+
+    // Enlever l'élément de sa position actuelle
+    newItems.splice(draggedItem, 1);
+
+    // L'insérer à sa nouvelle position
+    newItems.splice(dropIndex, 0, draggedContent);
+
+    setMenuItems(newItems);
+    setDraggedItem(null);
+    setDragOverIndex(null);
+  };
 
   const toggleRadar = (radarId) => {
     setExpandedRadars(prev => ({
@@ -139,19 +175,59 @@ const Sidebar = () => {
       <nav className="flex-1 overflow-y-auto py-3">
         {/* Menu principal */}
         <div className="px-2 mb-4">
-          {menuItems.map(item => (
-            <button
+          {menuItems.map((item, index) => (
+            <div
               key={item.id}
-              onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 ${
-                isActive(item.path) 
-                  ? 'text-blue-500 bg-white/80 shadow-sm ring-1 ring-gray-200 font-medium focus:ring-2 focus:ring-blue-200' 
-                  : 'text-gray-600 hover:bg-white/60'
-              }`}
+              draggable
+              onDragStart={(e) => {
+                handleDragStart(e, index);
+                // Créer une image de prévisualisation personnalisée
+                const dragPreview = document.createElement('div');
+                dragPreview.style.position = 'absolute';
+                dragPreview.style.top = '-1000px';
+                dragPreview.style.backgroundColor = 'white';
+                dragPreview.style.padding = '8px 12px';
+                dragPreview.style.borderRadius = '8px';
+                dragPreview.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                dragPreview.style.fontSize = '14px';
+                dragPreview.style.color = '#374151';
+                dragPreview.textContent = item.label;
+                document.body.appendChild(dragPreview);
+                e.dataTransfer.setDragImage(dragPreview, 0, 0);
+                setTimeout(() => document.body.removeChild(dragPreview), 0);
+              }}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              className={`relative ${dragOverIndex === index ? 'opacity-50' : ''} ${draggedItem === index ? 'opacity-30' : ''}`}
+              style={{ cursor: draggedItem === index ? 'grabbing' : 'default' }}
             >
-              <span className={isActive(item.path) ? 'text-blue-500' : 'text-gray-400'}>{item.icon}</span>
-              {!isCollapsed && <span>{item.label}</span>}
-            </button>
+              {dragOverIndex === index && (
+                <div className="absolute inset-x-0 -top-0.5 h-0.5 bg-blue-500 rounded-full"></div>
+              )}
+              <button
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 ${
+                  isActive(item.path)
+                    ? 'text-blue-500 bg-white/80 shadow-sm ring-1 ring-gray-200 font-medium focus:ring-2 focus:ring-blue-200'
+                    : 'text-gray-600 hover:bg-white/60'
+                } ${draggedItem === index ? 'cursor-grabbing' : 'cursor-pointer'}`}
+              >
+                {/* Icône de drag (visible au hover) */}
+                <div className="absolute left-0 opacity-0 hover:opacity-100 transition-opacity cursor-grab">
+                  <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" className="text-gray-400">
+                    <circle cx="2" cy="2" r="1" />
+                    <circle cx="2" cy="6" r="1" />
+                    <circle cx="2" cy="10" r="1" />
+                    <circle cx="6" cy="2" r="1" />
+                    <circle cx="6" cy="6" r="1" />
+                    <circle cx="6" cy="10" r="1" />
+                  </svg>
+                </div>
+                <span className={isActive(item.path) ? 'text-blue-500' : 'text-gray-400'}>{item.icon}</span>
+                {!isCollapsed && <span>{item.label}</span>}
+              </button>
+            </div>
           ))}
         </div>
 

@@ -1,16 +1,104 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 
-const SimpleKanban = () => {
-  const [tasks, setTasks] = useState({
-    'not-started': [],
-    'in-progress': [],
-    'done': []
+const SimpleKanban = ({ subjectId, radarId, tasks: initialTasks, onTasksChange }) => {
+  // Toujours initialiser avec la structure des colonnes
+  const [tasks, setTasks] = useState(() => {
+    // Structure par défaut
+    const defaultTasks = {
+      'not-started': [],
+      'in-progress': [],
+      'done': []
+    };
+
+    // Si des tâches sont passées en props
+    if (initialTasks) {
+      // Si c'est déjà un objet avec les bonnes colonnes
+      if (typeof initialTasks === 'object' && !Array.isArray(initialTasks)) {
+        return { ...defaultTasks, ...initialTasks };
+      }
+      // Si c'est un tableau, les convertir dans la structure de colonnes
+      if (Array.isArray(initialTasks)) {
+        const organized = { ...defaultTasks };
+        initialTasks.forEach(task => {
+          const column = task.status === 'todo' ? 'not-started' :
+                        task.status === 'in-progress' ? 'in-progress' :
+                        task.status === 'done' ? 'done' : 'not-started';
+          organized[column].push(task);
+        });
+        return organized;
+      }
+    }
+
+    // Charger depuis localStorage
+    if (subjectId && radarId) {
+      const savedKey = `kanban-tasks-${radarId}-${subjectId}`;
+      const saved = localStorage.getItem(savedKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // S'assurer que c'est dans le bon format
+          if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return { ...defaultTasks, ...parsed };
+          }
+        } catch (e) {
+          console.error('Erreur de chargement des tâches:', e);
+        }
+      }
+    }
+
+    return defaultTasks;
   });
 
   const [draggedTask, setDraggedTask] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalColumn, setModalColumn] = useState('not-started');
-  const [newTask, setNewTask] = useState({ name: '', date: '' });
+  // Date par défaut : aujourd'hui
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const [newTask, setNewTask] = useState({ name: '', date: getTodayDate() });
+  const inputRef = useRef(null);
+  const scrollPositionRef = useRef(0);
+
+  // Sauvegarder les tâches dans localStorage à chaque changement
+  useEffect(() => {
+    if (subjectId && radarId) {
+      const savedKey = `kanban-tasks-${radarId}-${subjectId}`;
+      localStorage.setItem(savedKey, JSON.stringify(tasks));
+
+      // Appeler le callback parent si fourni
+      if (onTasksChange) {
+        onTasksChange(tasks);
+      }
+    }
+  }, [tasks, subjectId, radarId, onTasksChange]);
+
+  // Gérer le focus sans faire scroller et bloquer le scroll du body
+  useEffect(() => {
+    if (showAddModal) {
+      // Sauvegarder et bloquer le scroll du body
+      const originalStyle = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      // Focus sur l'input sans faire scroller
+      if (inputRef.current) {
+        const currentScroll = window.scrollY;
+        inputRef.current.focus({ preventScroll: true });
+        window.scrollTo(0, currentScroll);
+      }
+
+      // Cleanup : restaurer le scroll
+      return () => {
+        document.body.style.overflow = originalStyle;
+        window.scrollTo(0, scrollPositionRef.current);
+      };
+    }
+  }, [showAddModal]);
 
   // Ajouter une nouvelle tâche
   const handleAddTask = () => {
@@ -26,7 +114,7 @@ const SimpleKanban = () => {
         [modalColumn]: [...prev[modalColumn], task]
       }));
 
-      setNewTask({ name: '', date: '' });
+      setNewTask({ name: '', date: getTodayDate() });
       setShowAddModal(false);
     }
   };
@@ -89,7 +177,7 @@ const SimpleKanban = () => {
 
   return (
     <div className="w-full">
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="kanban-scroll flex gap-4 overflow-x-auto pb-4">
         {columns.map(column => (
           <div
             key={column.id}
@@ -106,7 +194,10 @@ const SimpleKanban = () => {
                 </span>
                 <button
                   onClick={() => {
+                    // Sauvegarder la position actuelle du scroll
+                    scrollPositionRef.current = window.scrollY;
                     setModalColumn(column.id);
+                    setNewTask({ name: '', date: getTodayDate() });
                     setShowAddModal(true);
                   }}
                   className="text-gray-500 hover:text-gray-700 transition-colors"
@@ -164,48 +255,69 @@ const SimpleKanban = () => {
         ))}
       </div>
 
-      {/* Modal d'ajout de tâche */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Ajouter une tâche</h3>
+      {/* Modal d'ajout de tâche - Rendu dans body avec Portal */}
+      {showAddModal && ReactDOM.createPortal(
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAddModal(false);
+              setNewTask({ name: '', date: getTodayDate() });
+              // Restaurer la position du scroll
+              window.scrollTo(0, scrollPositionRef.current);
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg p-6 w-96 shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">
+              Nouvelle tâche - {columns.find(c => c.id === modalColumn)?.title}
+            </h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de la tâche
-                </label>
                 <input
+                  ref={inputRef}
                   type="text"
                   value={newTask.name}
                   onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Entrez le nom de la tâche..."
-                  autoFocus
-                  onKeyPress={(e) => {
+                  className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 bg-white"
+                  placeholder="Nom de la tâche..."
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && newTask.name.trim()) {
+                      e.preventDefault();
                       handleAddTask();
+                    }
+                    if (e.key === 'Escape') {
+                      setShowAddModal(false);
+                      setNewTask({ name: '', date: getTodayDate() });
                     }
                   }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date (optionnelle)
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Date (optionnelle - par défaut aujourd'hui)
                 </label>
                 <input
                   type="date"
                   value={newTask.date}
                   onChange={(e) => setNewTask({ ...newTask, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 bg-white"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newTask.name.trim()) {
+                      e.preventDefault();
+                      handleAddTask();
+                    }
+                  }}
                 />
-              </div>
-
-              <div className="text-sm text-gray-500">
-                Colonne: <span className="font-medium">
-                  {columns.find(c => c.id === modalColumn)?.title}
-                </span>
               </div>
             </div>
 
@@ -213,7 +325,7 @@ const SimpleKanban = () => {
               <button
                 onClick={() => {
                   setShowAddModal(false);
-                  setNewTask({ name: '', date: '' });
+                  setNewTask({ name: '', date: getTodayDate() });
                 }}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
@@ -222,13 +334,14 @@ const SimpleKanban = () => {
               <button
                 onClick={handleAddTask}
                 disabled={!newTask.name.trim()}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                Ajouter
+                Ajouter (Enter)
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

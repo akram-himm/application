@@ -9,7 +9,7 @@ const ChaptersView = () => {
   const { radarId, subjectId } = useParams();
   const navigate = useNavigate();
   const { radars, updateRadar } = useContext(AppContext);
-  const [kanbanTasks, setKanbanTasks] = useState([]);
+  const [kanbanTasks, setKanbanTasks] = useState(null); // null pour indiquer qu'on n'a pas encore chargé
 
   // Récupérer les données du radar et de la matière
   const radar = radars.find(r => r.id === radarId);
@@ -22,10 +22,14 @@ const ChaptersView = () => {
       const saved = localStorage.getItem(savedKey);
       if (saved) {
         try {
-          setKanbanTasks(JSON.parse(saved));
+          const parsed = JSON.parse(saved);
+          setKanbanTasks(parsed);
         } catch (e) {
           console.error('Erreur de chargement des tâches:', e);
+          setKanbanTasks(null);
         }
+      } else {
+        setKanbanTasks(null); // Pas de données sauvegardées
       }
     }
   }, [subjectId, radarId]);
@@ -42,11 +46,26 @@ const ChaptersView = () => {
     const newTask = {
       ...task,
       id: `task-${Date.now()}`,
-      status: task.status || 'todo',
       createdAt: new Date().toISOString()
     };
 
-    const updatedTasks = [...kanbanTasks, newTask];
+    // Déterminer la colonne en fonction du statut
+    const column = task.status === 'todo' ? 'not-started' :
+                  task.status === 'in-progress' ? 'in-progress' :
+                  task.status === 'done' ? 'done' : 'not-started';
+
+    // S'assurer que kanbanTasks a la bonne structure
+    const currentTasks = kanbanTasks || {
+      'not-started': [],
+      'in-progress': [],
+      'done': []
+    };
+
+    const updatedTasks = {
+      ...currentTasks,
+      [column]: [...(currentTasks[column] || []), newTask]
+    };
+
     saveKanbanTasks(updatedTasks);
 
     // Afficher une notification de succès (optionnel)
@@ -112,7 +131,7 @@ const ChaptersView = () => {
               onClick={() => navigate(`/radar/${radarId}`)}
               className="hover:text-gray-700"
             >
-              {radar.icon} {radar.name}
+              {radar.name}
             </button>
             <span>/</span>
             <span className="text-gray-700 font-medium">{subject.name}</span>
@@ -129,24 +148,13 @@ const ChaptersView = () => {
 
       {/* Main Content - Kanban et Éditeur */}
       <div className="max-w-[1400px] mx-auto px-6 pb-32 space-y-8">
-        {/* Section Kanban */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-              📊 Tableau de progression
-            </h2>
-            <span className="text-sm text-gray-500">
-              {kanbanTasks.length} tâche{kanbanTasks.length > 1 ? 's' : ''}
-            </span>
-          </div>
-
-          <SimpleKanban
-            tasks={kanbanTasks}
-            onTasksChange={saveKanbanTasks}
-            subjectId={subjectId}
-            radarId={radarId}
-          />
-        </div>
+        {/* Section Kanban - directement sans conteneur */}
+        <SimpleKanban
+          tasks={kanbanTasks}
+          onTasksChange={saveKanbanTasks}
+          subjectId={subjectId}
+          radarId={radarId}
+        />
 
         {/* Section Éditeur Notion */}
         <div>

@@ -309,16 +309,39 @@
 
 /* Menu slash */
 .notion-slash-menu {
-  position: absolute;
+  position: fixed !important;
   background: white;
   border-radius: 6px;
   box-shadow: 0 0 0 1px rgba(15, 15, 15, 0.05), 0 5px 10px rgba(15, 15, 15, 0.1), 0 15px 40px rgba(15, 15, 15, 0.1);
   padding: 6px;
-  min-width: 180px;
+  min-width: 200px;
   max-width: 280px;
-  max-height: 400px;
+  max-height: 350px;
+  z-index: 9999 !important;
+}
+
+.slash-menu-content {
+  max-height: 320px;
   overflow-y: auto;
-  z-index: 1000;
+  overflow-x: hidden;
+}
+
+/* Scrollbar personnalisée pour le menu */
+.slash-menu-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.slash-menu-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.slash-menu-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.slash-menu-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .slash-menu-header {
@@ -346,6 +369,11 @@
 
 .slash-menu-item:hover {
   background: var(--notion-hover);
+}
+
+.slash-menu-item.selected {
+  background: rgb(35, 131, 226, 0.1);
+  color: rgb(35, 131, 226);
 }
 
 .menu-icon {
@@ -406,6 +434,66 @@
 
 .notion-block {
   animation: fadeIn 0.1s ease;
+}
+
+/* Menu de couleurs */
+.notion-color-menu {
+  position: fixed !important;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(15, 15, 15, 0.05), 0 5px 10px rgba(15, 15, 15, 0.1), 0 15px 40px rgba(15, 15, 15, 0.1);
+  padding: 12px;
+  min-width: 240px;
+  z-index: 9999 !important;
+}
+
+.color-menu-header {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--notion-text-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 0 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--notion-border);
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.color-item {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.color-item:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.color-item:active {
+  transform: scale(0.95);
+}
+
+/* Position fixe du menu slash pour éviter les problèmes avec la sidebar */
+.notion-editor-page {
+  position: relative;
+}
+
+.notion-slash-menu,
+.notion-color-menu {
+  position: fixed !important;
 }
 
 /* Print styles */
