@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
+import ConfirmModal from './tasks/ConfirmModal';
 import * as pageService from '../services/pageService';
 
 const Sidebar = () => {
@@ -15,6 +16,7 @@ const Sidebar = () => {
   const [showNewPageModal, setShowNewPageModal] = useState(false);
   const [newPageName, setNewPageName] = useState('');
   const [newPageIcon, setNewPageIcon] = useState('📝');
+  const [confirmModal, setConfirmModal] = useState({ show: false, message: '', onConfirm: null });
 
   // Vérifier si on doit inverser les styles
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
@@ -294,19 +296,24 @@ const Sidebar = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm(`Supprimer "${page.name}" ?`)) {
-                          try {
-                            pageService.deletePage(page.id);
-                            const pages = pageService.getAllPages();
-                            const custom = pages.filter(p => !p.fixed);
-                            setCustomPages(custom);
-                            if (location.pathname === page.path) {
-                              navigate('/');
+                        setConfirmModal({
+                          show: true,
+                          message: `Êtes-vous sûr de vouloir supprimer "${page.name}" ?`,
+                          onConfirm: () => {
+                            try {
+                              pageService.deletePage(page.id);
+                              const pages = pageService.getAllPages();
+                              const custom = pages.filter(p => !p.fixed);
+                              setCustomPages(custom);
+                              if (location.pathname === page.path) {
+                                navigate('/');
+                              }
+                            } catch (error) {
+                              console.error('Erreur lors de la suppression:', error);
                             }
-                          } catch (error) {
-                            console.error('Erreur lors de la suppression:', error);
+                            setConfirmModal({ show: false, message: '', onConfirm: null });
                           }
-                        }
+                        });
                       }}
                       className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-white/80 rounded"
                     >
@@ -417,6 +424,76 @@ const Sidebar = () => {
           {!isCollapsed && <span>Paramètres</span>}
         </button>
       </div>
+
+      {/* Modal nouvelle page */}
+      {showNewPageModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-96 shadow-2xl">
+            <h2 className="text-xl font-semibold text-[#1E1F22] mb-4">Nouvelle page</h2>
+
+            {/* Sélecteur d'emoji */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#6B7280] mb-2">Icône</label>
+              <div className="grid grid-cols-6 gap-2">
+                {['📝', '📄', '📋', '📌', '🗂️', '📁', '📊', '💡', '🎯', '⭐', '🔥', '🚀'].map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => setNewPageIcon(emoji)}
+                    className={`p-2 text-2xl rounded-lg hover:bg-[#F3F4F6] transition-colors ${
+                      newPageIcon === emoji ? 'bg-[#F0F4FF] ring-2 ring-[#2B5CE6]' : ''
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Nom de la page */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-[#6B7280] mb-2">Nom</label>
+              <input
+                type="text"
+                value={newPageName}
+                onChange={(e) => setNewPageName(e.target.value)}
+                placeholder="Ma nouvelle page"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2B5CE6] focus:border-[#2B5CE6] outline-none"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleCreatePage()}
+              />
+            </div>
+
+            {/* Boutons */}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowNewPageModal(false);
+                  setNewPageName('');
+                  setNewPageIcon('📝');
+                }}
+                className="px-4 py-2 text-[#6B7280] hover:bg-[#F3F4F6] rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleCreatePage}
+                disabled={!newPageName.trim()}
+                className="px-4 py-2 bg-[#2B5CE6] text-white rounded-lg hover:bg-[#1E40AF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Créer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmation */}
+      <ConfirmModal
+        show={confirmModal.show}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ show: false, message: '', onConfirm: null })}
+      />
     </aside>
   );
 };
