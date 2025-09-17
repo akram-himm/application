@@ -234,6 +234,67 @@ const Sidebar = () => {
         {/* Séparateur */}
         <div className="mx-4 border-t border-gray-200/70 mb-4"></div>
 
+        {/* Pages personnalisées */}
+        {customPages.length > 0 && (
+          <div className="px-2 mb-4">
+            {!isCollapsed && (
+              <div className="px-2 mb-2">
+                <span className="text-[10px] font-medium text-[#9CA3AF] uppercase tracking-wider">Pages</span>
+              </div>
+            )}
+            {customPages.map(page => (
+              <div
+                key={page.id}
+                className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-150 cursor-pointer ${
+                  location.pathname === page.path
+                    ? 'bg-[#F0F4FF] text-[#2B5CE6]'
+                    : 'hover:bg-[#F3F4F6] text-[#6B7280]'
+                }`}
+                onClick={() => navigate(page.path)}
+              >
+                <span className="text-base">{page.icon}</span>
+                {!isCollapsed && (
+                  <>
+                    <span className="text-sm flex-1">{page.name}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Supprimer "${page.name}" ?`)) {
+                          deletePage(page.id);
+                          const pages = getAllPages();
+                          const custom = pages.filter(p => !p.fixed);
+                          setCustomPages(custom);
+                          if (location.pathname === page.path) {
+                            navigate('/');
+                          }
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-white/80 rounded"
+                    >
+                      <svg className="w-3.5 h-3.5 text-[#EF4444]" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Bouton nouvelle page */}
+        <div className="px-2 mb-4">
+          <button
+            onClick={() => setShowNewPageModal(true)}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-150 hover:bg-[#F3F4F6] text-[#9CA3AF]"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z" />
+            </svg>
+            {!isCollapsed && <span className="text-sm">Nouvelle page</span>}
+          </button>
+        </div>
+
         {/* Radars */}
         <div className="px-2">
           <div className="flex items-center justify-between px-2 mb-2">

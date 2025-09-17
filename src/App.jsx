@@ -7,7 +7,7 @@ import { ToastProvider } from './components/Toast';
 import SaveIndicator from './components/ui/SaveIndicator';
 import CrashRecovery from './components/CrashRecovery';
 // import Layout from './components/Layout';
-import SidebarWithPages from './components/SidebarWithPages';
+import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import DashboardView from './pages/DashboardView';
 import HistoryView from './pages/HistoryView';
@@ -31,7 +31,7 @@ function App() {
               <CrashRecovery />
               <SaveIndicator />
               <div className="flex h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
-                <SidebarWithPages />
+                <Sidebar />
                 <main className="flex-1 overflow-y-auto">
                   <ErrorBoundary>
                     <Routes>
