@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
+import * as pageService from '../services/pageService';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -10,9 +11,43 @@ const Sidebar = () => {
   const [expandedRadars, setExpandedRadars] = useState({});
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [customPages, setCustomPages] = useState([]);
+  const [showNewPageModal, setShowNewPageModal] = useState(false);
+  const [newPageName, setNewPageName] = useState('');
+  const [newPageIcon, setNewPageIcon] = useState('📝');
 
   // Vérifier si on doit inverser les styles
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
+
+  // Charger les pages personnalisées
+  useEffect(() => {
+    try {
+      const pages = pageService.getAllPages();
+      const custom = pages.filter(p => !p.fixed);
+      setCustomPages(custom);
+    } catch (error) {
+      console.error('Erreur lors du chargement des pages:', error);
+      setCustomPages([]);
+    }
+  }, []);
+
+  const handleCreatePage = () => {
+    if (newPageName.trim()) {
+      try {
+        const newPage = pageService.createPage(newPageName.trim(), newPageIcon);
+        navigate(newPage.path);
+        setNewPageName('');
+        setNewPageIcon('📝');
+        setShowNewPageModal(false);
+        // Recharger les pages
+        const pages = pageService.getAllPages();
+        const custom = pages.filter(p => !p.fixed);
+        setCustomPages(custom);
+      } catch (error) {
+        console.error('Erreur lors de la création de la page:', error);
+      }
+    }
+  };
 
   const initialMenuItems = [
     { 
@@ -260,12 +295,16 @@ const Sidebar = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (confirm(`Supprimer "${page.name}" ?`)) {
-                          deletePage(page.id);
-                          const pages = getAllPages();
-                          const custom = pages.filter(p => !p.fixed);
-                          setCustomPages(custom);
-                          if (location.pathname === page.path) {
-                            navigate('/');
+                          try {
+                            pageService.deletePage(page.id);
+                            const pages = pageService.getAllPages();
+                            const custom = pages.filter(p => !p.fixed);
+                            setCustomPages(custom);
+                            if (location.pathname === page.path) {
+                              navigate('/');
+                            }
+                          } catch (error) {
+                            console.error('Erreur lors de la suppression:', error);
                           }
                         }
                       }}
