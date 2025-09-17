@@ -7,7 +7,7 @@ import { ToastProvider } from './components/Toast';
 import SaveIndicator from './components/ui/SaveIndicator';
 import CrashRecovery from './components/CrashRecovery';
 // import Layout from './components/Layout';
-import Sidebar from './components/Sidebar';
+import SidebarWithPages from './components/SidebarWithPages';
 import Dashboard from './pages/Dashboard';
 import DashboardView from './pages/DashboardView';
 import HistoryView from './pages/HistoryView';
@@ -18,6 +18,7 @@ import PlanView from './pages/PlanView';
 import CalendarView from './pages/CalendarView';
 import NotesView from './pages/NotesView';
 import TrashView from './pages/TrashView';
+import CustomPage from './pages/CustomPage';
 import './App.css';
 
 function App() {
@@ -30,7 +31,7 @@ function App() {
               <CrashRecovery />
               <SaveIndicator />
               <div className="flex h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]">
-                <Sidebar />
+                <SidebarWithPages />
                 <main className="flex-1 overflow-y-auto">
                   <ErrorBoundary>
                     <Routes>
@@ -44,6 +45,7 @@ function App() {
                       <Route path="/calendar" element={<CalendarView />} />
                       <Route path="/notes" element={<NotesView />} />
                       <Route path="/trash" element={<TrashView />} />
+                      <Route path="/page/:pageId" element={<CustomPage />} />
                     </Routes>
                   </ErrorBoundary>
                 </main>
