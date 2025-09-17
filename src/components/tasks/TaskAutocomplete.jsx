@@ -11,6 +11,7 @@ const TaskAutocomplete = ({
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1); // -1 = aucune sélection
+  const [duplicateError, setDuplicateError] = useState('');
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
@@ -93,9 +94,28 @@ const TaskAutocomplete = ({
   useEffect(() => {
     const newSuggestions = generateSuggestions(value);
     setSuggestions(newSuggestions);
-    setShowSuggestions(value.trim().length > 0);
+    setShowSuggestions(value.trim().length > 0 && !duplicateError);
     setSelectedIndex(-1); // Reset la sélection
   }, [value, radars]);
+
+  // Vérifier les doublons en temps réel
+  useEffect(() => {
+    if (value.trim()) {
+      // Vérifier si une tâche avec ce nom exact existe déjà
+      const duplicate = existingTasks?.find(task =>
+        task.name && task.name.toLowerCase() === value.trim().toLowerCase()
+      );
+
+      if (duplicate) {
+        setDuplicateError(`La tâche "${duplicate.name}" existe déjà`);
+        setShowSuggestions(false); // Cacher les suggestions si doublon
+      } else {
+        setDuplicateError('');
+      }
+    } else {
+      setDuplicateError('');
+    }
+  }, [value, existingTasks]);
 
   // Gérer la sélection d'une suggestion
   const handleSelectSuggestion = (suggestion) => {
@@ -115,8 +135,14 @@ const TaskAutocomplete = ({
 
   // Gérer le clavier
   const handleKeyDown = (e) => {
+    // Bloquer si doublon
+    if (duplicateError && e.key === 'Enter') {
+      e.preventDefault();
+      return;
+    }
+
     if (!showSuggestions || suggestions.length === 0) {
-      if (e.key === 'Enter' && value.trim()) {
+      if (e.key === 'Enter' && value.trim() && !duplicateError) {
         // Soumettre sans tag
         onSubmit({ name: value.trim() });
         onChange('');
@@ -143,14 +169,16 @@ const TaskAutocomplete = ({
         
       case 'Enter':
         e.preventDefault();
-        if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-          // Une suggestion est sélectionnée
-          handleSelectSuggestion(suggestions[selectedIndex]);
-        } else if (value.trim()) {
-          // Aucune sélection, soumettre sans tag
-          onSubmit({ name: value.trim() });
-          onChange('');
-          setShowSuggestions(false);
+        if (!duplicateError) {
+          if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+            // Une suggestion est sélectionnée
+            handleSelectSuggestion(suggestions[selectedIndex]);
+          } else if (value.trim()) {
+            // Aucune sélection, soumettre sans tag
+            onSubmit({ name: value.trim() });
+            onChange('');
+            setShowSuggestions(false);
+          }
         }
         break;
         
@@ -183,7 +211,7 @@ const TaskAutocomplete = ({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="w-full bg-transparent text-gray-600 placeholder-gray-500 outline-none focus:text-gray-900"
+        className={`w-full bg-transparent text-gray-600 placeholder-gray-500 outline-none focus:text-gray-900 ${duplicateError ? 'text-red-500' : ''}`}
         autoComplete="off"
       />
       
@@ -230,6 +258,16 @@ const TaskAutocomplete = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Message d'erreur pour les doublons */}
+      {duplicateError && (
+        <div className="absolute top-full left-0 mt-1 p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-1 z-50">
+          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+          {duplicateError}
         </div>
       )}
     </div>
