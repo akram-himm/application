@@ -457,7 +457,7 @@ const Sidebar = () => {
                 value={newPageName}
                 onChange={(e) => setNewPageName(e.target.value)}
                 placeholder="Ma nouvelle page"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2B5CE6] focus:border-[#2B5CE6] outline-none"
+                className="w-full px-3 py-2 text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2B5CE6] focus:border-[#2B5CE6] outline-none placeholder-gray-400"
                 autoFocus
                 onKeyDown={(e) => e.key === 'Enter' && handleCreatePage()}
               />

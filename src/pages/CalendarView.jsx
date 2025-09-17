@@ -19,14 +19,17 @@ const CalendarView = () => {
     return tasks.filter(task => {
       // Inclure les tâches weekly
       if (task.type === 'weekly') return true;
-      
-      // Inclure les tâches daily (sans heure obligatoire)
-      if (task.type === 'daily') return true;
-      
+
+      // Inclure TOUTES les tâches avec type daily, today, planned, routine
+      if (task.type === 'daily' || task.type === 'today' || task.type === 'planned' || task.type === 'routine') {
+        // Si elle a une date valide, l'inclure
+        if (task.date && task.date !== '-') return true;
+      }
+
       // Inclure les tâches avec des dates valides
-      const hasValidDate = (task.startDate && task.startDate !== '-') || 
+      const hasValidDate = (task.startDate && task.startDate !== '-') ||
                           (task.date && task.date !== '-');
-      
+
       // Pour la vue calendrier, on accepte les tâches avec ou sans heure
       return hasValidDate;
     });

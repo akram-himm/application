@@ -53,8 +53,8 @@ export const shouldRotate = () => {
 };
 
 // Effectuer la rotation des tâches
-export const rotateTasks = (tasks, updateTasks) => {
-  if (!shouldRotate()) {
+export const rotateTasks = (tasks, updateTasks, isManualRotation = false) => {
+  if (!shouldRotate() && !isManualRotation) {
     return false;
   }
 
@@ -62,9 +62,9 @@ export const rotateTasks = (tasks, updateTasks) => {
   const today = now.toDateString();
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  
+
   console.log('🔄 Rotation des tâches en cours...');
-  
+
   // Formater les dates en YYYY-MM-DD
   const formatDate = (date) => {
     const year = date.getFullYear();
@@ -72,32 +72,37 @@ export const rotateTasks = (tasks, updateTasks) => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-  
+
   const yesterdayStr = formatDate(yesterday);
   const todayStr = formatDate(now);
-  
+
   // Séparer les tâches
   const yesterdayTasks = [];
   const todayTasks = [];
   const futureTasks = [];
   const tasksWithoutDate = [];
   const routineTasks = [];
-  
+
   tasks.forEach(task => {
     // Les tâches routine sont spéciales
     if (task.type === 'routine') {
       routineTasks.push(task);
       return;
     }
-    
+
     const taskDate = task.date || task.startDate;
-    
+
     if (!taskDate || taskDate === '-') {
       // Tâches sans date restent dans To-Do
       tasksWithoutDate.push(task);
     } else if (taskDate === yesterdayStr) {
-      // Tâches d'hier -> historique
-      yesterdayTasks.push(task);
+      // Tâches d'hier -> historique seulement si "Fait"
+      if (task.status === 'Fait' || task.status === 'done' || task.status === 'terminé') {
+        yesterdayTasks.push(task);
+      } else {
+        // Les tâches non terminées d'hier restent visibles
+        todayTasks.push(task);
+      }
     } else if (taskDate === todayStr) {
       // Tâches d'aujourd'hui -> restent visibles
       todayTasks.push(task);
@@ -105,18 +110,22 @@ export const rotateTasks = (tasks, updateTasks) => {
       // Tâches futures -> gardées pour plus tard
       futureTasks.push(task);
     } else {
-      // Tâches anciennes (avant hier) -> historique aussi
-      yesterdayTasks.push(task);
+      // Tâches anciennes (avant hier) -> historique seulement si "Fait"
+      if (task.status === 'Fait' || task.status === 'done' || task.status === 'terminé') {
+        yesterdayTasks.push(task);
+      } else {
+        // Les tâches non terminées restent visibles
+        todayTasks.push(task);
+      }
     }
   });
   
-  // Archiver TOUTES les tâches d'hier dans l'historique (peu importe le statut)
+  // Archiver seulement les tâches terminées dans l'historique
   // Sauf les routines qui sont recréées chaque jour
   const tasksToArchive = yesterdayTasks.filter(t => t.type !== 'routine');
   if (tasksToArchive.length > 0) {
     addToHistory(yesterday, tasksToArchive);
-    console.log(`📦 ${tasksToArchive.length} tâche(s) archivée(s) dans l'historique`);
-    console.log(`   - Inclut les tâches: À faire, En cours, et Fait`);
+    console.log(`📦 ${tasksToArchive.length} tâche(s) terminée(s) archivée(s) dans l'historique`);
   }
   
   // Créer les nouvelles copies des routines pour aujourd'hui
@@ -157,19 +166,19 @@ export const rotateTasks = (tasks, updateTasks) => {
 export const initTaskRotation = (tasks, updateTasks) => {
   // Vérifier immédiatement au démarrage
   if (shouldRotate()) {
-    rotateTasks(tasks, updateTasks);
+    rotateTasks(tasks, updateTasks, false);
   }
-  
+
   // Vérifier toutes les minutes si on doit faire une rotation
   const checkInterval = setInterval(() => {
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
-    
+
     // Vérifier à minuit pile (00:00)
     if (hours === 0 && minutes === 0) {
       console.log('⏰ Minuit ! Vérification de rotation...');
-      rotateTasks(tasks, updateTasks);
+      rotateTasks(tasks, updateTasks, false);
     }
   }, 60000); // Vérifier toutes les minutes
   
@@ -180,20 +189,20 @@ export const initTaskRotation = (tasks, updateTasks) => {
 // Forcer une rotation manuelle (pour les tests ou besoins spécifiques)
 export const forceRotation = (tasks, updateTasks) => {
   const wasBlocked = isRotationBlocked();
-  
+
   // Débloquer temporairement
   setRotationBlocked(false);
-  
+
   // Réinitialiser la dernière date pour forcer la rotation
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   setLastRotationDate(yesterday);
-  
-  // Effectuer la rotation
-  const result = rotateTasks(tasks, updateTasks);
-  
+
+  // Effectuer la rotation avec le flag manuel
+  const result = rotateTasks(tasks, updateTasks, true);
+
   // Restaurer l'état de blocage
   setRotationBlocked(wasBlocked);
-  
+
   return result;
 };
