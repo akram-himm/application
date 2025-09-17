@@ -1059,6 +1059,7 @@ const DraggableTable = ({
                       onSubmit={handleAddTask}
                       radars={radars}
                       placeholder="Ajouter une tâche..."
+                      existingTasks={tasks}
                     />
                     <label className="flex items-center gap-1.5 text-sm text-gray-600 whitespace-nowrap cursor-pointer hover:text-purple-600 transition-colors">
                       <input

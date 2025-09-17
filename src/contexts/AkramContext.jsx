@@ -19,7 +19,9 @@ export const AkramProvider = ({ children }) => {
 
     const calculatePenalties = () => {
       const now = new Date();
-      const periodMs = akramPeriod * 24 * 60 * 60 * 1000;
+      // Ajouter 1 jour pour que la pénalité s'applique après X jours complets
+      // Ex: Si period = 3, la pénalité arrive après 4 jours (lundi -> vendredi 00:00)
+      const periodMs = (akramPeriod + 1) * 24 * 60 * 60 * 1000;
       const newPenalties = [];
 
       radars.forEach(radar => {

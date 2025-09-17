@@ -72,7 +72,7 @@ const RadarView = () => {
     if (selectedSubjectIndex !== null) {
       const subject = subjects[selectedSubjectIndex];
       const now = new Date();
-      const periodMs = 3 * 24 * 60 * 60 * 1000; // Utiliser la période configurée
+      const periodMs = 4 * 24 * 60 * 60 * 1000; // 3 jours complets + 1 = 4 jours total
 
       let newSubjects;
       if (!subject.isPaused) {
@@ -80,7 +80,8 @@ const RadarView = () => {
         const lastProgressDate = new Date(subject.lastProgress);
         const timeSinceProgress = now - lastProgressDate;
         const remainingTime = periodMs - timeSinceProgress;
-        const remainingDays = Math.max(0, Math.ceil(remainingTime / (24 * 60 * 60 * 1000)));
+        // Calculer les jours complets restants
+        const remainingDays = Math.max(0, Math.floor(remainingTime / (24 * 60 * 60 * 1000)));
 
         newSubjects = subjects.map((s, index) => {
           if (index === selectedSubjectIndex) {
@@ -95,6 +96,7 @@ const RadarView = () => {
         });
       } else {
         // REPRENDRE : Recalculer la date de dernière progression
+        // Garder le même nombre de jours restants qu'au moment de la pause
         const remainingMs = (subject.remainingDaysBeforePenalty || 0) * 24 * 60 * 60 * 1000;
         const newLastProgress = new Date(now.getTime() - (periodMs - remainingMs));
 
@@ -204,8 +206,18 @@ const RadarView = () => {
   return (
     <div className={uniformStyles.layout.page}>
       <div className="max-w-7xl mx-auto p-8">
-        {/* Titre de la page */}
+        {/* Titre de la page avec navigation */}
         <div className={uniformStyles.pageHeader.container}>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+            <button
+              onClick={() => navigate('/improvements')}
+              className="hover:text-gray-700"
+            >
+              Radars
+            </button>
+            <span>/</span>
+            <span className="text-gray-700 font-medium">{radar?.name || 'Radar'}</span>
+          </div>
           <h1 className={uniformStyles.text.pageTitle}>
             {radar?.name || 'Radar'}
           </h1>

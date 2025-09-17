@@ -270,12 +270,25 @@
 .notion-block-divider {
   padding: 6px 0;
   width: 100%;
+  position: relative;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.notion-block-divider:focus {
+  outline: none;
+}
+
+.notion-block-divider:focus .divider-line,
+.notion-block-divider:hover .divider-line {
+  background: var(--notion-text-light);
 }
 
 .divider-line {
   height: 1px;
   background: var(--notion-border);
   width: 100%;
+  transition: background 0.2s;
 }
 
 /* Zone d'ajout de bloc */

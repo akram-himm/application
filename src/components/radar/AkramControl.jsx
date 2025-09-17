@@ -35,13 +35,14 @@ const AkramControl = () => {
             value={akramPeriod}
             onChange={(e) => setAkramPeriod(Number(e.target.value))}
             className="px-3 py-1.5 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-sm cursor-pointer transition-all duration-150 hover:bg-white/[0.08] hover:border-white/20 focus:outline-none focus:border-[rgb(35,131,226)]"
+            title="Pénalité appliquée après X jours complets sans progression"
           >
             <option value="0">Désactivé</option>
-            <option value="1">1 jour</option>
-            <option value="2">2 jours</option>
-            <option value="3">3 jours</option>
-            <option value="7">7 jours</option>
-            <option value="14">14 jours</option>
+            <option value="1">1 jour complet</option>
+            <option value="2">2 jours complets</option>
+            <option value="3">3 jours complets</option>
+            <option value="7">7 jours complets</option>
+            <option value="14">14 jours complets</option>
           </select>
         </div>
 

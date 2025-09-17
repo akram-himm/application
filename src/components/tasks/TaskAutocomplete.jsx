@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const TaskAutocomplete = ({ 
-  value, 
-  onChange, 
+const TaskAutocomplete = ({
+  value,
+  onChange,
   onSubmit,
   radars,
-  placeholder 
+  placeholder,
+  existingTasks = []
 }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -40,6 +41,11 @@ const TaskAutocomplete = ({
       // Chercher dans les matières
       radar.subjects?.forEach(subject => {
         if (subject.name.toLowerCase().includes(searchTerm)) {
+          // Vérifier si une tâche existe déjà pour cette matière
+          const hasExistingTask = existingTasks?.some(task =>
+            task.subject === subject.id && task.radar === radar.id
+          );
+
           results.push({
             type: 'subject',
             label: `${radar.icon} ${radar.name} › ${subject.name}`,
@@ -48,7 +54,8 @@ const TaskAutocomplete = ({
             radarId: radar.id,
             radarName: radar.name,
             subjectId: subject.id,
-            subjectName: subject.name
+            subjectName: subject.name,
+            hasExistingTask: hasExistingTask
           });
         }
       });
@@ -58,6 +65,11 @@ const TaskAutocomplete = ({
         // Suggérer les matières de ce radar
         radar.subjects?.forEach(subject => {
           if (!results.some(r => r.subjectId === subject.id)) {
+            // Vérifier si une tâche existe déjà pour cette matière
+            const hasExistingTask = existingTasks?.some(task =>
+              task.subject === subject.id && task.radar === radar.id
+            );
+
             results.push({
               type: 'subject',
               label: `${radar.icon} ${radar.name} › ${subject.name}`,
@@ -66,7 +78,8 @@ const TaskAutocomplete = ({
               radarId: radar.id,
               radarName: radar.name,
               subjectId: subject.id,
-              subjectName: subject.name
+              subjectName: subject.name,
+              hasExistingTask: hasExistingTask
             });
           }
         });
@@ -183,20 +196,31 @@ const TaskAutocomplete = ({
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
-              onClick={() => handleSelectSuggestion(suggestion)}
+              onClick={() => {
+                if (suggestion.hasExistingTask) {
+                  return; // Ne pas permettre la sélection
+                }
+                handleSelectSuggestion(suggestion);
+              }}
               className={`
-                px-3 py-2.5 cursor-pointer transition-all
-                ${index === selectedIndex 
-                  ? 'bg-blue-50 text-blue-600' 
-                  : 'text-gray-700 hover:bg-gray-50'
+                px-3 py-2.5 transition-all
+                ${suggestion.hasExistingTask
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : index === selectedIndex
+                    ? 'bg-blue-50 text-blue-600 cursor-pointer'
+                    : 'text-gray-700 hover:bg-gray-50 cursor-pointer'
                 }
               `}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{suggestion.label}</span>
-                {suggestion.type === 'none' && (
+                <span className={`text-sm font-medium ${suggestion.hasExistingTask ? 'line-through' : ''}`}>
+                  {suggestion.label}
+                </span>
+                {suggestion.hasExistingTask ? (
+                  <span className="text-xs text-red-500 font-medium">Tâche existante</span>
+                ) : suggestion.type === 'none' ? (
                   <span className="text-xs text-gray-500">Sans tag</span>
-                )}
+                ) : null}
                 {suggestion.type === 'radar' && (
                   <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded">Radar</span>
                 )}

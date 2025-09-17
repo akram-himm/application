@@ -693,10 +693,51 @@ const NotionEditor = ({ subjectId, radarId, subjectName, onSave, onAddToKanban }
       return (
         <div
           key={block.id}
-          className="notion-block-divider"
+          className="notion-block-divider group"
           style={{ marginLeft: `${block.indent * 40}px` }}
+          onClick={() => setSelectedBlockId(block.id)}
+          onKeyDown={(e) => {
+            // Supprimer avec Delete ou Backspace
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+              e.preventDefault();
+              deleteBlock(block.id);
+            }
+            // Navigation avec flèches
+            if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              const prevIndex = blocks.findIndex(b => b.id === block.id) - 1;
+              if (prevIndex >= 0) {
+                setSelectedBlockId(blocks[prevIndex].id);
+                const prevEl = blockRefs.current[blocks[prevIndex].id];
+                if (prevEl) prevEl.focus();
+              }
+            }
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              const nextIndex = blocks.findIndex(b => b.id === block.id) + 1;
+              if (nextIndex < blocks.length) {
+                setSelectedBlockId(blocks[nextIndex].id);
+                const nextEl = blockRefs.current[blocks[nextIndex].id];
+                if (nextEl) nextEl.focus();
+              }
+            }
+          }}
+          tabIndex={0}
         >
           <div className="divider-line" />
+          {/* Bouton de suppression visible au hover */}
+          <button
+            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteBlock(block.id);
+            }}
+            title="Supprimer le séparateur"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       );
     }
@@ -735,7 +776,10 @@ const NotionEditor = ({ subjectId, radarId, subjectName, onSave, onAddToKanban }
               className="action-btn kanban-btn"
               title="Ajouter au Kanban"
             >
-              +📋
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4.085 1.5a1 1 0 0 1 .915-.5h6a1 1 0 0 1 .915.5L13 3.5V14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3.5L4.085 1.5zM11 2.5H5v11a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-11z"/>
+                <path d="M8 4.5a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3V5a.5.5 0 0 1 .5-.5z"/>
+              </svg>
             </button>
           )}
           <button

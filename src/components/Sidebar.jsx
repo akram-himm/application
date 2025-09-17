@@ -267,7 +267,9 @@ const Sidebar = () => {
                   onClick={() => navigate(`/radar/${radar.id}`)}
                   className="flex-1 flex items-center gap-2 text-left"
                 >
-                  <span className="text-base">{radar.icon}</span>
+                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm0 2a6 6 0 0 1 5.2 3H10L8 8 6 5H2.8A6 6 0 0 1 8 2zm-6 6a6 6 0 0 1 .1-1H5l2 3v4.9A6 6 0 0 1 2 8zm6 6a6 6 0 0 0 5-2.7V11l-2-3-2 3v3zm6-6a6 6 0 0 1-.8 2.9L11 8l2-3h.9a6 6 0 0 1 .1 1z" opacity="0.9"/>
+                  </svg>
                   {!isCollapsed && <span>{radar.name}</span>}
                 </button>
               </div>

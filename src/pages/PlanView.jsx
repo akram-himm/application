@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect, memo, useCallback, useMemo } from 'react';
 import { AppContext } from '../contexts/AppContext';
+import { useToast } from '../components/Toast';
 import DraggableTable from '../components/tasks/DraggableTable';
 import TaskContextMenu from '../components/tasks/TaskContextMenu';
 import TaskEditModal from '../components/tasks/TaskEditModal';
@@ -10,7 +11,8 @@ import { uniformStyles } from '../styles/uniformStyles';
 import { initTaskRotation, isRotationBlocked, setRotationBlocked, forceRotation } from '../services/taskRotationService';
 
 const PlanView = memo(() => {
-  const { tasks, addTask, updateTask, deleteTask, radars, setTasks } = useContext(AppContext);
+  const { tasks, addTask, updateTask, deleteTask, radars, setTasks, updateRadar } = useContext(AppContext);
+  const toast = useToast();
   
   // Vérifier si on doit inverser les styles
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
@@ -142,6 +144,25 @@ const PlanView = memo(() => {
   // Gestion des tâches quotidiennes
   const handleAddDailyTask = (taskData) => {
     const todayStr = getTodayStr();
+
+    // Vérifier si une tâche existe déjà pour cette matière
+    if (taskData.subject) {
+      const existingTask = tasks.find(t =>
+        t.subject === taskData.subject &&
+        t.radar === taskData.radar &&
+        (t.type === 'today' || t.type === 'daily' || t.type === 'routine' || !t.type) &&
+        (t.date === todayStr || t.date === '-' || !t.date)
+      );
+
+      if (existingTask) {
+        // Afficher un toast d'erreur
+        toast.error(
+          `🚫 Tâche en doublon : ${taskData.subjectName || 'Cette matière'} a déjà la tâche "${existingTask.name}" (${existingTask.status})`,
+          5000
+        );
+        return;
+      }
+    }
     
     // Si c'est une string (ancien comportement)
     if (typeof taskData === 'string') {
@@ -172,16 +193,128 @@ const PlanView = memo(() => {
     }
   };
 
+  // Suivre les progressions déjà appliquées pour éviter les doublons
+  const [taskProgressions, setTaskProgressions] = useState({});
+
+  // Gérer la progression du radar selon le changement de statut
+  const handleRadarProgression = useCallback((oldTask, newTask) => {
+    // Vérifier si la tâche a un radar et une matière associés
+    if (!newTask.radar || !newTask.subject) return;
+
+    // Vérifier si le statut a changé
+    if (oldTask.status === newTask.status) return;
+
+    // Trouver le radar et la matière
+    const radar = radars.find(r => r.id === newTask.radar);
+    if (!radar) return;
+
+    const subjectIndex = radar.subjects?.findIndex(s => s.id === newTask.subject);
+    if (subjectIndex === -1) return;
+
+    const subject = radar.subjects[subjectIndex];
+    let progressionDelta = 0;
+
+    // Calculer la différence de progression
+    // Normaliser les statuts (sans accents, minuscules) pour la comparaison
+    const normalizeStatus = (status) => {
+      if (!status) return '';
+      return status.toLowerCase()
+        .replace(/é/g, 'e')
+        .replace(/à/g, 'a')
+        .replace(/è/g, 'e')
+        .replace(/ê/g, 'e')
+        .replace(/ô/g, 'o')
+        .replace(/î/g, 'i')
+        .replace(/ç/g, 'c')
+        .trim();
+    };
+
+    const getProgressValue = (status) => {
+      const normalized = normalizeStatus(status);
+      if (normalized === 'fait' || normalized === 'termine' || normalized === 'done') return 2;
+      if (normalized === 'en cours' || normalized === 'in progress' || normalized === 'encours') return 1;
+      return 0; // 'À faire', 'To do', etc.
+    };
+
+    const oldProgress = getProgressValue(oldTask.status);
+    const newProgress = getProgressValue(newTask.status);
+    progressionDelta = newProgress - oldProgress;
+
+    console.log(`Statut changé: "${oldTask.status}" -> "${newTask.status}" (${oldProgress} -> ${newProgress})`);
+
+    // Vérifier si on a déjà appliqué une progression pour cette tâche
+    const previousProgress = taskProgressions[newTask.id] || 0;
+    const actualDelta = newProgress - previousProgress;
+
+    // Si il y a un changement de progression réel
+    if (actualDelta !== 0) {
+      const newValue = Math.min(100, Math.max(0, subject.value + actualDelta));
+
+      // Mettre à jour le radar
+      const updatedSubjects = [...radar.subjects];
+      updatedSubjects[subjectIndex] = {
+        ...subject,
+        value: newValue,
+        lastProgress: progressionDelta > 0 ? new Date().toISOString() : subject.lastProgress
+      };
+
+      updateRadar({
+        ...radar,
+        subjects: updatedSubjects
+      });
+
+      // Enregistrer la progression appliquée pour cette tâche
+      setTaskProgressions(prev => ({
+        ...prev,
+        [newTask.id]: newProgress
+      }));
+
+      console.log(`Progression ${newTask.subjectName}: ${subject.value}% -> ${newValue}% (${actualDelta > 0 ? '+' : ''}${actualDelta}%)`);
+    }
+  }, [radars, updateRadar, taskProgressions]);
+
+  // Wrapper pour updateTask qui gère la progression du radar
+  const handleUpdateTask = useCallback((updatedTask) => {
+    // Trouver l'ancienne version de la tâche
+    const oldTask = tasks.find(t => t.id === updatedTask.id);
+
+    if (oldTask) {
+      // Gérer la progression du radar si le statut change
+      handleRadarProgression(oldTask, updatedTask);
+    }
+
+    // Mettre à jour la tâche
+    updateTask(updatedTask);
+  }, [tasks, updateTask, handleRadarProgression]);
+
   const handleUpdateDailyTasks = (newTasks) => {
     // Mettre à jour l'ordre de chaque tâche
     newTasks.forEach((task, index) => {
-      updateTask({ ...task, order: index });
+      handleUpdateTask({ ...task, order: index });
     });
   };
 
   // Gestion des tâches hebdomadaires
   const handleAddWeeklyTask = (taskData) => {
     const todayStr = getTodayStr();
+
+    // Vérifier si une tâche existe déjà pour cette matière
+    if (taskData.subject) {
+      const existingTask = tasks.find(t =>
+        t.subject === taskData.subject &&
+        t.radar === taskData.radar &&
+        t.type === 'weekly'
+      );
+
+      if (existingTask) {
+        // Afficher un toast d'erreur
+        toast.error(
+          `🚫 Tâche hebdomadaire en doublon : ${taskData.subjectName || 'Cette matière'} a déjà la tâche "${existingTask.name}"`,
+          5000
+        );
+        return;
+      }
+    }
     
     // Si c'est une string (ancien comportement)
     if (typeof taskData === 'string') {
@@ -254,10 +387,10 @@ const PlanView = memo(() => {
 
   const handleDelete = () => {
     const taskToDelete = contextMenu.task;
-    
+
     // Fermer le menu immédiatement
     setContextMenu({ show: false, x: 0, y: 0, task: null, isWeekly: false });
-    
+
     // Petit délai pour éviter le clignotement
     setTimeout(() => {
       setConfirmModal({
@@ -270,6 +403,65 @@ const PlanView = memo(() => {
   // Gérer la confirmation de suppression
   const handleConfirmDelete = () => {
     if (confirmModal.taskToDelete) {
+      const taskToDelete = confirmModal.taskToDelete;
+
+      // Si la tâche a un radar/matière et un statut qui a donné de la progression
+      if (taskToDelete.radar && taskToDelete.subject) {
+        const normalizeStatus = (status) => {
+          if (!status) return '';
+          return status.toLowerCase()
+            .replace(/é/g, 'e')
+            .replace(/à/g, 'a')
+            .replace(/è/g, 'e')
+            .replace(/ê/g, 'e')
+            .replace(/ô/g, 'o')
+            .replace(/î/g, 'i')
+            .replace(/ç/g, 'c')
+            .trim();
+        };
+
+        const getProgressValue = (status) => {
+          const normalized = normalizeStatus(status);
+          if (normalized === 'fait' || normalized === 'termine' || normalized === 'done') return 2;
+          if (normalized === 'en cours' || normalized === 'in progress' || normalized === 'encours') return 1;
+          return 0;
+        };
+
+        const progressToRemove = getProgressValue(taskToDelete.status);
+
+        // Si la tâche avait de la progression, la retirer
+        if (progressToRemove > 0) {
+          const radar = radars.find(r => r.id === taskToDelete.radar);
+          if (radar) {
+            const subjectIndex = radar.subjects?.findIndex(s => s.id === taskToDelete.subject);
+            if (subjectIndex !== -1) {
+              const subject = radar.subjects[subjectIndex];
+              const newValue = Math.max(0, subject.value - progressToRemove);
+
+              const updatedSubjects = [...radar.subjects];
+              updatedSubjects[subjectIndex] = {
+                ...subject,
+                value: newValue
+              };
+
+              updateRadar({
+                ...radar,
+                subjects: updatedSubjects
+              });
+
+              console.log(`Suppression tâche ${taskToDelete.subjectName}: ${subject.value}% -> ${newValue}% (-${progressToRemove}%)`);
+            }
+          }
+        }
+      }
+
+      // Retirer la progression enregistrée pour cette tâche
+      setTaskProgressions(prev => {
+        const newProgressions = { ...prev };
+        delete newProgressions[confirmModal.taskToDelete.id];
+        return newProgressions;
+      });
+
       deleteTask(confirmModal.taskToDelete.id);
     }
     setConfirmModal({ show: false, taskToDelete: null });
@@ -304,7 +496,7 @@ const PlanView = memo(() => {
 
   // Sauvegarder les modifications du modal
   const handleSaveEdit = (updatedTask) => {
-    updateTask(updatedTask);
+    handleUpdateTask(updatedTask);
     setEditModal({ show: false, task: null, isWeekly: false });
   };
 
@@ -466,10 +658,11 @@ const PlanView = memo(() => {
             columns={dailyColumns}
             onUpdateTasks={handleUpdateDailyTasks}
             onAddTask={handleAddDailyTask}
-            onUpdateTask={updateTask}
+            onUpdateTask={handleUpdateTask}
             onDoubleClick={(task, cellIndex) => handleDoubleClick(task, cellIndex, false)}
             onContextMenu={(e, task) => handleContextMenu(e, task, false)}
             onDeleteTasks={deleteTask}
+            radars={radars}
           />
         </div>
 

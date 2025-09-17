@@ -110,11 +110,13 @@ export const rotateTasks = (tasks, updateTasks) => {
     }
   });
   
-  // Archiver les tâches d'hier dans l'historique (sauf les routines)
+  // Archiver TOUTES les tâches d'hier dans l'historique (peu importe le statut)
+  // Sauf les routines qui sont recréées chaque jour
   const tasksToArchive = yesterdayTasks.filter(t => t.type !== 'routine');
   if (tasksToArchive.length > 0) {
     addToHistory(yesterday, tasksToArchive);
     console.log(`📦 ${tasksToArchive.length} tâche(s) archivée(s) dans l'historique`);
+    console.log(`   - Inclut les tâches: À faire, En cours, et Fait`);
   }
   
   // Créer les nouvelles copies des routines pour aujourd'hui
