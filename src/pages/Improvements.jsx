@@ -155,7 +155,11 @@ const Improvements = () => {
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
           {radars.length === 0 ? (
             <Card className="col-span-full text-center py-20">
-              <div className="text-6xl mb-4">🎯</div>
+              <div className="mb-4 flex justify-center">
+                <svg className="w-16 h-16 text-gray-400" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm0 2a6 6 0 0 1 5.2 3H10L8 8 6 5H2.8A6 6 0 0 1 8 2zm-6 6a6 6 0 0 1 .1-1H5l2 3v4.9A6 6 0 0 1 2 8zm6 6a6 6 0 0 0 5-2.7V11l-2-3-2 3v3zm6-6a6 6 0 0 1-.8 2.9L11 8l2-3h.9a6 6 0 0 1 .1 1z" opacity="0.9"/>
+                </svg>
+              </div>
               <p className="text-gray-600 text-lg font-medium">Aucun radar créé</p>
               <p className="text-gray-500 text-sm mt-2">Créez votre premier radar pour commencer</p>
             </Card>

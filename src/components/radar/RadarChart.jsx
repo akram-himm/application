@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useContext, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AkramContext } from '../../contexts/AkramContext';
 
@@ -10,6 +11,7 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
   const { penalties } = useContext(AkramContext);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [stackedSubjectsMenu, setStackedSubjectsMenu] = useState(null);
+  const [tooltipData, setTooltipData] = useState(null);
   const animationRef = useRef(null);
 
   // Configuration du radar
@@ -377,68 +379,84 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     const angleStep = (Math.PI * 2) / AXES_COUNT;
     let hovered = null;
-    
+
     // Vérifier d'abord le centre
     const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
     const stackedSubjects = getStackedSubjectsAtCenter();
-    
+
     if (distanceFromCenter <= 14 && stackedSubjects && stackedSubjects.length > 0) {
       canvasRef.current.style.cursor = 'pointer';
-      tooltipRef.current.innerHTML = `<div class="text-sm font-semibold">${stackedSubjects.length} matières empilées</div><div class="text-xs opacity-70">Cliquez pour voir la liste</div>`;
-      tooltipRef.current.style.display = 'block';
-      tooltipRef.current.style.left = e.clientX + 10 + 'px';
-      tooltipRef.current.style.top = e.clientY - 10 + 'px';
+      setTooltipData({
+        x: e.clientX + 10,
+        y: e.clientY - 10,
+        content: (
+          <>
+            <div className="text-sm font-semibold">{stackedSubjects.length} matières empilées</div>
+            <div className="text-xs opacity-70">Cliquez pour voir la liste</div>
+          </>
+        )
+      });
       return;
     }
-    
+
     // Vérifier les points sur les axes
     subjects.forEach((subject, index) => {
       const angle = index * angleStep - Math.PI / 2;
       let value = subject.value;
-      
+
       const penalty = penalties.find(p => p.subjectId === subject.id);
       if (penalty) {
         value = Math.max(0, value - penalty.penaltyValue);
       }
-      
+
       const pointX = centerX + Math.cos(angle) * radius * (value / 100);
       const pointY = centerY + Math.sin(angle) * radius * (value / 100);
-      
+
       const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
-      
+
       if (distance <= 12) {
         hovered = index;
         return;
       }
     });
-    
+
     onHoverSubject(hovered);
     canvasRef.current.style.cursor = hovered !== null ? 'pointer' : 'default';
-    
+
     // Tooltip pour les points normaux
     if (hovered !== null && subjects[hovered]) {
       const subject = subjects[hovered];
       const penalty = penalties.find(p => p.subjectId === subject.id);
       let displayValue = subject.value;
-      
+
       if (penalty) {
         displayValue = Math.max(0, displayValue - penalty.penaltyValue);
       }
-      
-      tooltipRef.current.innerHTML = `
-        <div class="font-semibold">${subject.name}</div>
-        <div class="text-sm opacity-70">Progression: ${displayValue}%</div>
-        ${penalty ? `<div class="text-sm text-yellow-400">Pénalité: -${penalty.penaltyValue}%</div>` : ''}
-      `;
-      
-      tooltipRef.current.style.display = 'block';
-      tooltipRef.current.style.left = e.clientX + 10 + 'px';
-      tooltipRef.current.style.top = e.clientY - 10 + 'px';
+
+      // Calculer la position pour éviter le débordement
+      const tooltipX = e.clientX + 10;
+      const tooltipY = e.clientY - 10;
+      const adjustedX = tooltipX + 200 > window.innerWidth ? e.clientX - 210 : tooltipX;
+      const adjustedY = tooltipY + 100 > window.innerHeight ? e.clientY - 100 : tooltipY;
+
+      setTooltipData({
+        x: adjustedX,
+        y: adjustedY,
+        content: (
+          <>
+            <div className="font-semibold">{subject.name}</div>
+            <div className="text-sm opacity-70">Progression: {displayValue}%</div>
+            {penalty && (
+              <div className="text-sm text-yellow-400">Pénalité: -{penalty.penaltyValue}%</div>
+            )}
+          </>
+        )
+      });
     } else if (distanceFromCenter > 14) {
-      tooltipRef.current.style.display = 'none';
+      setTooltipData(null);
     }
   };
 
@@ -468,22 +486,36 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
         onMouseMove={handleCanvasMouseMove}
         onMouseLeave={() => {
           onHoverSubject(null);
-          tooltipRef.current.style.display = 'none';
+          setTooltipData(null);
         }}
         onContextMenu={handleCanvasContextMenu}
       />
       
-      <div
-        ref={tooltipRef}
-        className="fixed bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-lg px-3 py-2 text-gray-200 text-sm z-[100] pointer-events-none shadow-xl"
-        style={{ display: 'none' }}
-      />
+      {/* Tooltip avec Portal */}
+      {tooltipData && ReactDOM.createPortal(
+        <div
+          className="fixed bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-lg px-3 py-2 text-gray-200 text-sm pointer-events-none shadow-xl"
+          style={{
+            left: `${tooltipData.x}px`,
+            top: `${tooltipData.y}px`,
+            zIndex: 99999
+          }}
+        >
+          {tooltipData.content}
+        </div>,
+        document.body
+      )}
       
       {/* Menu pour les matières empilées */}
-      {stackedSubjectsMenu && (
+      {stackedSubjectsMenu && ReactDOM.createPortal(
         <div
-          className="stacked-subjects-menu fixed bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl p-1 z-[300] animate-scaleIn"
-          style={{ left: stackedSubjectsMenu.x, top: stackedSubjectsMenu.y }}
+          className="stacked-subjects-menu absolute bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl p-1 animate-scaleIn"
+          style={{
+            position: 'fixed',
+            left: `${stackedSubjectsMenu.x}px`,
+            top: `${stackedSubjectsMenu.y}px`,
+            zIndex: 9999
+          }}
         >
           <div className="text-xs text-gray-400 px-3 py-1.5 border-b border-gray-700/50">
             Matières au centre
@@ -512,7 +544,8 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
               {subject.name}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
       
       {/* Message si pas de matières */}

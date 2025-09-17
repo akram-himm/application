@@ -30,7 +30,8 @@
       "Bash(taskkill:*)",
       "Bash(npm init:*)",
       "Bash(del nul)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(del \"src\\components\\NotionSync.jsx\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

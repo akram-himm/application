@@ -6,7 +6,6 @@ import TaskContextMenu from '../components/tasks/TaskContextMenu';
 import TaskEditModal from '../components/tasks/TaskEditModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ConfirmModal from '../components/tasks/ConfirmModal';
-import NotionSync from '../components/NotionSync';
 import { uniformStyles } from '../styles/uniformStyles';
 import { initTaskRotation, isRotationBlocked, setRotationBlocked, forceRotation } from '../services/taskRotationService';
 
@@ -196,6 +195,37 @@ const PlanView = memo(() => {
   // Suivre les progressions déjà appliquées pour éviter les doublons
   const [taskProgressions, setTaskProgressions] = useState({});
 
+  // Initialiser les progressions existantes au montage
+  useEffect(() => {
+    const initialProgressions = {};
+    tasks.forEach(task => {
+      if (task.radar && task.subject) {
+        const normalizeStatus = (status) => {
+          if (!status) return '';
+          return status.toLowerCase()
+            .replace(/é/g, 'e')
+            .replace(/à/g, 'a')
+            .replace(/è/g, 'e')
+            .replace(/ê/g, 'e')
+            .replace(/ô/g, 'o')
+            .replace(/î/g, 'i')
+            .replace(/ç/g, 'c')
+            .trim();
+        };
+
+        const normalized = normalizeStatus(task.status);
+        if (normalized === 'fait' || normalized === 'termine' || normalized === 'done') {
+          initialProgressions[task.id] = 2;
+        } else if (normalized === 'en cours' || normalized === 'in progress' || normalized === 'encours') {
+          initialProgressions[task.id] = 1;
+        } else {
+          initialProgressions[task.id] = 0;
+        }
+      }
+    });
+    setTaskProgressions(initialProgressions);
+  }, []); // Vide pour ne s'exécuter qu'au montage
+
   // Gérer la progression du radar selon le changement de statut
   const handleRadarProgression = useCallback((oldTask, newTask) => {
     // Vérifier si la tâche a un radar et une matière associés
@@ -242,13 +272,9 @@ const PlanView = memo(() => {
 
     console.log(`Statut changé: "${oldTask.status}" -> "${newTask.status}" (${oldProgress} -> ${newProgress})`);
 
-    // Vérifier si on a déjà appliqué une progression pour cette tâche
-    const previousProgress = taskProgressions[newTask.id] || 0;
-    const actualDelta = newProgress - previousProgress;
-
-    // Si il y a un changement de progression réel
-    if (actualDelta !== 0) {
-      const newValue = Math.min(100, Math.max(0, subject.value + actualDelta));
+    // Le delta réel est la différence entre l'ancien et le nouveau statut
+    if (progressionDelta !== 0) {
+      const newValue = Math.min(100, Math.max(0, subject.value + progressionDelta));
 
       // Mettre à jour le radar
       const updatedSubjects = [...radar.subjects];
@@ -269,9 +295,9 @@ const PlanView = memo(() => {
         [newTask.id]: newProgress
       }));
 
-      console.log(`Progression ${newTask.subjectName}: ${subject.value}% -> ${newValue}% (${actualDelta > 0 ? '+' : ''}${actualDelta}%)`);
+      console.log(`Progression ${newTask.subjectName}: ${subject.value}% -> ${newValue}% (${progressionDelta > 0 ? '+' : ''}${progressionDelta}%)`);
     }
-  }, [radars, updateRadar, taskProgressions]);
+  }, [radars, updateRadar]);
 
   // Wrapper pour updateTask qui gère la progression du radar
   const handleUpdateTask = useCallback((updatedTask) => {
@@ -597,10 +623,6 @@ const PlanView = memo(() => {
           </div>
         </div>
 
-        {/* Bouton de synchronisation Notion */}
-        <div className="mb-4 flex justify-end">
-          <NotionSync tasks={tasks} />
-        </div>
 
         {/* Barre de recherche et Filtres */}
         <div className="space-y-4">

@@ -9,8 +9,7 @@
     "preview": "vite preview",
     "electron": "electron .",
     "electron-dev": "vite build && electron .",
-    "dist": "vite build && electron-builder",
-    "notion": "node notion-proxy.js"
+    "dist": "vite build && electron-builder"
   },
   "dependencies": {
     "@air/react-drag-to-select": "^5.0.11",
@@ -25,7 +24,6 @@
     "@fullcalendar/interaction": "^6.1.19",
     "@fullcalendar/react": "^6.1.19",
     "@fullcalendar/timegrid": "^6.1.19",
-    "@notionhq/client": "^2.3.0",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
     "express": "^4.21.2",

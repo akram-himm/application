@@ -4,7 +4,6 @@ import WeeklyCalendarFullCalendar from '../components/tasks/WeeklyCalendarFullCa
 import MonthlyCalendar from '../components/calendar/MonthlyCalendar';
 import YearlyCalendar from '../components/calendar/YearlyCalendar';
 import TaskSidebar from '../components/calendar/TaskSidebar';
-import NotionSync from '../components/NotionSync';
 import { uniformStyles } from '../styles/uniformStyles';
 
 const CalendarView = () => {
@@ -209,8 +208,6 @@ const CalendarView = () => {
             )}
             
             <div className="flex items-center gap-4">
-              {/* Bouton de synchronisation Notion */}
-              <NotionSync tasks={calendarTasks} />
 
               {/* Sélecteur de vue */}
               <div className="flex bg-gray-100 rounded-lg p-1">

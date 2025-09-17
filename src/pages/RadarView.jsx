@@ -7,7 +7,9 @@ import RadarChart from '../components/radar/RadarChart';
 import AkramControl from '../components/radar/AkramControl';
 import FloatingAlert from '../components/radar/FloatingAlert';
 import SubjectModal from '../components/radar/SubjectModal';
+import ConfirmModal from '../components/tasks/ConfirmModal';
 import { uniformStyles } from '../styles/uniformStyles';
+import { addToTrash } from '../services/trashService';
 
 const RadarView = () => {
   const { radarId } = useParams();
@@ -20,7 +22,12 @@ const RadarView = () => {
   const [editingSubject, setEditingSubject] = useState(null);
   const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0 });
   const [selectedSubjectIndex, setSelectedSubjectIndex] = useState(null);
-  
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    message: '',
+    onConfirm: null
+  });
+
   const radar = radars.find(r => r.id === radarId);
   
   useEffect(() => {
@@ -61,10 +68,29 @@ const RadarView = () => {
   };
   
   const handleDeleteSubject = () => {
-    if (selectedSubjectIndex !== null && confirm('Êtes-vous sûr de vouloir supprimer cette matière ?')) {
-      const newSubjects = subjects.filter((_, index) => index !== selectedSubjectIndex);
-      updateRadar({ ...radar, subjects: newSubjects });
-      setContextMenu({ show: false, x: 0, y: 0 });
+    if (selectedSubjectIndex !== null) {
+      setConfirmModal({
+        show: true,
+        message: 'Êtes-vous sûr de vouloir supprimer cette matière ?',
+        onConfirm: () => {
+          const subjectToDelete = subjects[selectedSubjectIndex];
+
+          // Ajouter la matière à la corbeille avec les informations du radar
+          addToTrash({
+            ...subjectToDelete,
+            type: 'subject',
+            radarId: radar.id,
+            radarName: radar.name,
+            originalId: subjectToDelete.id
+          });
+
+          // Supprimer la matière du radar
+          const newSubjects = subjects.filter((_, index) => index !== selectedSubjectIndex);
+          updateRadar({ ...radar, subjects: newSubjects });
+          setContextMenu({ show: false, x: 0, y: 0 });
+          setConfirmModal({ show: false, message: '', onConfirm: null });
+        }
+      });
     }
   };
 
@@ -316,6 +342,14 @@ const RadarView = () => {
           editingSubject={editingSubject}
         />
       )}
+
+      {/* Modal de confirmation */}
+      <ConfirmModal
+        show={confirmModal.show}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ show: false, message: '', onConfirm: null })}
+      />
       </div>
     </div>
   );
