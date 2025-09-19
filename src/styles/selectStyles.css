@@ -1,0 +1,44 @@
+/* Styles globaux pour les selects et options */
+
+/* Style par défaut pour tous les options dans l'application */
+select option {
+  background-color: rgb(31, 41, 55); /* bg-gray-800 */
+  color: white;
+  padding: 8px;
+}
+
+/* Style au survol (ne fonctionne pas dans tous les navigateurs) */
+select option:hover {
+  background-color: rgb(55, 65, 81); /* bg-gray-700 */
+}
+
+/* Style pour les options sélectionnées */
+select option:checked {
+  background-color: rgb(59, 130, 246); /* bg-blue-500 */
+}
+
+/* Style pour les inputs de date et time sur fond sombre */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+/* Style pour les inputs sur fond sombre */
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+/* Assurer la visibilité du texte dans les dropdowns */
+.dark-select option,
+select.dark option {
+  background-color: rgb(31, 41, 55) !important;
+  color: white !important;
+}
+
+/* Pour les selects avec fond transparent ou clair */
+select.light-select option {
+  background-color: white !important;
+  color: rgb(17, 24, 39) !important; /* text-gray-900 */
+}

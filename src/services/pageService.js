@@ -1,4 +1,6 @@
 // Service de gestion des pages personnalisées
+import { addToTrash } from './trashService.js';
+
 const STORAGE_KEY = 'custom_pages';
 const PAGES_ORDER_KEY = 'pages_order';
 
@@ -121,18 +123,36 @@ export const updatePage = (pageId, updates) => {
   return null;
 };
 
-// Supprimer une page
+// Supprimer une page (déplacer vers la corbeille)
 export const deletePage = (pageId) => {
   const customPages = loadCustomPages();
-  const filtered = customPages.filter(p => p.id !== pageId);
+  const pageToDelete = customPages.find(p => p.id === pageId);
 
-  if (filtered.length !== customPages.length) {
+  if (pageToDelete) {
+    // Ajouter la page à la corbeille avec le type 'page'
+    const trashedPage = {
+      ...pageToDelete,
+      type: 'page',
+      originalId: pageToDelete.id
+    };
+    addToTrash(trashedPage);
+
+    // Retirer la page de la liste des pages actives
+    const filtered = customPages.filter(p => p.id !== pageId);
     saveCustomPages(filtered);
 
     // Mettre à jour l'ordre
     const order = loadPagesOrder();
     const newOrder = order.filter(id => id !== pageId);
     savePagesOrder(newOrder);
+
+    // Supprimer le contenu stocké séparément si existe
+    const contentKey = `page_content_${pageId}`;
+    try {
+      localStorage.removeItem(contentKey);
+    } catch (error) {
+      console.error('Erreur lors de la suppression du contenu:', error);
+    }
 
     return true;
   }
@@ -194,6 +214,28 @@ export const savePageContent = (pageId, blocks) => {
 };
 
 // Charger le contenu d'une page
+// Restaurer une page depuis la corbeille
+export const restorePage = (trashedPage) => {
+  // Retirer les propriétés de corbeille
+  const page = { ...trashedPage };
+  delete page.trashedAt;
+  delete page.type;
+  page.id = page.originalId || page.id;
+  delete page.originalId;
+
+  // Ajouter la page restaurée aux pages personnalisées
+  const customPages = loadCustomPages();
+  customPages.push(page);
+  saveCustomPages(customPages);
+
+  // Ajouter à l'ordre des pages
+  const order = loadPagesOrder();
+  order.push(page.id);
+  savePagesOrder(order);
+
+  return page;
+};
+
 export const loadPageContent = (pageId) => {
   // D'abord vérifier dans les pages personnalisées
   const customPages = loadCustomPages();

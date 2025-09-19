@@ -4,6 +4,36 @@ import { CSS } from '@dnd-kit/utilities';
 import ContentEditable from './ContentEditable';
 import BlockMenu from './BlockMenu';
 
+// Placeholders selon le type de bloc
+const PLACEHOLDERS = {
+  text: "Tapez '/' pour les commandes ou commencez à écrire...",
+  heading1: "Titre 1",
+  heading2: "Titre 2",
+  heading3: "Titre 3",
+  bullet: "Liste à puces",
+  numbered: "Liste numérotée",
+  todo: "Tâche à faire",
+  toggle: "Liste déroulante",
+  quote: "Citation",
+  callout: "Message important",
+  code: "// Tapez votre code ici"
+};
+
+// Styles selon le type de bloc
+const BLOCK_STYLES = {
+  text: "text-gray-900",
+  heading1: "text-3xl font-bold text-gray-900",
+  heading2: "text-2xl font-semibold text-gray-900",
+  heading3: "text-xl font-medium text-gray-900",
+  bullet: "text-gray-900",
+  numbered: "text-gray-900",
+  todo: "text-gray-900",
+  toggle: "text-gray-900 font-medium",
+  quote: "text-gray-700 italic border-l-4 border-gray-300 pl-4",
+  callout: "text-gray-900",
+  code: "font-mono text-sm bg-gray-50 p-3 rounded text-gray-900"
+};
+
 const NotionBlock = ({
   block,
   isFirst,
@@ -19,8 +49,9 @@ const NotionBlock = ({
   onSlashCommand,
   onFocus
 }) => {
-  const [showMenu, setShowMenu] = useState(false);
+  const [showBlockMenu, setShowBlockMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(block.properties?.isOpen ?? true);
   const blockRef = useRef(null);
 
   const {
@@ -52,7 +83,12 @@ const NotionBlock = ({
         return;
       }
 
-      onAddBlock(block.id, 'text', '');
+      // Pour les listes, créer un nouveau bloc du même type
+      if (['bullet', 'numbered', 'todo'].includes(block.type)) {
+        onAddBlock(block.id, block.type, '');
+      } else {
+        onAddBlock(block.id, 'text', '');
+      }
       return;
     }
 
@@ -60,13 +96,13 @@ const NotionBlock = ({
     if (e.key === 'Backspace' && !block.content) {
       e.preventDefault();
 
-      // Si c'est un heading, d'abord transformer en texte
+      // Si c'est un bloc spécial, d'abord transformer en texte
       if (block.type !== 'text') {
         onTransform(block.id, 'text');
         return;
       }
 
-      // Sinon supprimer le bloc
+      // Sinon supprimer le bloc (sauf si c'est le premier)
       if (!isFirst) {
         onDelete(block.id);
       }
@@ -79,7 +115,7 @@ const NotionBlock = ({
       const currentIndent = block.properties?.indent || 0;
       const newIndent = e.shiftKey
         ? Math.max(0, currentIndent - 1)
-        : Math.min(3, currentIndent + 1);
+        : Math.min(5, currentIndent + 1);
 
       onUpdate(block.id, {
         properties: { ...block.properties, indent: newIndent }
@@ -117,7 +153,7 @@ const NotionBlock = ({
 
   // Gérer le changement de contenu
   const handleContentChange = useCallback((newContent) => {
-    // Détection automatique de transformation
+    // Détection automatique de transformation (markdown shortcuts)
     if (!block.content && newContent) {
       // # → Heading 1
       if (newContent === '# ') {
@@ -137,7 +173,7 @@ const NotionBlock = ({
         onUpdate(block.id, { content: '' });
         return;
       }
-      // - → Bullet list
+      // - ou * → Bullet list
       if (newContent === '- ' || newContent === '* ') {
         onTransform(block.id, 'bullet');
         onUpdate(block.id, { content: '' });
@@ -149,7 +185,7 @@ const NotionBlock = ({
         onUpdate(block.id, { content: '' });
         return;
       }
-      // [] ou [ ] → Todo
+      // [] → Todo
       if (newContent === '[] ' || newContent === '[ ] ') {
         onTransform(block.id, 'todo');
         onUpdate(block.id, { content: '' });
@@ -164,270 +200,230 @@ const NotionBlock = ({
     }
 
     onUpdate(block.id, { content: newContent });
-  }, [block, onUpdate, onTransform]);
+  }, [block.id, block.content, onTransform, onUpdate]);
 
-  // Rendu du contenu selon le type
-  const renderContent = () => {
-    const indent = block.properties?.indent || 0;
-    const indentClass = indent > 0 ? `ml-${indent * 8}` : '';
+  // Toggle pour les blocs expandables
+  const handleToggleExpand = () => {
+    if (block.type === 'toggle') {
+      setIsExpanded(!isExpanded);
+      onUpdate(block.id, {
+        properties: { ...block.properties, isOpen: !isExpanded }
+      });
+    }
+  };
 
+  // Gérer la checkbox pour les todos
+  const handleTodoToggle = () => {
+    onUpdate(block.id, {
+      properties: {
+        ...block.properties,
+        checked: !block.properties?.checked
+      }
+    });
+  };
+
+  // Calculer l'indentation
+  const indent = block.properties?.indent || 0;
+  const indentStyle = { paddingLeft: `${indent * 24}px` };
+
+  // Rendu du contenu principal du bloc
+  const renderBlockContent = () => {
     switch (block.type) {
-      case 'heading1':
-        return (
-          <h1 className={`text-3xl font-bold text-gray-900 ${indentClass}`}>
-            <ContentEditable
-              value={block.content}
-              onChange={handleContentChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Titre 1"
-              readOnly={readOnly}
-              focused={isFocused}
-            />
-          </h1>
-        );
-
-      case 'heading2':
-        return (
-          <h2 className={`text-2xl font-bold text-gray-800 ${indentClass}`}>
-            <ContentEditable
-              value={block.content}
-              onChange={handleContentChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Titre 2"
-              readOnly={readOnly}
-              focused={isFocused}
-            />
-          </h2>
-        );
-
-      case 'heading3':
-        return (
-          <h3 className={`text-xl font-semibold text-gray-700 ${indentClass}`}>
-            <ContentEditable
-              value={block.content}
-              onChange={handleContentChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Titre 3"
-              readOnly={readOnly}
-              focused={isFocused}
-            />
-          </h3>
-        );
-
-      case 'bullet':
-        return (
-          <div className={`flex items-start gap-2 ${indentClass}`}>
-            <span className="text-gray-400 mt-1">•</span>
-            <div className="flex-1">
-              <ContentEditable
-                value={block.content}
-                onChange={handleContentChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Liste"
-                readOnly={readOnly}
-                focused={isFocused}
-              />
-            </div>
-          </div>
-        );
-
-      case 'numbered':
-        return (
-          <div className={`flex items-start gap-2 ${indentClass}`}>
-            <span className="text-gray-400 mt-1">{block.properties?.number || 1}.</span>
-            <div className="flex-1">
-              <ContentEditable
-                value={block.content}
-                onChange={handleContentChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Liste numérotée"
-                readOnly={readOnly}
-                focused={isFocused}
-              />
-            </div>
-          </div>
-        );
-
-      case 'todo':
-        return (
-          <div className={`flex items-start gap-2 ${indentClass}`}>
-            <input
-              type="checkbox"
-              checked={block.properties?.checked || false}
-              onChange={(e) => onUpdate(block.id, {
-                properties: { ...block.properties, checked: e.target.checked }
-              })}
-              className="mt-1 w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500"
-              disabled={readOnly}
-            />
-            <div className={`flex-1 ${block.properties?.checked ? 'line-through text-gray-400' : ''}`}>
-              <ContentEditable
-                value={block.content}
-                onChange={handleContentChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Tâche"
-                readOnly={readOnly}
-                focused={isFocused}
-              />
-            </div>
-          </div>
-        );
-
-      case 'quote':
-        return (
-          <div className={`border-l-3 border-gray-300 pl-4 italic text-gray-600 ${indentClass}`}>
-            <ContentEditable
-              value={block.content}
-              onChange={handleContentChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Citation"
-              readOnly={readOnly}
-              focused={isFocused}
-            />
-          </div>
-        );
-
       case 'divider':
         return <hr className="my-4 border-gray-200" />;
 
-      case 'code':
+      case 'todo':
         return (
-          <pre className={`bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto ${indentClass}`}>
+          <div className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              checked={block.properties?.checked || false}
+              onChange={handleTodoToggle}
+              className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              disabled={readOnly}
+            />
             <ContentEditable
               value={block.content}
               onChange={handleContentChange}
               onKeyDown={handleKeyDown}
-              placeholder="// Code"
+              placeholder={PLACEHOLDERS[block.type]}
               readOnly={readOnly}
               focused={isFocused}
-              isCode={true}
+              className={`flex-1 ${block.properties?.checked ? 'line-through text-gray-400' : BLOCK_STYLES[block.type]}`}
             />
-          </pre>
-        );
-
-      case 'callout':
-        return (
-          <div className={`p-4 rounded-lg flex gap-3 ${
-            block.properties?.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
-            block.properties?.type === 'error' ? 'bg-red-50 border border-red-200' :
-            block.properties?.type === 'success' ? 'bg-green-50 border border-green-200' :
-            'bg-blue-50 border border-blue-200'
-          } ${indentClass}`}>
-            <span className="text-2xl">
-              {block.properties?.emoji || '💡'}
-            </span>
-            <div className="flex-1">
-              <ContentEditable
-                value={block.content}
-                onChange={handleContentChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Callout"
-                readOnly={readOnly}
-                focused={isFocused}
-              />
-            </div>
           </div>
         );
 
       case 'toggle':
         return (
-          <details className={`group ${indentClass}`}>
-            <summary className="flex items-center gap-2 cursor-pointer select-none">
-              <svg
-                className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-90"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleToggleExpand}
+                className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                disabled={readOnly}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+                <svg
+                  className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M6 10l4 4 4-4H6z" />
+                </svg>
+              </button>
               <ContentEditable
                 value={block.content}
                 onChange={handleContentChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Toggle"
+                placeholder={PLACEHOLDERS[block.type]}
                 readOnly={readOnly}
                 focused={isFocused}
+                className={BLOCK_STYLES[block.type]}
               />
-            </summary>
-            <div className="ml-6 mt-2">
-              {block.properties?.children && (
-                <div className="text-gray-600">
-                  {block.properties.children}
-                </div>
-              )}
             </div>
-          </details>
+            {isExpanded && block.children && (
+              <div className="ml-6 mt-2">
+                {/* Ici on rendrait les blocs enfants */}
+                <div className="text-gray-500 text-sm">Blocs enfants...</div>
+              </div>
+            )}
+          </>
         );
 
-      default: // text
+      case 'callout':
+        const emoji = block.properties?.emoji || '💡';
+        const bgColor = block.properties?.color || 'blue';
+        const bgClasses = {
+          blue: 'bg-blue-50 border-blue-200',
+          yellow: 'bg-yellow-50 border-yellow-200',
+          red: 'bg-red-50 border-red-200',
+          green: 'bg-green-50 border-green-200',
+          gray: 'bg-gray-50 border-gray-200'
+        };
         return (
-          <div className={`text-gray-900 ${indentClass}`}>
+          <div className={`flex gap-3 p-3 rounded-lg border ${bgClasses[bgColor] || bgClasses.gray}`}>
+            <span className="text-2xl select-none">{emoji}</span>
             <ContentEditable
               value={block.content}
               onChange={handleContentChange}
               onKeyDown={handleKeyDown}
-              placeholder="Tapez '/' pour les commandes"
+              placeholder={PLACEHOLDERS[block.type]}
               readOnly={readOnly}
               focused={isFocused}
+              className={`flex-1 ${BLOCK_STYLES[block.type]}`}
             />
           </div>
+        );
+
+      case 'bullet':
+        return (
+          <div className="flex items-start gap-2">
+            <span className="text-gray-400 select-none mt-0.5">•</span>
+            <ContentEditable
+              value={block.content}
+              onChange={handleContentChange}
+              onKeyDown={handleKeyDown}
+              placeholder={PLACEHOLDERS[block.type]}
+              readOnly={readOnly}
+              focused={isFocused}
+              className={`flex-1 ${BLOCK_STYLES[block.type]}`}
+            />
+          </div>
+        );
+
+      case 'numbered':
+        return (
+          <div className="flex items-start gap-2">
+            <span className="text-gray-400 select-none mt-0.5">1.</span>
+            <ContentEditable
+              value={block.content}
+              onChange={handleContentChange}
+              onKeyDown={handleKeyDown}
+              placeholder={PLACEHOLDERS[block.type]}
+              readOnly={readOnly}
+              focused={isFocused}
+              className={`flex-1 ${BLOCK_STYLES[block.type]}`}
+            />
+          </div>
+        );
+
+      default:
+        return (
+          <ContentEditable
+            value={block.content}
+            onChange={handleContentChange}
+            onKeyDown={handleKeyDown}
+            placeholder={PLACEHOLDERS[block.type] || PLACEHOLDERS.text}
+            readOnly={readOnly}
+            focused={isFocused}
+            isCode={block.type === 'code'}
+            className={BLOCK_STYLES[block.type] || BLOCK_STYLES.text}
+          />
         );
     }
   };
 
   return (
     <div
-      ref={(node) => {
-        setNodeRef(node);
-        blockRef.current = node;
-      }}
-      style={style}
+      ref={setNodeRef}
+      style={{ ...style, ...indentStyle }}
       {...attributes}
-      className={`notion-block relative group ${isDragging ? 'opacity-50' : ''}`}
+      className={`group relative ${block.type === 'divider' ? 'my-2' : 'mb-1'}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={onFocus}
     >
-      {/* Poignée de drag et menu */}
-      {!readOnly && isHovered && (
-        <div className="absolute -left-12 top-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Poignée de drag */}
+      <div
+        ref={blockRef}
+        className="flex items-start gap-2"
+        onClick={() => !readOnly && onFocus()}
+      >
+        {/* Handle de drag - Visible au hover */}
+        {!readOnly && isHovered && (
           <div
             {...listeners}
-            className="p-1 hover:bg-gray-100 rounded cursor-move"
+            className="absolute -left-8 top-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
           >
-            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M9 5h2v2H9V5zm0 4h2v2H9V9zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm4-12h2v2h-2V5zm0 4h2v2h-2V9zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z" />
+            <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM13 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM7 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM13 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM7 14a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM13 14a2 2 0 1 1 0 4 2 2 0 0 1 0-4z" />
             </svg>
           </div>
+        )}
 
-          {/* Menu d'actions */}
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-1 hover:bg-gray-100 rounded"
-          >
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-            </svg>
-          </button>
+        {/* Bouton menu à 3 points - Visible au hover */}
+        {!readOnly && isHovered && (
+          <div className="absolute -left-2 top-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowBlockMenu(!showBlockMenu);
+              }}
+              className="p-1 hover:bg-gray-100 rounded transition-colors"
+              title="Menu du bloc"
+            >
+              <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM18 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </button>
+
+            {/* Menu du bloc - Affiché uniquement si showBlockMenu est true */}
+            {showBlockMenu && (
+              <BlockMenu
+                blockId={block.id}
+                blockType={block.type}
+                onDelete={onDelete}
+                onDuplicate={onDuplicate}
+                onTransform={onTransform}
+                onClose={() => setShowBlockMenu(false)}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Contenu du bloc */}
+        <div className="flex-1 min-w-0">
+          {renderBlockContent()}
         </div>
-      )}
-
-      {/* Menu contextuel */}
-      {showMenu && !readOnly && (
-        <BlockMenu
-          blockId={block.id}
-          blockType={block.type}
-          onDelete={onDelete}
-          onDuplicate={onDuplicate}
-          onTransform={onTransform}
-          onClose={() => setShowMenu(false)}
-        />
-      )}
-
-      {/* Contenu du bloc */}
-      <div className="py-1">{renderContent()}</div>
+      </div>
     </div>
   );
 };

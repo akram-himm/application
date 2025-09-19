@@ -10,12 +10,13 @@ import {
   emptyTrash,
   cleanOldTrashItems
 } from '../services/trashService';
+import { restorePage } from '../services/pageService';
 
 const TrashView = () => {
   const { radars, updateRadar } = useContext(AppContext);
   const [trashItems, setTrashItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
-  const [filter, setFilter] = useState('all'); // all, subjects, tasks
+  const [filter, setFilter] = useState('all'); // all, subjects, tasks, pages
   const toast = useToast();
 
   // Charger la corbeille au montage
@@ -38,6 +39,7 @@ const TrashView = () => {
     if (filter === 'all') return true;
     if (filter === 'subjects') return item.type === 'subject';
     if (filter === 'tasks') return item.type === 'task';
+    if (filter === 'pages') return item.type === 'page';
     return true;
   });
 
@@ -63,7 +65,16 @@ const TrashView = () => {
       } else {
         toast.error('Le radar d\'origine n\'existe plus');
       }
+    } else if (item.type === 'page') {
+      // Restaurer une page personnalisée
+      const restoredItem = restoreFromTrash(item.id);
+      if (restoredItem) {
+        const restoredPage = restorePage(restoredItem);
+        toast.success(`Page "${restoredPage.name}" restaurée`);
+        loadTrashItems();
+      }
     }
+    // TODO: Gérer la restauration des tâches
   };
 
   // Supprimer définitivement un élément
@@ -198,6 +209,16 @@ const TrashView = () => {
             >
               Tâches ({trashItems.filter(i => i.type === 'task').length})
             </button>
+            <button
+              onClick={() => setFilter('pages')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                filter === 'pages'
+                  ? 'bg-gray-800 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Pages ({trashItems.filter(i => i.type === 'page').length})
+            </button>
           </div>
 
           <div className="flex gap-2">
@@ -293,6 +314,8 @@ const TrashView = () => {
                       <svg className="w-5 h-5 text-gray-500" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM6 6.5C6 7.328 6.672 8 7.5 8h1c.828 0 1.5-.672 1.5-1.5V4.5a1 1 0 1 1 2 0V6l.003.041a3 3 0 0 1 2.742 2.713A1.993 1.993 0 0 0 16 10.5a2 2 0 0 1-2 2h-.581a5.998 5.998 0 0 1-.484 1.166l.41.41a2 2 0 0 1-2.83 2.83l-.41-.41A5.998 5.998 0 0 1 8.94 17H7.06a5.998 5.998 0 0 1-1.166-.484l-.41.41a2 2 0 1 1-2.83-2.83l.41-.41A5.998 5.998 0 0 1 2.58 12.5H2a2 2 0 0 1-2-2 1.993 1.993 0 0 0 1.255-1.746A3 3 0 0 1 3.997 6.041L4 6V4.5a1 1 0 0 1 2 0V6.5z" />
                       </svg>
+                    ) : item.type === 'page' ? (
+                      <span className="text-lg">{item.icon || '📝'}</span>
                     ) : (
                       <svg className="w-5 h-5 text-gray-500" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V9.5A2.5 2.5 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25zM11 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zm-5.5 9.25a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5z" />
@@ -309,6 +332,11 @@ const TrashView = () => {
                       {item.type === 'subject' && item.radarName && (
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                           {item.radarName}
+                        </span>
+                      )}
+                      {item.type === 'page' && (
+                        <span className="text-xs text-gray-500 bg-blue-100 px-2 py-0.5 rounded">
+                          Page personnalisée
                         </span>
                       )}
                     </div>

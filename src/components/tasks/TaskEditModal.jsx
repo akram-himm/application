@@ -108,9 +108,9 @@ const TaskEditModal = ({
                 onChange={(e) => setFormData({...formData, status: e.target.value})}
                 className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700/50 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
               >
-                <option value="À faire">À faire</option>
-                <option value="En cours">En cours</option>
-                <option value="Terminé">Terminé</option>
+                <option value="À faire" className="bg-gray-800 text-white">À faire</option>
+                <option value="En cours" className="bg-gray-800 text-white">En cours</option>
+                <option value="Terminé" className="bg-gray-800 text-white">Terminé</option>
               </select>
             </div>
             
@@ -123,9 +123,9 @@ const TaskEditModal = ({
                 onChange={(e) => setFormData({...formData, priority: e.target.value})}
                 className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700/50 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
               >
-                <option value="Pas de panique">Pas de panique</option>
-                <option value="Important">Important</option>
-                <option value="Très important">Très important</option>
+                <option value="Pas de panique" className="bg-gray-800 text-white">Pas de panique</option>
+                <option value="Important" className="bg-gray-800 text-white">Important</option>
+                <option value="Très important" className="bg-gray-800 text-white">Très important</option>
               </select>
             </div>
           </div>
@@ -196,9 +196,9 @@ const TaskEditModal = ({
                 }}
                 className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700/50 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
               >
-                <option value="">Aucun radar</option>
+                <option value="" className="bg-gray-800 text-white">Aucun radar</option>
                 {radars.map(radar => (
-                  <option key={radar.id} value={radar.id}>
+                  <option key={radar.id} value={radar.id} className="bg-gray-800 text-white">
                     {radar.icon} {radar.name}
                   </option>
                 ))}
@@ -215,11 +215,11 @@ const TaskEditModal = ({
                 className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700/50 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
                 disabled={!formData.radar}
               >
-                <option value="">Aucune matière</option>
+                <option value="" className="bg-gray-800 text-white">Aucune matière</option>
                 {formData.radar && radars
                   .find(r => r.id === formData.radar)
                   ?.subjects?.map(subject => (
-                    <option key={subject.id} value={subject.id}>
+                    <option key={subject.id} value={subject.id} className="bg-gray-800 text-white">
                       {subject.name}
                     </option>
                   ))}

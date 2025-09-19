@@ -555,14 +555,13 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
       }
         
       case 'date':
-      case 'time':
       case 'startDate':
       case 'endDate':
         return (
           <td className="px-6 py-3 border-b border-gray-200">
-            <span 
+            <span
               className="text-sm cursor-pointer transition-all hover:text-blue-600"
-              style={{ 
+              style={{
                 color: value ? '#6B7280' : '#D1D5DB',
                 fontStyle: value ? 'normal' : 'italic',
                 fontWeight: '400'
@@ -573,14 +572,52 @@ const SortableRow = ({ task, columns, onDoubleClick, onContextMenu, onCellClick,
               }}
             >
               {value ? (
-                column === 'date' || column === 'startDate' || column === 'endDate' ? 
-                  new Date(value).toLocaleDateString('fr-FR', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric' 
-                  }).replace(/\//g, '/') : 
-                  value
+                new Date(value).toLocaleDateString('fr-FR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric'
+                }).replace(/\//g, '/')
               ) : 'Ajouter'}
+            </span>
+          </td>
+        );
+
+      case 'time':
+        // Si on est en train d'éditer cette cellule
+        if (isEditing) {
+          return (
+            <td className="px-6 py-3 border-b border-gray-200">
+              <input
+                type="time"
+                className="px-2 py-1 text-sm text-gray-900 bg-white border border-blue-500 rounded outline-none"
+                autoFocus
+                value={editingCell.value || ''}
+                onChange={(e) => onEditingCellChange({ ...editingCell, value: e.target.value })}
+                onBlur={() => onCellClick(task, column, editingCell.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onCellClick(task, column, editingCell.value);
+                  if (e.key === 'Escape') onEditingCellChange(null);
+                }}
+              />
+            </td>
+          );
+        }
+        // Affichage normal
+        return (
+          <td className="px-6 py-3 border-b border-gray-200">
+            <span
+              className="text-sm cursor-pointer transition-all hover:text-blue-600"
+              style={{
+                color: value ? '#6B7280' : '#D1D5DB',
+                fontStyle: value ? 'normal' : 'italic',
+                fontWeight: '400'
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditingCellChange({ taskId: task.id, column, value: value || '' });
+              }}
+            >
+              {value || 'Ajouter'}
             </span>
           </td>
         );

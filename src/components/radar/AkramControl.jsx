@@ -37,12 +37,12 @@ const AkramControl = () => {
             className="px-3 py-1.5 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-sm cursor-pointer transition-all duration-150 hover:bg-white/[0.08] hover:border-white/20 focus:outline-none focus:border-[rgb(35,131,226)]"
             title="Pénalité appliquée après X jours complets sans progression"
           >
-            <option value="0">Désactivé</option>
-            <option value="1">1 jour complet</option>
-            <option value="2">2 jours complets</option>
-            <option value="3">3 jours complets</option>
-            <option value="7">7 jours complets</option>
-            <option value="14">14 jours complets</option>
+            <option value="0" className="bg-gray-800 text-white">Désactivé</option>
+            <option value="1" className="bg-gray-800 text-white">1 jour complet</option>
+            <option value="2" className="bg-gray-800 text-white">2 jours complets</option>
+            <option value="3" className="bg-gray-800 text-white">3 jours complets</option>
+            <option value="7" className="bg-gray-800 text-white">7 jours complets</option>
+            <option value="14" className="bg-gray-800 text-white">14 jours complets</option>
           </select>
         </div>
 
@@ -55,11 +55,11 @@ const AkramControl = () => {
               onChange={(e) => setPenaltyPercentage(Number(e.target.value))}
               className="px-3 py-1.5 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 text-sm cursor-pointer transition-all duration-150 hover:bg-white/[0.08] hover:border-white/20 focus:outline-none focus:border-[rgb(35,131,226)]"
             >
-              <option value="1">1%</option>
-              <option value="2">2%</option>
-              <option value="3">3%</option>
-              <option value="5">5%</option>
-              <option value="10">10%</option>
+              <option value="1" className="bg-gray-800 text-white">1%</option>
+              <option value="2" className="bg-gray-800 text-white">2%</option>
+              <option value="3" className="bg-gray-800 text-white">3%</option>
+              <option value="5" className="bg-gray-800 text-white">5%</option>
+              <option value="10" className="bg-gray-800 text-white">10%</option>
             </select>
           </div>
         )}

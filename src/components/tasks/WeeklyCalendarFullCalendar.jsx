@@ -331,9 +331,9 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
   const events = useMemo(() => {
     return tasks
       .filter(task => {
+        // Afficher toutes les tâches qui ont une date valide
         const hasDate = (task.startDate && task.startDate !== '-') || (task.date && task.date !== '-');
-        const hasTime = task.time && task.time !== '-';
-        return hasDate && hasTime;
+        return hasDate;
       })
       .map(task => {
         const taskDate = task.startDate || task.date;
@@ -361,19 +361,32 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
         if (task.color === '#9ca3af') {
           adjustedColor = '#e7e5e4'; // Gris-beige très clair (stone-200)
         }
-        
+
+        // Gérer les tâches avec ou sans heure
+        let startDateTime, endDateTime;
+        if (task.time && task.time !== '-') {
+          // Tâche avec heure spécifique
+          startDateTime = `${taskDate}T${task.time}:00`;
+          endDateTime = task.endTime ? `${taskEndDate}T${task.endTime}:00` : `${taskEndDate}T${addHour(task.time)}:00`;
+        } else {
+          // Tâche sans heure - la mettre en journée entière
+          startDateTime = taskDate;
+          endDateTime = taskEndDate || taskDate;
+        }
+
         return {
           id: String(task.id),
           title: task.name,
-          start: `${taskDate}T${task.time}:00`,
-          end: task.endTime ? `${taskEndDate}T${task.endTime}:00` : `${taskEndDate}T${addHour(task.time)}:00`,
+          start: startDateTime,
+          end: endDateTime,
+          allDay: !task.time || task.time === '-', // Marquer comme événement toute la journée si pas d'heure
           backgroundColor: adjustedColor ? hexToRgba(adjustedColor, adjustOpacity(adjustedColor)) : 'rgba(75, 85, 99, 0.18)',
           borderColor: '#000000', // Bordure noire pour toutes les tâches
           textColor: '#000000', // Texte noir
-          extendedProps: { 
+          extendedProps: {
             task,
             status: task.status,
-            description: task.description 
+            description: task.description
           }
         };
       });
