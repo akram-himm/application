@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
-import SimpleKanban from '../components/chapters/SimpleKanban';
-import NotionEditor from '../components/NotionEditor/Editor';
+// import SimpleKanban from '../components/chapters/SimpleKanban';
+// import NotionEditor from '../components/NotionEditor/Editor';
 import { uniformStyles } from '../styles/uniformStyles';
 
 const ChaptersView = () => {
@@ -149,12 +149,15 @@ const ChaptersView = () => {
       {/* Main Content - Kanban et Éditeur */}
       <div className="max-w-[1400px] mx-auto px-6 pb-32 space-y-8">
         {/* Section Kanban - directement sans conteneur */}
-        <SimpleKanban
+        {/* <SimpleKanban
           tasks={kanbanTasks}
           onTasksChange={saveKanbanTasks}
           subjectId={subjectId}
           radarId={radarId}
-        />
+        /> */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <p className="text-gray-600">Le composant Kanban a été temporairement désactivé pendant la migration vers BlockNote.</p>
+        </div>
 
         {/* Section Éditeur Notion */}
         <div>
@@ -171,13 +174,16 @@ const ChaptersView = () => {
             </div>
           </div>
 
-          <NotionEditor
+          {/* <NotionEditor
             subjectId={subjectId}
             radarId={radarId}
             subjectName={subject.name}
             onSave={handleEditorSave}
             onAddToKanban={handleAddToKanban}
-          />
+          /> */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+            <p className="text-gray-600">L'éditeur a été temporairement désactivé pendant la migration vers BlockNote.</p>
+          </div>
         </div>
 
         {/* Section d'aide */}
