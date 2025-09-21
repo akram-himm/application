@@ -5,7 +5,7 @@ import { uniformStyles } from '../styles/uniformStyles';
 import { exportHistory, importHistory } from '../services/historyService';
 
 const HistoryView = () => {
-  const { tasks } = useContext(AppContext);
+  const { tasks, addTask, radars } = useContext(AppContext);
   const navigate = useNavigate();
   const [selectedView, setSelectedView] = useState('overview'); // overview, week, day
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -13,6 +13,60 @@ const HistoryView = () => {
   const [visibleMonths, setVisibleMonths] = useState(3); // Nombre de mois visibles
   const [showImportSuccess, setShowImportSuccess] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Fonction pour ajouter des tâches de test
+  const addTestTasks = () => {
+    const today = new Date();
+    // Utiliser les vrais radars ou des valeurs par défaut
+    const firstRadar = radars && radars.length > 0 ? radars[0] : null;
+    const firstRadarName = firstRadar ? firstRadar.name : 'Autres';
+
+    const testTasks = [
+      {
+        name: 'Tâche test aujourd\'hui - Terminée',
+        type: 'daily',
+        status: 'Terminé',
+        priority: 'Haute',
+        date: today.toISOString().split('T')[0],
+        radarName: firstRadarName,
+        radarId: firstRadar?.id,
+        color: '#10b981'
+      },
+      {
+        name: 'Tâche test aujourd\'hui - En cours',
+        type: 'daily',
+        status: 'En cours',
+        priority: 'Normale',
+        date: today.toISOString().split('T')[0],
+        radarName: firstRadarName,
+        radarId: firstRadar?.id,
+        color: '#3b82f6'
+      },
+      {
+        name: 'Tâche test hier - Terminée',
+        type: 'daily',
+        status: 'Terminé',
+        priority: 'Basse',
+        date: new Date(today.getTime() - 24*60*60*1000).toISOString().split('T')[0],
+        radarName: firstRadarName,
+        radarId: firstRadar?.id,
+        color: '#f59e0b'
+      },
+      {
+        name: 'Tâche test avant-hier - Terminée',
+        type: 'daily',
+        status: 'Terminé',
+        priority: 'Normale',
+        date: new Date(today.getTime() - 2*24*60*60*1000).toISOString().split('T')[0],
+        radarName: firstRadarName,
+        radarId: firstRadar?.id,
+        color: '#10b981'
+      }
+    ];
+
+    testTasks.forEach(task => addTask(task));
+    alert(`${testTasks.length} tâches de test ajoutées avec le radar '${firstRadarName}' ! Actualisez la page.`);
+  };
   
   // Icônes minimalistes style Monday.com
   const icons = {
@@ -58,20 +112,30 @@ const HistoryView = () => {
   
   // Calculer les métriques pour une période donnée (inclut toutes les tâches)
   const calculateMetrics = (startDate, endDate) => {
+    // S'assurer que les dates sont valides
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
     const filteredTasks = tasks.filter(task => {
       const taskDate = task.date || task.startDate;
       if (!taskDate || taskDate === '-') return false;
-      
+
       const d = new Date(taskDate);
-      return d >= startDate && d <= endDate;
+      d.setHours(12, 0, 0, 0); // Normaliser à midi pour éviter les problèmes de timezone
+      return d >= start && d <= end;
     });
-    
+
+    // Utiliser uniquement les radars existants
     const byCategory = {};
     filteredTasks.forEach(task => {
       const category = task.radarName || 'Autres';
       byCategory[category] = (byCategory[category] || 0) + 1;
     });
-    
+
+    console.log(`Metrics for ${start.toLocaleDateString()} - ${end.toLocaleDateString()}: ${filteredTasks.length} tasks`);
+
     return {
       total: filteredTasks.length,
       tasks: filteredTasks,
@@ -555,7 +619,7 @@ const HistoryView = () => {
         
         {/* Liste des tâches organisée par statut */}
         <div className="space-y-4">
-          {dayTasks.length > 0 ? (
+          {dayTasks && dayTasks.length > 0 ? (
             <>
               {/* Tâches terminées */}
               {completedTasks.length > 0 && (
@@ -683,11 +747,19 @@ const HistoryView = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <nav className="flex items-center gap-2 text-sm">
-              <button 
+              <button
                 onClick={() => setSelectedView('overview')}
                 className={`${selectedView === 'overview' ? 'text-gray-700' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
               >
                 Historique
+              </button>
+              {/* Bouton de test */}
+              <button
+                onClick={addTestTasks}
+                className="ml-4 px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200"
+                title="Ajouter des tâches de test"
+              >
+                🧪 Test
               </button>
             {selectedView !== 'overview' && (
               <>
@@ -829,13 +901,18 @@ const HistoryView = () => {
                                 height: `${(height / 100) * 160}px`, 
                                 minHeight: week.total > 0 ? '10px' : '2px'
                               }}
-                              onClick={() => {
-                                const fullWeek = allWeeks.find(w => 
-                                  w.startDate.getTime() === week.startDate.getTime()
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log('Clic sur la barre, semaine:', week);
+                                const fullWeek = allWeeks.find(w =>
+                                  Math.abs(w.startDate.getTime() - week.startDate.getTime()) < 1000
                                 );
+                                console.log('Semaine trouvée:', fullWeek);
                                 if (fullWeek) {
                                   setSelectedWeek(fullWeek);
                                   setSelectedView('week');
+                                } else {
+                                  console.error('Semaine non trouvée');
                                 }
                               }}
                             />

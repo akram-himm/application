@@ -801,19 +801,56 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
           const description = eventInfo.event.extendedProps.description;
           const borderColor = eventInfo.event.borderColor;
           const task = eventInfo.event.extendedProps.task;
-          
+
+          // Fonction pour ajuster la couleur de la ligne (style Google Calendar/Outlook)
+          const adjustLineColor = (color) => {
+            // Si la couleur est en format hex
+            if (color && color.startsWith('#')) {
+              const num = parseInt(color.replace('#', ''), 16);
+              let r = (num >> 16);
+              let g = ((num >> 8) & 0x00FF);
+              let b = (num & 0x0000FF);
+
+              // Augmenter la saturation et légèrement assombrir (comme Google Calendar)
+              // On assombrit de 15% et on augmente la saturation
+              r = Math.floor(r * 0.85);
+              g = Math.floor(g * 0.85);
+              b = Math.floor(b * 0.85);
+
+              return `rgb(${r}, ${g}, ${b})`;
+            }
+            // Si la couleur est en format rgb
+            if (color && color.startsWith('rgb')) {
+              const values = color.match(/\d+/g);
+              if (values && values.length >= 3) {
+                let r = parseInt(values[0]);
+                let g = parseInt(values[1]);
+                let b = parseInt(values[2]);
+
+                // Style Google Calendar : légèrement plus foncé et plus saturé
+                r = Math.floor(r * 0.85);
+                g = Math.floor(g * 0.85);
+                b = Math.floor(b * 0.85);
+
+                return `rgb(${r}, ${g}, ${b})`;
+              }
+            }
+            // Couleur par défaut si le format n'est pas reconnu
+            return color || '#6B7280';
+          };
+
           // Calculer la hauteur de l'événement
           const eventEl = eventInfo.el;
           const eventHeight = eventEl ? eventEl.offsetHeight : 100;
           const isSmall = eventHeight < 40; // Si moins de 40px, considéré comme petit
-          
+
           // Extraire les deux premiers mots de la description
           const getDescriptionPreview = (desc) => {
             if (!desc || desc.trim() === '') return null;
             const words = desc.trim().split(/\s+/);
             return words.slice(0, 2).join(' ');
           };
-          
+
           const descPreview = getDescriptionPreview(description);
           
           return (
@@ -826,15 +863,16 @@ const WeeklyCalendarFullCalendar = React.memo(({ tasks, onAddTask, onUpdateTask,
                 paddingRight: '20px' // Espace pour l'icône
               }}
             >
-              {/* Ligne verticale colorée */}
+              {/* Ligne verticale colorée - style Google Calendar/Outlook */}
               <div style={{
                 position: 'absolute',
                 left: '-1px',
                 top: '-2px',
                 bottom: '-2px',
-                width: '3.5px',
-                backgroundColor: borderColor,
-                borderRadius: '0'
+                width: '4px',
+                backgroundColor: adjustLineColor(eventInfo.event.backgroundColor || borderColor),
+                borderRadius: '2px 0 0 2px',
+                boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)'
               }} />
               
               {/* Afficher le contenu seulement si l'événement n'est pas trop petit */}
