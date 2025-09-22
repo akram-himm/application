@@ -171,7 +171,7 @@ const TrashView = () => {
         <div className={uniformStyles.pageHeader.container}>
           <h1 className={uniformStyles.text.pageTitle}>Corbeille</h1>
           <p className={uniformStyles.text.pageSubtitle}>
-            Les éléments sont automatiquement supprimés après 30 jours
+            Consultez vos éléments supprimés
           </p>
         </div>
 

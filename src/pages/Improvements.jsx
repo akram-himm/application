@@ -7,7 +7,7 @@ import { uniformStyles } from '../styles/uniformStyles';
 
 const Improvements = () => {
   const navigate = useNavigate();
-  const { radars, addRadar, updateRadar, deleteRadar, setRadars } = useContext(AppContext);
+  const { radars, addRadar, updateRadar, setRadars } = useContext(AppContext);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRadar, setEditingRadar] = useState(null);
   const [draggedCard, setDraggedCard] = useState(null);
@@ -37,18 +37,18 @@ const Improvements = () => {
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    
+
     const card = e.target.closest('.radar-card');
     if (!card || card === draggedCard) return;
-    
+
     const rect = card.getBoundingClientRect();
     const midpoint = rect.left + rect.width / 2;
     const currentIndex = parseInt(card.getAttribute('data-index'));
-    
+
     document.querySelectorAll('.drop-indicator').forEach(el => {
       el.classList.remove('active');
     });
-    
+
     if (e.clientX < midpoint) {
       card.querySelector('.drop-indicator.left')?.classList.add('active');
       setDropTargetIndex(currentIndex);
@@ -78,13 +78,13 @@ const Improvements = () => {
   const handleDrop = (e) => {
     e.preventDefault();
     if (draggedIndex === null || dropTargetIndex === null || draggedIndex === dropTargetIndex) return;
-    
+
     const newRadars = [...radars];
     const [removed] = newRadars.splice(draggedIndex, 1);
-    
+
     const insertIndex = dropTargetIndex > draggedIndex ? dropTargetIndex - 1 : dropTargetIndex;
     newRadars.splice(insertIndex, 0, removed);
-    
+
     // Réorganiser les radars
     reorderRadars(newRadars);
   };
@@ -101,13 +101,6 @@ const Improvements = () => {
       addRadar(radarData);
     }
     setModalOpen(false);
-  };
-
-  const handleDeleteRadar = (e, radarId) => {
-    e.stopPropagation();
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce radar ?')) {
-      deleteRadar(radarId);
-    }
   };
 
   const handleEditRadar = (e, radar) => {
@@ -135,9 +128,11 @@ const Improvements = () => {
         {/* Titre de la page */}
         <div className={uniformStyles.pageHeader.container}>
           <h1 className={uniformStyles.text.pageTitle}>Améliorations</h1>
-          <p className={uniformStyles.text.pageSubtitle}>Gérez vos domaines d'amélioration et de progression</p>
+          <p className={uniformStyles.text.pageSubtitle}>
+            Gérez vos domaines d'amélioration et de progression
+          </p>
         </div>
-        
+
         {/* Bouton d'action */}
         <div className="flex justify-end mb-6">
           <button
@@ -192,15 +187,6 @@ const Improvements = () => {
                   >
                     <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 16" fill="currentColor">
                       <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.226 13.25a4.25 4.25 0 0 1-1.154.734l-2.72.906a.75.75 0 0 1-.95-.95l.906-2.72c.141-.424.415-.81.734-1.154l8.258-8.262zm1.414 1.06a.25.25 0 0 0-.353 0L10.53 5.119l.707.707 1.545-1.545a.25.25 0 0 0 0-.354l-.354-.353zM9.822 5.826 4.31 11.338a2.75 2.75 0 0 0-.475.748l-.51 1.53 1.53-.51a2.75 2.75 0 0 0 .748-.475l5.512-5.512-.707-.707z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteRadar(e, radar.id)}
-                    className={uniformStyles.button.icon}
-                  >
-                    <svg className="w-4 h-4 text-gray-500" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M6.5 5.5a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5zm4.25 0a.75.75 0 0 0-1.5 0v4.75a.75.75 0 0 0 1.5 0V5.5z" />
-                      <path d="M12 2.75a.75.75 0 0 1 .75.75v.5h.75a.75.75 0 0 1 0 1.5h-.5v7a2.25 2.25 0 0 1-2.25 2.25h-5.5A2.25 2.25 0 0 1 3 12.5v-7h-.5a.75.75 0 0 1 0-1.5h.75v-.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75h1.5zm-7.5.75v-.25h5v.25h-5zm7 2.5h-7v7a.75.75 0 0 0 .75.75h5.5a.75.75 0 0 0 .75-.75v-7z" />
                     </svg>
                   </button>
                 </div>
@@ -281,7 +267,7 @@ const Improvements = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal Radar */}
       {modalOpen && (
         <RadarModal
           isOpen={modalOpen}

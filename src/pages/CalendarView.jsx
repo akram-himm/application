@@ -167,7 +167,9 @@ const CalendarView = () => {
         {/* Titre de la page */}
         <div className={uniformStyles.pageHeader.container}>
           <h1 className={uniformStyles.text.pageTitle}>Calendrier</h1>
-          <p className={uniformStyles.text.pageSubtitle}>Planifiez et organisez vos tâches de la semaine</p>
+          <p className={uniformStyles.text.pageSubtitle}>
+            Planifiez et organisez vos tâches de la semaine
+          </p>
         </div>
         
         {/* Barre de navigation du calendrier */}

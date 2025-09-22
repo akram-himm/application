@@ -44,18 +44,13 @@ export const loadRadars = () => {
         return parsed;
       }
     }
-    // Essayer de restaurer depuis la backup
-    const backup = restoreFromBackup(STORAGE_KEYS.RADARS);
-    if (backup) {
-      console.warn('Restored radars from backup');
-      return backup;
-    }
+    // Ne PAS restaurer automatiquement depuis la backup
+    // Cela empêche les radars supprimés de réapparaître
     return [];
   } catch (error) {
-    console.error('Error loading radars, attempting backup restore:', error);
-    // Essayer de restaurer depuis la backup
-    const backup = restoreFromBackup(STORAGE_KEYS.RADARS);
-    return backup || [];
+    console.error('Error loading radars:', error);
+    // Ne PAS restaurer automatiquement depuis la backup en cas d'erreur
+    return [];
   }
 };
 
@@ -112,18 +107,13 @@ export const loadTasks = () => {
         return parsed;
       }
     }
-    // Essayer de restaurer depuis la backup
-    const backup = restoreFromBackup(STORAGE_KEYS.TASKS);
-    if (backup) {
-      console.warn('Restored tasks from backup');
-      return backup;
-    }
+    // Ne PAS restaurer automatiquement depuis la backup
+    // Cela empêche les tâches supprimées de réapparaître
     return [];
   } catch (error) {
-    console.error('Error loading tasks, attempting backup restore:', error);
-    // Essayer de restaurer depuis la backup
-    const backup = restoreFromBackup(STORAGE_KEYS.TASKS);
-    return backup || [];
+    console.error('Error loading tasks:', error);
+    // Ne PAS restaurer automatiquement depuis la backup en cas d'erreur
+    return [];
   }
 };
 
@@ -172,11 +162,49 @@ export const saveTasks = (tasks) => {
 // Clear all data
 export const clearAllData = () => {
   try {
+    // Supprimer les données principales
     localStorage.removeItem(STORAGE_KEYS.RADARS);
     localStorage.removeItem(STORAGE_KEYS.TASKS);
+    // Supprimer les backups
+    localStorage.removeItem(STORAGE_KEYS.BACKUP_RADARS);
+    localStorage.removeItem(STORAGE_KEYS.BACKUP_TASKS);
+    // Supprimer toutes les autres données de l'application
+    localStorage.removeItem('gestion_history');
+    localStorage.removeItem('gestion_calendar');
+    localStorage.removeItem('gestion_settings');
+    localStorage.removeItem('gestion_subjects');
+    localStorage.removeItem('pages');
+    localStorage.removeItem('page_contents');
+    localStorage.removeItem('task_rotation_blocked');
+    localStorage.removeItem('last_task_rotation');
+
+    // Supprimer toutes les clés qui pourraient être liées à l'application
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes('gestion_') || key.includes('radar') || key.includes('subject') || key.startsWith('page_')) {
+        localStorage.removeItem(key);
+      }
+    });
   } catch (error) {
     console.error('Error clearing data:', error);
   }
+};
+
+// Fonction pour restaurer manuellement depuis le backup (si vraiment nécessaire)
+export const manualRestoreFromBackup = (type) => {
+  if (type === 'radars') {
+    const backup = restoreFromBackup(STORAGE_KEYS.RADARS);
+    if (backup) {
+      saveRadars(backup);
+      return true;
+    }
+  } else if (type === 'tasks') {
+    const backup = restoreFromBackup(STORAGE_KEYS.TASKS);
+    if (backup) {
+      saveTasks(backup);
+      return true;
+    }
+  }
+  return false;
 };
 
 // Export/Import functionality

@@ -10,7 +10,6 @@ import CrashRecovery from './components/CrashRecovery';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import DashboardView from './pages/DashboardView';
-import HistoryView from './pages/HistoryView';
 import Improvements from './pages/Improvements';
 import RadarView from './pages/RadarView';
 import ChaptersView from './pages/ChaptersView';
@@ -19,6 +18,7 @@ import CalendarView from './pages/CalendarView';
 import NotesView from './pages/NotesView';
 import TrashView from './pages/TrashView';
 import CustomPage from './pages/CustomPage';
+import Settings from './pages/Settings';
 import './App.css';
 
 function App() {
@@ -37,7 +37,6 @@ function App() {
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/dashboard" element={<DashboardView />} />
-                      <Route path="/history" element={<HistoryView />} />
                       <Route path="/improvements" element={<Improvements />} />
                       <Route path="/radar/:radarId" element={<RadarView />} />
                       <Route path="/radar/:radarId/subject/:subjectId" element={<ChaptersView />} />
@@ -45,6 +44,7 @@ function App() {
                       <Route path="/calendar" element={<CalendarView />} />
                       <Route path="/notes" element={<NotesView />} />
                       <Route path="/trash" element={<TrashView />} />
+                      <Route path="/settings" element={<Settings />} />
                       <Route path="/page/:pageId" element={<CustomPage />} />
                     </Routes>
                   </ErrorBoundary>

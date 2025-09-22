@@ -120,7 +120,9 @@ const Dashboard = memo(() => {
         {/* Titre de la page */}
         <div className={uniformStyles.pageHeader.container}>
           <h1 className={uniformStyles.text.pageTitle}>Tableau de bord</h1>
-          <p className={uniformStyles.text.pageSubtitle}>Vue d'ensemble de votre progression</p>
+          <p className={uniformStyles.text.pageSubtitle}>
+            Vue d'ensemble de votre progression
+          </p>
         </div>
 
         {/* Stats Cards */}

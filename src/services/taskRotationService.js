@@ -60,8 +60,6 @@ export const rotateTasks = (tasks, updateTasks, isManualRotation = false) => {
 
   const now = new Date();
   const today = now.toDateString();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
 
   console.log('🔄 Rotation des tâches en cours...');
 
@@ -73,11 +71,38 @@ export const rotateTasks = (tasks, updateTasks, isManualRotation = false) => {
     return `${year}-${month}-${day}`;
   };
 
-  const yesterdayStr = formatDate(yesterday);
   const todayStr = formatDate(now);
 
+  // Calculer le nombre de jours manqués depuis la dernière rotation
+  const lastRotation = getLastRotationDate();
+  let daysMissed = 0;
+
+  if (lastRotation) {
+    const timeDiff = now.getTime() - lastRotation.getTime();
+    daysMissed = Math.floor(timeDiff / (24 * 60 * 60 * 1000));
+  }
+
+  console.log(`📅 Jours manqués depuis la dernière rotation: ${daysMissed}`);
+
+  // Créer un objet pour organiser les tâches par date pour l'archivage
+  const tasksToArchiveByDate = {};
+
+  // D'abord, traiter chaque jour manqué (du plus ancien au plus récent)
+  if (daysMissed > 1) {
+    for (let i = daysMissed - 1; i >= 1; i--) {
+      const missedDate = new Date(now);
+      missedDate.setDate(missedDate.getDate() - i);
+      const missedDateStr = formatDate(missedDate);
+
+      // Initialiser le tableau pour cette date
+      tasksToArchiveByDate[missedDateStr] = {
+        date: missedDate,
+        tasks: []
+      };
+    }
+  }
+
   // Séparer les tâches
-  const yesterdayTasks = [];
   const todayTasks = [];
   const futureTasks = [];
   const tasksWithoutDate = [];
@@ -95,14 +120,6 @@ export const rotateTasks = (tasks, updateTasks, isManualRotation = false) => {
     if (!taskDate || taskDate === '-') {
       // Tâches sans date restent dans To-Do
       tasksWithoutDate.push(task);
-    } else if (taskDate === yesterdayStr) {
-      // Tâches d'hier -> historique seulement si "Fait"
-      if (task.status === 'Fait' || task.status === 'done' || task.status === 'terminé') {
-        yesterdayTasks.push(task);
-      } else {
-        // Les tâches non terminées d'hier restent visibles
-        todayTasks.push(task);
-      }
     } else if (taskDate === todayStr) {
       // Tâches d'aujourd'hui -> restent visibles
       todayTasks.push(task);
@@ -110,39 +127,72 @@ export const rotateTasks = (tasks, updateTasks, isManualRotation = false) => {
       // Tâches futures -> gardées pour plus tard
       futureTasks.push(task);
     } else {
-      // Tâches anciennes (avant hier) -> historique seulement si "Fait"
-      if (task.status === 'Fait' || task.status === 'done' || task.status === 'terminé') {
-        yesterdayTasks.push(task);
-      } else {
-        // Les tâches non terminées restent visibles
-        todayTasks.push(task);
+      // Tâches anciennes -> archiver avec leur date correcte
+      // Si la date existe dans notre map, l'utiliser, sinon créer une nouvelle entrée
+      if (!tasksToArchiveByDate[taskDate]) {
+        const taskDateObj = new Date(taskDate + 'T00:00:00');
+        tasksToArchiveByDate[taskDate] = {
+          date: taskDateObj,
+          tasks: []
+        };
       }
+      tasksToArchiveByDate[taskDate].tasks.push(task);
     }
   });
-  
-  // Archiver seulement les tâches terminées dans l'historique
-  // Sauf les routines qui sont recréées chaque jour
-  const tasksToArchive = yesterdayTasks.filter(t => t.type !== 'routine');
-  if (tasksToArchive.length > 0) {
-    addToHistory(yesterday, tasksToArchive);
-    console.log(`📦 ${tasksToArchive.length} tâche(s) terminée(s) archivée(s) dans l'historique`);
+
+  // Archiver chaque jour avec ses tâches respectives
+  let totalArchived = 0;
+  Object.values(tasksToArchiveByDate).forEach(({ date, tasks: tasksForDate }) => {
+    // Filtrer les routines
+    const nonRoutineTasks = tasksForDate.filter(t => t.type !== 'routine');
+    if (nonRoutineTasks.length > 0) {
+      addToHistory(date, nonRoutineTasks);
+      console.log(`📦 ${nonRoutineTasks.length} tâche(s) du ${formatDate(date)} archivée(s)`);
+      totalArchived += nonRoutineTasks.length;
+    }
+  });
+
+  // Gérer les routines pour chaque jour manqué
+  const allRoutineTasks = [];
+
+  // Si on a manqué des jours, créer les routines pour chaque jour manqué
+  if (daysMissed > 1) {
+    for (let i = daysMissed - 1; i >= 1; i--) {
+      const missedDate = new Date(now);
+      missedDate.setDate(missedDate.getDate() - i);
+      const missedDateStr = formatDate(missedDate);
+
+      // Créer les routines pour ce jour manqué et les archiver immédiatement
+      const missedRoutines = routineTasks.map(routine => ({
+        ...routine,
+        id: `${routine.id}_${missedDateStr}`,
+        date: missedDateStr,
+        status: 'Non fait' // Marquer comme non fait car le jour est passé
+      }));
+
+      // Archiver ces routines manquées
+      if (missedRoutines.length > 0) {
+        addToHistory(missedDate, missedRoutines);
+        console.log(`📝 ${missedRoutines.length} routine(s) du ${missedDateStr} archivée(s) comme non faite(s)`);
+      }
+    }
   }
-  
-  // Créer les nouvelles copies des routines pour aujourd'hui
+
+  // Créer les nouvelles copies des routines pour aujourd'hui seulement
   const newRoutineTasks = routineTasks.map(routine => ({
     ...routine,
     id: `${routine.id}_${todayStr}`, // ID unique pour chaque jour
     date: todayStr,
-    status: 'À faire' // Réinitialiser le statut
+    status: 'À faire' // Réinitialiser le statut pour aujourd'hui
   }));
-  
+
   // Mettre à jour la liste des tâches
-  // Garder les tâches d'aujourd'hui, futures, sans date, routines originales et nouvelles routines
+  // Garder uniquement les tâches pertinentes pour aujourd'hui
   const newTaskList = [
     ...todayTasks,
     ...futureTasks,
     ...tasksWithoutDate,
-    ...routineTasks, // Garder les routines originales
+    ...routineTasks, // Garder les routines originales (templates)
     ...newRoutineTasks // Ajouter les nouvelles copies pour aujourd'hui
   ];
   
@@ -153,11 +203,13 @@ export const rotateTasks = (tasks, updateTasks, isManualRotation = false) => {
   
   // Marquer la rotation comme effectuée
   setLastRotationDate(now);
-  
   console.log('✅ Rotation terminée');
-  console.log(`   - ${yesterdayTasks.length} tâche(s) archivée(s)`);
+  console.log(`   - ${totalArchived} tâche(s) archivée(s) au total`);
   console.log(`   - ${todayTasks.length} tâche(s) du jour affichée(s)`);
   console.log(`   - ${tasksWithoutDate.length} tâche(s) sans date conservée(s)`);
+  if (daysMissed > 1) {
+    console.log(`   - ${daysMissed - 1} jour(s) manqué(s) traité(s)`);
+  }
   
   return true;
 };
@@ -188,21 +240,55 @@ export const initTaskRotation = (tasks, updateTasks) => {
 
 // Forcer une rotation manuelle (pour les tests ou besoins spécifiques)
 export const forceRotation = (tasks, updateTasks) => {
-  const wasBlocked = isRotationBlocked();
+  console.log('🔄 Rotation manuelle déclenchée');
 
-  // Débloquer temporairement
-  setRotationBlocked(false);
-
-  // Réinitialiser la dernière date pour forcer la rotation
-  const yesterday = new Date();
+  const now = new Date();
+  const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  setLastRotationDate(yesterday);
 
-  // Effectuer la rotation avec le flag manuel
-  const result = rotateTasks(tasks, updateTasks, true);
+  // Formater les dates en YYYY-MM-DD
+  const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
-  // Restaurer l'état de blocage
-  setRotationBlocked(wasBlocked);
+  const todayStr = formatDate(now);
+  const yesterdayStr = formatDate(yesterday);
 
-  return result;
+  // Filtrer les tâches d'aujourd'hui à archiver
+  const todayTasks = tasks.filter(task => {
+    const taskDate = task.date || task.startDate;
+    return taskDate === todayStr && task.type !== 'routine';
+  });
+
+  // Ajouter les tâches d'aujourd'hui à l'historique avec la date d'aujourd'hui
+  // (elles apparaîtront dans l'historique comme des tâches du jour actuel)
+  if (todayTasks.length > 0) {
+    addToHistory(now, todayTasks);
+    console.log(`📦 ${todayTasks.length} tâche(s) d'aujourd'hui archivée(s) dans l'historique`);
+  }
+
+  // Retirer les tâches d'aujourd'hui de la liste actuelle
+  const remainingTasks = tasks.filter(task => {
+    const taskDate = task.date || task.startDate;
+    // Retirer les tâches d'aujourd'hui qui ont été archivées
+    if (taskDate === todayStr && task.type !== 'routine') {
+      return false;
+    }
+    // Garder les tâches futures, sans date, ou routines
+    return true;
+  });
+
+  // Mettre à jour les tâches
+  if (updateTasks) {
+    updateTasks(remainingTasks);
+    console.log(`✅ Rotation manuelle terminée - ${remainingTasks.length} tâche(s) restante(s)`);
+  }
+
+  // Marquer la rotation comme effectuée
+  setLastRotationDate(now);
+
+  return true;
 };

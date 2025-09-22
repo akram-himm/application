@@ -8,9 +8,11 @@ const NotesView = () => {
         {/* Titre de la page */}
         <div className={uniformStyles.pageHeader.container}>
           <h1 className={uniformStyles.text.pageTitle}>Notes</h1>
-          <p className={uniformStyles.text.pageSubtitle}>Vos notes et documents - En cours de développement</p>
+          <p className={uniformStyles.text.pageSubtitle}>
+            Gérez votre base de connaissances personnelle
+          </p>
         </div>
-        
+
         {/* Contenu */}
         <div className={'flex items-center justify-center py-20 ' + uniformStyles.card.default}>
           <div className="text-center">
