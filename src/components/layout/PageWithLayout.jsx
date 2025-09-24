@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLayout } from '../../contexts/LayoutContext';
 import LayoutManager from './LayoutManager';
 import SubPageManager from './SubPageManager';
-import PageToolbar from './PageToolbar';
+import PageMenu from './PageMenu';
+import PageBreadcrumbs from './PageBreadcrumbs';
 import { getIcon } from '../icons/SvgIcons';
 
 const PageWithLayout = ({
@@ -132,8 +133,8 @@ const PageWithLayout = ({
           {children}
         </div>
 
-        {/* Toolbar flottante */}
-        <PageToolbar pageId={pageId} />
+        {/* Menu en haut de page style Notion */}
+        <PageMenu pageId={pageId} />
       </div>
     );
   }
@@ -219,8 +220,8 @@ const PageWithLayout = ({
         </div>
       </div>
 
-      {/* Toolbar flottante */}
-      <PageToolbar pageId={pageId} />
+      {/* Menu en haut de page style Notion */}
+      <PageMenu pageId={pageId} />
     </div>
   );
 };
