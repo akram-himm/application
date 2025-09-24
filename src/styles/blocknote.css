@@ -1,0 +1,279 @@
+/* Personnaliser BlockNote pour ressembler à Notion */
+
+/* Conteneur de l'éditeur */
+.bn-editor {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: rgb(55, 53, 47);
+}
+
+/* Supprimer les bordures */
+.bn-editor-wrapper {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.bn-editor-wrapper .bn-editor {
+  border: none !important;
+}
+
+/* Placeholder */
+.bn-editor .ProseMirror .is-empty::before {
+  content: "Tapez '/' pour les commandes...";
+  color: rgba(55, 53, 47, 0.4);
+  font-size: 16px;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* Titres */
+.bn-editor h1 {
+  font-size: 30px;
+  font-weight: 600;
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+  color: rgb(55, 53, 47);
+}
+
+.bn-editor h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: rgb(55, 53, 47);
+}
+
+.bn-editor h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  color: rgb(55, 53, 47);
+}
+
+/* Paragraphes */
+.bn-editor p {
+  margin: 0.5em 0;
+  color: rgb(55, 53, 47);
+}
+
+/* Listes */
+.bn-editor ul,
+.bn-editor ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+  color: rgb(55, 53, 47);
+}
+
+.bn-editor li {
+  margin: 0.25em 0;
+}
+
+/* Sélection */
+.bn-editor ::selection {
+  background: rgba(35, 131, 226, 0.15);
+}
+
+/* Code blocks */
+.bn-editor pre {
+  background: rgb(247, 246, 243);
+  border-radius: 3px;
+  padding: 12px;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  font-size: 14px;
+  overflow-x: auto;
+}
+
+.bn-editor code {
+  background: rgba(135, 131, 120, 0.15);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #eb5757;
+}
+
+/* Blockquote */
+.bn-editor blockquote {
+  border-left: 3px solid rgb(55, 53, 47);
+  margin: 1em 0;
+  padding-left: 1em;
+  color: rgb(120, 119, 116);
+}
+
+/* Menu slash "/" */
+.bn-slash-menu {
+  background: white;
+  border: 1px solid rgba(55, 53, 47, 0.09);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  min-width: 180px;
+}
+
+/* Items du menu */
+.bn-slash-menu-item {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: rgb(55, 53, 47);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 20ms ease;
+}
+
+.bn-slash-menu-item:hover {
+  background: rgba(55, 53, 47, 0.08);
+}
+
+.bn-slash-menu-item.selected {
+  background: rgba(55, 53, 47, 0.08);
+}
+
+/* Toolbar de formatage */
+.bn-formatting-toolbar {
+  background: white;
+  border: 1px solid rgba(55, 53, 47, 0.09);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+}
+
+.bn-formatting-toolbar button {
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: background 20ms ease;
+  color: rgb(55, 53, 47);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.bn-formatting-toolbar button:hover {
+  background: rgba(55, 53, 47, 0.08);
+}
+
+.bn-formatting-toolbar button[data-selected="true"] {
+  background: rgba(35, 131, 226, 0.2);
+  color: rgb(35, 131, 226);
+}
+
+/* Drag handle */
+.bn-block-handle {
+  opacity: 0;
+  transition: opacity 20ms ease;
+}
+
+.bn-block-wrapper:hover .bn-block-handle {
+  opacity: 1;
+}
+
+.bn-drag-handle {
+  cursor: grab;
+  color: rgba(55, 53, 47, 0.45);
+  padding: 2px;
+  border-radius: 3px;
+  transition: all 20ms ease;
+}
+
+.bn-drag-handle:hover {
+  background: rgba(55, 53, 47, 0.08);
+  color: rgb(55, 53, 47);
+}
+
+.bn-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Block menu */
+.bn-block-menu {
+  background: white;
+  border: 1px solid rgba(55, 53, 47, 0.09);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+}
+
+.bn-block-menu button {
+  padding: 6px 10px;
+  border-radius: 3px;
+  transition: background 20ms ease;
+  color: rgb(55, 53, 47);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+.bn-block-menu button:hover {
+  background: rgba(55, 53, 47, 0.08);
+}
+
+/* Links */
+.bn-editor a {
+  color: rgb(35, 131, 226);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(35, 131, 226, 0.3);
+  transition: border-color 20ms ease;
+}
+
+.bn-editor a:hover {
+  border-bottom-color: rgb(35, 131, 226);
+}
+
+/* Tables */
+.bn-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.bn-editor th,
+.bn-editor td {
+  border: 1px solid rgba(55, 53, 47, 0.09);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.bn-editor th {
+  background: rgba(55, 53, 47, 0.04);
+  font-weight: 600;
+}
+
+/* Focus styles */
+.bn-editor:focus-within {
+  outline: none;
+}
+
+.bn-editor .ProseMirror:focus {
+  outline: none;
+}
+
+/* Curseur de texte */
+.bn-editor .ProseMirror {
+  caret-color: rgb(55, 53, 47);
+}
+
+/* Images */
+.bn-editor img {
+  max-width: 100%;
+  border-radius: 3px;
+  margin: 1em 0;
+}
+
+/* Dividers */
+.bn-editor hr {
+  border: none;
+  border-top: 1px solid rgba(55, 53, 47, 0.09);
+  margin: 2em 0;
+}

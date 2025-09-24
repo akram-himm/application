@@ -6,41 +6,41 @@
 export const uniformStyles = {
   // Boutons
   button: {
-    primary: 'px-3 py-1.5 bg-white/70 text-gray-600 rounded-lg hover:bg-white hover:shadow-sm transition-all text-sm ring-1 ring-gray-200',
-    secondary: 'px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-all text-sm',
-    danger: 'px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all text-sm',
-    success: 'px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-all text-sm',
-    icon: 'p-1.5 hover:bg-gray-100 rounded-lg transition-colors',
+    primary: 'px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-all duration-20 text-sm',
+    secondary: 'px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-all duration-20 text-sm',
+    danger: 'px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-all duration-20 text-sm',
+    success: 'px-3 py-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-all duration-20 text-sm',
+    icon: 'p-1.5 hover:bg-gray-100 rounded transition-colors duration-20',
     iconSize: 'w-3.5 h-3.5'
   },
   
   // Inputs
   input: {
-    default: 'w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 transition-all text-sm',
-    select: 'w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-300 transition-all text-sm',
-    textarea: 'w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 transition-all text-sm resize-none'
+    default: 'w-full px-3 py-2 bg-white border border-gray-200 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-all duration-20 text-sm',
+    select: 'w-full px-3 py-2 bg-white border border-gray-200 rounded text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-all duration-20 text-sm',
+    textarea: 'w-full px-3 py-2 bg-white border border-gray-200 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-all duration-20 text-sm resize-none'
   },
   
   // Cards
   card: {
-    default: 'bg-white/70 backdrop-blur-sm rounded-xl shadow-sm ring-1 ring-gray-200',
-    hover: 'bg-white/70 backdrop-blur-sm rounded-xl shadow-sm ring-1 ring-gray-200 hover:shadow-md transition-all',
+    default: 'bg-white rounded-lg border border-gray-200',
+    hover: 'bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-all duration-20',
     padding: 'p-4'
   },
   
   // Modals
   modal: {
-    overlay: 'fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50',
-    container: 'bg-white/90 backdrop-blur-md rounded-2xl shadow-xl ring-1 ring-gray-200 p-6 max-w-md w-full mx-4',
+    overlay: 'fixed inset-0 bg-black/20 flex items-center justify-center z-50',
+    container: 'bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4',
     title: 'text-lg font-light text-gray-800 mb-4',
-    // Dark theme modals
-    darkOverlay: 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4',
-    darkContainer: 'bg-[rgb(37,37,37)] border border-[rgb(47,47,47)] rounded-lg p-6 w-full max-w-[500px] shadow-2xl',
-    darkTitle: 'text-xl font-semibold text-white/81 mb-5',
-    darkInput: 'w-full px-3 py-2 bg-white/[0.055] border border-white/[0.094] rounded-md text-white/81 placeholder-white/46 focus:outline-none focus:border-white/20 transition-all duration-150',
-    darkLabel: 'block mb-2 text-white/46 text-sm font-medium',
-    darkButtonCancel: 'px-3 py-1.5 bg-white/[0.055] text-white/46 border border-white/[0.094] rounded-md text-sm font-medium hover:bg-white/[0.08] transition-all duration-150',
-    darkButtonSubmit: 'px-3 py-1.5 bg-[rgb(35,131,226)] text-white rounded-md text-sm font-medium hover:bg-[rgb(28,104,181)] transition-all duration-150'
+    // Dark theme modals (convertis en clair)
+    darkOverlay: 'fixed inset-0 bg-black/20 z-[1000] flex items-center justify-center p-4',
+    darkContainer: 'bg-white border border-gray-200 rounded-lg p-6 w-full max-w-[500px] shadow-lg',
+    darkTitle: 'text-xl font-semibold text-gray-800 mb-5',
+    darkInput: 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700 placeholder-gray-400 focus:outline-none focus:border-blue-300 transition-all duration-20',
+    darkLabel: 'block mb-2 text-gray-600 text-sm font-medium',
+    darkButtonCancel: 'px-3 py-1.5 bg-gray-100 text-gray-600 border border-gray-200 rounded-md text-sm font-medium hover:bg-gray-200 transition-all duration-20',
+    darkButtonSubmit: 'px-3 py-1.5 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-all duration-20'
   },
   
   // Typography
@@ -50,8 +50,8 @@ export const uniformStyles = {
     label: 'block text-sm text-gray-600 mb-1',
     body: 'text-sm text-gray-700',
     // Page headers
-    pageTitle: 'text-3xl font-light text-gray-700 tracking-tight',
-    pageSubtitle: 'text-gray-400 mt-2 text-sm'
+    pageTitle: 'text-3xl font-light text-gray-800 tracking-tight',
+    pageSubtitle: 'text-gray-500 mt-2 text-sm'
   },
   
   // Page header container
@@ -70,8 +70,8 @@ export const uniformStyles = {
   
   // Layout
   layout: {
-    page: 'min-h-screen bg-white/70 backdrop-blur-sm ring-1 ring-gray-200 shadow-[12px_0_32px_rgba(0,0,0,0.06)]',
-    pageAlt: 'min-h-screen bg-gradient-to-b from-[#E9E9E9] via-[#F4F4F4] to-[#F9F9F9]',
+    page: 'min-h-screen bg-gray-50',
+    pageAlt: 'min-h-screen bg-white',
     container: 'max-w-7xl mx-auto p-6',
     section: 'mb-6'
   }

@@ -27,8 +27,8 @@ const SaveIndicator = () => {
     };
   }, []);
 
-  // Ne rien afficher si idle
-  if (status === 'idle') return null;
+  // Toujours retourner null pour masquer complètement l'indicateur
+  return null;
 
   const getStatusIcon = () => {
     switch (status) {

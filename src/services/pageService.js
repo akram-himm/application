@@ -1,8 +1,23 @@
 // Service de gestion des pages personnalisées
 import { addToTrash } from './trashService.js';
+import { getCurrentWorkspace } from './workspaceService';
 
-const STORAGE_KEY = 'custom_pages';
-const PAGES_ORDER_KEY = 'pages_order';
+// Obtenir les clés de stockage dynamiques en fonction du workspace actuel
+const getStorageKeys = () => {
+  const workspace = getCurrentWorkspace();
+  if (!workspace || !workspace.dataKeys) {
+    // Clés par défaut pour la compatibilité
+    return {
+      STORAGE_KEY: 'custom_pages',
+      PAGES_ORDER_KEY: 'pages_order'
+    };
+  }
+
+  return {
+    STORAGE_KEY: workspace.dataKeys.pages || 'custom_pages',
+    PAGES_ORDER_KEY: `${workspace.dataKeys.pages}_order` || 'pages_order'
+  };
+};
 
 // Pages par défaut (non modifiables dans leur structure)
 export const DEFAULT_PAGES = [
@@ -16,6 +31,7 @@ export const DEFAULT_PAGES = [
 // Charger les pages personnalisées
 export const loadCustomPages = () => {
   try {
+    const { STORAGE_KEY } = getStorageKeys();
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : [];
   } catch (error) {
@@ -27,6 +43,7 @@ export const loadCustomPages = () => {
 // Sauvegarder les pages personnalisées
 export const saveCustomPages = (pages) => {
   try {
+    const { STORAGE_KEY } = getStorageKeys();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(pages));
     return true;
   } catch (error) {
@@ -38,6 +55,7 @@ export const saveCustomPages = (pages) => {
 // Charger l'ordre des pages
 export const loadPagesOrder = () => {
   try {
+    const { PAGES_ORDER_KEY } = getStorageKeys();
     const saved = localStorage.getItem(PAGES_ORDER_KEY);
     if (!saved) {
       // Ordre par défaut
@@ -53,6 +71,7 @@ export const loadPagesOrder = () => {
 // Sauvegarder l'ordre des pages
 export const savePagesOrder = (order) => {
   try {
+    const { PAGES_ORDER_KEY } = getStorageKeys();
     localStorage.setItem(PAGES_ORDER_KEY, JSON.stringify(order));
     return true;
   } catch (error) {
@@ -62,25 +81,21 @@ export const savePagesOrder = (order) => {
 };
 
 // Créer une nouvelle page
-export const createPage = (name, icon = '📝') => {
+export const createPage = (name, icon = '📝', content = null) => {
   const customPages = loadCustomPages();
+  const pageId = Date.now().toString();
+  const pagePath = name.toLowerCase().replace(/\s+/g, '-');
+
   const newPage = {
-    id: `custom-${Date.now()}`,
+    id: pageId,
     name: name,
     icon: icon,
-    path: `/page/${Date.now()}`,
+    path: `/page/${pagePath}`,
     fixed: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    content: {
-      blocks: [
-        {
-          id: `block-${Date.now()}`,
-          type: 'heading1',
-          content: name,
-          properties: {}
-        }
-      ]
+    content: content || {
+      blocks: []
     }
   };
 
@@ -191,13 +206,13 @@ export const getAllPages = () => {
 };
 
 // Sauvegarder le contenu d'une page
-export const savePageContent = (pageId, blocks) => {
+export const savePageContent = (pageId, content) => {
   const customPages = loadCustomPages();
-  const page = customPages.find(p => p.id === pageId);
+  const pageIndex = customPages.findIndex(p => p.id === pageId);
 
-  if (page) {
-    page.content = { blocks };
-    page.updatedAt = new Date().toISOString();
+  if (pageIndex !== -1) {
+    customPages[pageIndex].content = content;
+    customPages[pageIndex].updatedAt = new Date().toISOString();
     saveCustomPages(customPages);
     return true;
   }
@@ -205,7 +220,7 @@ export const savePageContent = (pageId, blocks) => {
   // Pour les pages personnalisées stockées séparément
   const key = `page_content_${pageId}`;
   try {
-    localStorage.setItem(key, JSON.stringify({ blocks, updatedAt: new Date().toISOString() }));
+    localStorage.setItem(key, JSON.stringify({ ...content, updatedAt: new Date().toISOString() }));
     return true;
   } catch (error) {
     console.error('Erreur lors de la sauvegarde du contenu:', error);
@@ -254,4 +269,16 @@ export const loadPageContent = (pageId) => {
     console.error('Erreur lors du chargement du contenu:', error);
     return { blocks: [] };
   }
+};
+
+// Obtenir une page par son path
+export const getPageByPath = (path) => {
+  const customPages = loadCustomPages();
+  return customPages.find(p => p.path === path);
+};
+
+// Obtenir une page par son ID
+export const getPageById = (id) => {
+  const customPages = loadCustomPages();
+  return customPages.find(p => p.id === id);
 };

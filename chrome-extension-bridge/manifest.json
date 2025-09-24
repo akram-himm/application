@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Desktop App Bridge for ChatGPT",
+  "version": "1.0.0",
+  "description": "Permet à ChatGPT de contrôler l'application desktop",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:3456/*",
+    "https://chat.openai.com/*",
+    "https://chatgpt.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

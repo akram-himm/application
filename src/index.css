@@ -9,38 +9,78 @@
   box-sizing: border-box;
 }
 
+/* Supprimer le cadre bleu sur tous les inputs et textareas */
+input:focus,
+textarea:focus,
+select:focus,
+button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: inherit !important;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Transition fluide lors du changement de workspace */
+body.workspace-switching {
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+}
+
+body.workspace-switching * {
+  pointer-events: none !important;
+}
+
+body.workspace-switching aside {
+  opacity: 0.95;
+  filter: blur(0.5px);
+  transition: all 150ms ease-out;
+}
+
+/* Masquer les animations pendant le switch */
+body.workspace-switching aside * {
+  animation: none !important;
+  transition: none !important;
+}
+
 :root {
   /* Couleurs principales */
-  --bg-primary: rgb(25, 25, 25);
-  --bg-secondary: rgb(32, 32, 32);
-  --bg-tertiary: rgb(37, 37, 37);
-  --bg-hover: rgb(45, 45, 45);
-  
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #FAFAFA;
+  --bg-tertiary: #F7F6F3;
+  --bg-hover: rgba(55, 53, 47, 0.03);
+
   /* Bordures */
-  --border-primary: rgb(47, 47, 47);
-  --border-secondary: rgba(255, 255, 255, 0.094);
-  
+  --border-primary: rgba(55, 53, 47, 0.09);
+  --border-secondary: rgba(55, 53, 47, 0.06);
+
   /* Texte */
-  --text-primary: rgba(255, 255, 255, 0.81);
-  --text-secondary: rgba(255, 255, 255, 0.46);
-  --text-tertiary: rgba(255, 255, 255, 0.282);
-  
+  --text-primary: rgb(37, 37, 37);
+  --text-secondary: rgba(55, 53, 47, 0.65);
+  --text-tertiary: rgba(55, 53, 47, 0.45);
+
   /* Couleurs d'accent */
-  --accent-blue: rgb(35, 131, 226);
-  --accent-blue-hover: rgb(28, 104, 181);
+  --accent-blue: rgb(51, 126, 169);
+  --accent-blue-hover: rgb(41, 101, 135);
   --accent-green: rgb(34, 197, 94);
   --accent-yellow: rgb(251, 191, 36);
   --accent-red: rgb(239, 68, 68);
-  
+
   /* Effets */
-  --bg-opacity-1: rgba(255, 255, 255, 0.055);
-  --bg-opacity-2: rgba(255, 255, 255, 0.08);
-  --bg-opacity-3: rgba(255, 255, 255, 0.1);
-  
+  --bg-opacity-1: rgba(55, 53, 47, 0.03);
+  --bg-opacity-2: rgba(55, 53, 47, 0.05);
+  --bg-opacity-3: rgba(55, 53, 47, 0.08);
+
   /* Transitions */
   --transition-fast: 20ms ease-in;
-  --transition-normal: 150ms ease;
-  --transition-slow: 300ms ease;
+  --transition-normal: 20ms ease;
+  --transition-slow: 50ms ease;
 }
 
 body {
@@ -71,18 +111,18 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-primary);
+  background: rgba(55, 53, 47, 0.2);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(55, 53, 47, 0.3);
 }
 
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border-primary) var(--bg-secondary);
+  scrollbar-color: rgba(55, 53, 47, 0.2) var(--bg-secondary);
 }
 
 /* Sélection de texte */
@@ -138,20 +178,20 @@ code {
 
 /* Classes utilitaires personnalisées */
 .fade-in {
-  animation: fadeIn 300ms ease forwards;
+  animation: fadeIn 20ms ease forwards;
 }
 
 .slide-in {
-  animation: slideIn 300ms ease forwards;
+  animation: slideIn 20ms ease forwards;
 }
 
 .scale-in {
-  animation: scaleIn 300ms ease forwards;
+  animation: scaleIn 20ms ease forwards;
 }
 
 /* Transitions pour les éléments interactifs */
 .interactive {
-  transition: all var(--transition-normal);
+  transition: all 20ms ease;
 }
 
 .interactive-fast {
@@ -160,7 +200,7 @@ code {
 
 /* Effets de hover pour les cartes */
 .card-hover {
-  transition: all var(--transition-normal);
+  transition: all 20ms ease;
 }
 
 .card-hover:hover {
@@ -170,21 +210,21 @@ code {
 
 /* Styles pour les inputs personnalisés */
 .custom-input {
-  background: var(--bg-opacity-1);
-  border: 1px solid var(--border-secondary);
+  background: white;
+  border: 1px solid var(--border-primary);
   border-radius: 6px;
   color: var(--text-primary);
   transition: all var(--transition-normal);
 }
 
 .custom-input:hover {
-  background: var(--bg-opacity-2);
+  background: var(--bg-secondary);
 }
 
 .custom-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.2);
-  background: var(--bg-opacity-2);
+  border-color: var(--accent-blue);
+  background: white;
 }
 
 /* Styles pour les boutons */
@@ -226,27 +266,25 @@ code {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.2);
   z-index: 1000;
-  animation: fadeIn 200ms ease;
+  animation: fadeIn 20ms ease;
 }
 
 .modal-content {
-  background: var(--bg-tertiary);
+  background: white;
   border: 1px solid var(--border-primary);
   border-radius: 8px;
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
-  animation: scaleIn 300ms ease;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  animation: scaleIn 20ms ease;
 }
 
 /* Styles pour les tooltips */
 .tooltip {
-  background: rgba(37, 37, 37, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: white;
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
 /* Classes pour les statuts */
@@ -302,8 +340,8 @@ code {
 }
 
 .drag-over {
-  background: rgba(35, 131, 226, 0.1) !important;
-  border-color: rgb(35, 131, 226) !important;
+  background: rgba(51, 126, 169, 0.1) !important;
+  border-color: var(--accent-blue) !important;
   transform: scale(1.02);
 }
 
@@ -313,9 +351,9 @@ code {
   top: 0;
   width: 3px;
   height: 100%;
-  background: rgb(35, 131, 226);
+  background: var(--accent-blue);
   opacity: 0;
-  transition: opacity 150ms ease;
+  transition: opacity 20ms ease;
   pointer-events: none;
   z-index: 10;
 }
@@ -335,7 +373,7 @@ code {
 /* Radar card specific styles */
 .radar-card {
   position: relative;
-  transition: all 150ms ease;
+  transition: all 20ms ease;
 }
 
 .radar-card:hover {
@@ -361,7 +399,7 @@ code {
   display: flex;
   gap: 4px;
   opacity: 0;
-  transition: opacity 150ms ease;
+  transition: opacity 20ms ease;
 }
 
 /* Styles pour les tables */
@@ -383,12 +421,12 @@ code {
 
 .data-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  border-bottom: 1px solid var(--border-secondary);
   font-size: 14px;
 }
 
 .data-table tr:hover td {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-hover);
 }
 
 /* Responsive utilities */

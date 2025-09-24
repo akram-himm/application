@@ -1,0 +1,66 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Chrome Controller API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "paths": {
+    "/chrome/navigate": {
+      "post": {
+        "summary": "Navigate to URL",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chrome/modify": {
+      "post": {
+        "summary": "Modify page content",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "selector": {"type": "string"},
+                  "content": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chrome/execute": {
+      "post": {
+        "summary": "Execute JavaScript",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "script": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

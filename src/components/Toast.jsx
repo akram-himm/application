@@ -141,8 +141,13 @@ const Toast = ({ toast, onRemove }) => {
   );
 };
 
-// Container pour les toasts
+// Container pour les toasts - Désactivé pour éviter les notifications visuelles
 const ToastContainer = ({ toasts, onRemove }) => {
+  // Retourner null pour masquer complètement les toasts
+  return null;
+
+  // Code original conservé mais non exécuté
+  /*
   return (
     <div className="fixed bottom-4 right-4 z-[9999] space-y-2">
       <style>{`
@@ -156,7 +161,7 @@ const ToastContainer = ({ toasts, onRemove }) => {
             opacity: 1;
           }
         }
-        
+
         @keyframes slideOut {
           from {
             transform: translateX(0);
@@ -173,6 +178,7 @@ const ToastContainer = ({ toasts, onRemove }) => {
       ))}
     </div>
   );
+  */
 };
 
 export default ToastProvider;

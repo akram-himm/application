@@ -20,8 +20,10 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
   const centerY = size / 2;
   const radius = size * 0.4;
 
-  // Minimum 6 axes, mais peut augmenter selon le nombre de matières
-  const AXES_COUNT = Math.max(6, subjects.length);
+  // Utiliser un nombre d'axes qui s'adapte mais reste stable
+  const MIN_AXES = 6; // Minimum d'axes pour garder une belle forme
+  const AXES_COUNT = Math.max(MIN_AXES, subjects.length); // S'adapter au nombre de sujets mais avec un minimum
+  const angleStep = (Math.PI * 2) / AXES_COUNT; // Définir angleStep globalement
 
   const animateRadar = useCallback(() => {
     setAnimationProgress(prev => {
@@ -38,24 +40,26 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
   }, [animationProgress]);
 
   useEffect(() => {
+    // Réinitialiser l'animation chaque fois que les sujets changent
     setAnimationProgress(0);
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
     animationRef.current = requestAnimationFrame(animateRadar);
-    
+
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [subjects]);
+  }, [subjects.length]); // Déclencher sur le changement du nombre de sujets
 
   const drawRadar = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, size, size);
-    
-    const angleStep = (Math.PI * 2) / AXES_COUNT;
 
     // Grilles circulaires - style simple et cohérent
     ctx.strokeStyle = 'rgba(156, 163, 175, 0.2)'; // gray-400 avec opacité
@@ -105,7 +109,12 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       ctx.fillStyle = 'rgb(107, 114, 128)'; // gray-500 pour cohérence
       
       subjects.forEach((subject, index) => {
-        const angle = index * angleStep - Math.PI / 2;
+        // Utiliser la grille d'axes pour positionner les sujets
+        // Si moins de sujets que d'axes, répartir uniformément sur les axes disponibles
+        const angleIndex = subjects.length < AXES_COUNT
+          ? Math.floor((index / subjects.length) * AXES_COUNT)
+          : index;
+        const angle = (angleIndex * angleStep) - Math.PI / 2;
         let value = subject.value;
         
         const penalty = penalties.find(p => p.subjectId === subject.id);
@@ -133,7 +142,12 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       ctx.lineWidth = 2;
       
       subjects.forEach((subject, index) => {
-        const angle = index * angleStep - Math.PI / 2;
+        // Utiliser la grille d'axes pour positionner les sujets
+        // Si moins de sujets que d'axes, répartir uniformément sur les axes disponibles
+        const angleIndex = subjects.length < AXES_COUNT
+          ? Math.floor((index / subjects.length) * AXES_COUNT)
+          : index;
+        const angle = (angleIndex * angleStep) - Math.PI / 2;
         let value = subject.value;
         
         const penalty = penalties.find(p => p.subjectId === subject.id);
@@ -156,7 +170,12 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       
       // Points sur les axes
       subjects.forEach((subject, index) => {
-        const angle = index * angleStep - Math.PI / 2;
+        // Utiliser la grille d'axes pour positionner les sujets
+        // Si moins de sujets que d'axes, répartir uniformément sur les axes disponibles
+        const angleIndex = subjects.length < AXES_COUNT
+          ? Math.floor((index / subjects.length) * AXES_COUNT)
+          : index;
+        const angle = (angleIndex * angleStep) - Math.PI / 2;
         let value = subject.value;
         
         const penalty = penalties.find(p => p.subjectId === subject.id);
@@ -215,48 +234,68 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
       }
     }
     
-    // Labels pour tous les axes
+    // Labels pour les sujets uniquement
     ctx.globalAlpha = 1;
     ctx.font = '14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
-    for (let i = 0; i < AXES_COUNT; i++) {
-      const angle = i * angleStep - Math.PI / 2;
+
+    // Afficher les labels seulement pour les sujets existants
+    subjects.forEach((subject, index) => {
+      // Utiliser la même logique de positionnement que pour les points
+      const angleIndex = subjects.length < AXES_COUNT
+        ? Math.floor((index / subjects.length) * AXES_COUNT)
+        : index;
+      const angle = (angleIndex * angleStep) - Math.PI / 2;
       const labelRadius = radius + 30;
       const x = centerX + Math.cos(angle) * labelRadius * animationProgress;
       const y = centerY + Math.sin(angle) * labelRadius * animationProgress;
-      
-      if (i < subjects.length) {
-        const subject = subjects[i];
-        const penalty = penalties.find(p => p.subjectId === subject.id);
 
-        // Tous les labels en gris pour cohérence (avec indication de pause)
-        if (subject.isPaused) {
-          ctx.fillStyle = 'rgb(156, 163, 175)'; // gray-400 pour les pausés
-        } else if (i === hoveredSubject) {
-          ctx.fillStyle = 'rgb(55, 65, 81)'; // gray-700 plus foncé au survol
-        } else {
-          ctx.fillStyle = 'rgb(107, 114, 128)'; // gray-500 par défaut
-        }
-        
-        // Tronquer le texte s'il est trop long
-        let text = subject.name;
-        if (subject.isPaused) {
-          text = `⏸ ${text}`; // Ajouter l'icône pause
-        }
-        if (text.length > 15) {
-          text = text.substring(0, 13) + '...';
-        }
-        ctx.fillText(text, x, y);
+      const penalty = penalties.find(p => p.subjectId === subject.id);
+
+      // Tous les labels en gris pour cohérence (avec indication de pause)
+      if (subject.isPaused) {
+        ctx.fillStyle = 'rgb(156, 163, 175)'; // gray-400 pour les pausés
+      } else if (index === hoveredSubject) {
+        ctx.fillStyle = 'rgb(55, 65, 81)'; // gray-700 plus foncé au survol
       } else {
-        // Axes vides quand moins de 6 matières
-        ctx.fillStyle = 'rgba(156, 163, 175, 0.5)'; // gray-400 à 50%
-        ctx.fillText('—', x, y);
+        ctx.fillStyle = 'rgb(107, 114, 128)'; // gray-500 par défaut
+      }
+
+      // Tronquer le texte s'il est trop long
+      let text = subject.name;
+      if (subject.isPaused) {
+        text = `⏸ ${text}`; // Ajouter l'icône pause
+      }
+      if (text.length > 15) {
+        text = text.substring(0, 13) + '...';
+      }
+      ctx.fillText(text, x, y);
+    });
+
+    // Points de référence discrets sur les axes vides (optionnel, plus léger)
+    if (subjects.length < AXES_COUNT) {
+      ctx.fillStyle = 'rgba(156, 163, 175, 0.2)'; // gray-400 très transparent
+      for (let i = 0; i < AXES_COUNT; i++) {
+        // Vérifier si cet axe est utilisé par un sujet
+        const isUsed = subjects.some((_, subjectIndex) => {
+          const angleIndex = Math.floor((subjectIndex / subjects.length) * AXES_COUNT);
+          return angleIndex === i;
+        });
+
+        if (!isUsed) {
+          const angle = i * angleStep - Math.PI / 2;
+          const x = centerX + Math.cos(angle) * (radius + 10) * animationProgress;
+          const y = centerY + Math.sin(angle) * (radius + 10) * animationProgress;
+
+          ctx.beginPath();
+          ctx.arc(x, y, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     }
     
-  }, [size, centerX, centerY, radius, subjects, hoveredSubject, penalties, animationProgress, AXES_COUNT]);
+  }, [size, centerX, centerY, radius, subjects, hoveredSubject, penalties, animationProgress, AXES_COUNT, angleStep]);
 
   useEffect(() => {
     drawRadar();
@@ -309,7 +348,10 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     const angleStep = (Math.PI * 2) / AXES_COUNT;
     
     subjects.forEach((subject, index) => {
-      const angle = index * angleStep - Math.PI / 2;
+      const angleIndex = subjects.length < AXES_COUNT
+        ? Math.floor((index / subjects.length) * AXES_COUNT)
+        : index;
+      const angle = (angleIndex * angleStep) - Math.PI / 2;
       let value = subject.value;
       
       const penalty = penalties.find(p => p.subjectId === subject.id);
@@ -355,7 +397,10 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
     const angleStep = (Math.PI * 2) / AXES_COUNT;
     
     subjects.forEach((subject, index) => {
-      const angle = index * angleStep - Math.PI / 2;
+      const angleIndex = subjects.length < AXES_COUNT
+        ? Math.floor((index / subjects.length) * AXES_COUNT)
+        : index;
+      const angle = (angleIndex * angleStep) - Math.PI / 2;
       let value = subject.value;
       
       const penalty = penalties.find(p => p.subjectId === subject.id);
@@ -404,7 +449,10 @@ const RadarChart = ({ subjects, hoveredSubject, onHoverSubject, onSelectSubject,
 
     // Vérifier les points sur les axes
     subjects.forEach((subject, index) => {
-      const angle = index * angleStep - Math.PI / 2;
+      const angleIndex = subjects.length < AXES_COUNT
+        ? Math.floor((index / subjects.length) * AXES_COUNT)
+        : index;
+      const angle = (angleIndex * angleStep) - Math.PI / 2;
       let value = subject.value;
 
       const penalty = penalties.find(p => p.subjectId === subject.id);

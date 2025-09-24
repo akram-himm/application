@@ -10,6 +10,11 @@ const ChaptersView = () => {
   const navigate = useNavigate();
   const { radars, updateRadar } = useContext(AppContext);
   const [kanbanTasks, setKanbanTasks] = useState(null); // null pour indiquer qu'on n'a pas encore chargé
+  const [showKanban, setShowKanban] = useState(() => {
+    // Charger la préférence depuis localStorage
+    const savedPref = localStorage.getItem(`show-kanban-${radarId}-${subjectId}`);
+    return savedPref !== 'false'; // Par défaut true
+  });
 
   // Récupérer les données du radar et de la matière
   const radar = radars.find(r => r.id === radarId);
@@ -39,6 +44,13 @@ const ChaptersView = () => {
     const savedKey = `kanban-tasks-${radarId}-${subjectId}`;
     localStorage.setItem(savedKey, JSON.stringify(tasks));
     setKanbanTasks(tasks);
+  };
+
+  // Basculer l'affichage du Kanban
+  const toggleKanban = () => {
+    const newState = !showKanban;
+    setShowKanban(newState);
+    localStorage.setItem(`show-kanban-${radarId}-${subjectId}`, newState.toString());
   };
 
   // Gérer l'ajout d'une tâche depuis l'éditeur Notion vers le Kanban
@@ -137,24 +149,53 @@ const ChaptersView = () => {
             <span className="text-gray-700 font-medium">{subject.name}</span>
           </div>
 
-          <h1 className={uniformStyles.text.pageTitle}>
-            {subject?.name || 'Chapitres'}
-          </h1>
-          <p className={uniformStyles.text.pageSubtitle}>
-            Organisez vos chapitres et suivez votre progression
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className={uniformStyles.text.pageTitle}>
+                {subject?.name || 'Chapitres'}
+              </h1>
+              <p className={uniformStyles.text.pageSubtitle}>
+                Organisez vos chapitres et suivez votre progression
+              </p>
+            </div>
+
+            {/* Bouton pour basculer le Kanban */}
+            <button
+              onClick={toggleKanban}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                showKanban
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+              }`}
+              title={showKanban ? 'Masquer le Kanban' : 'Afficher le Kanban'}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                {showKanban ? (
+                  <path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                ) : (
+                  <>
+                    <rect x="3" y="7" width="7" height="10" rx="1"/>
+                    <rect x="14" y="5" width="7" height="12" rx="1"/>
+                  </>
+                )}
+              </svg>
+              {showKanban ? 'Masquer Kanban' : 'Afficher Kanban'}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Content - Kanban et Éditeur */}
       <div className="max-w-[1400px] mx-auto px-6 pb-32">
-        {/* Section Kanban */}
-        <div className="mb-8 p-6">
-          <SimpleKanban
-            subjectId={subjectId}
-            radarId={radarId}
-          />
-        </div>
+        {/* Section Kanban - Conditionnellement affichée */}
+        {showKanban && (
+          <div className="mb-8 p-6 animate-fadeIn">
+            <SimpleKanban
+              subjectId={subjectId}
+              radarId={radarId}
+            />
+          </div>
+        )}
 
         {/* Section Éditeur BlockNote */}
         <div>

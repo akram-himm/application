@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect, memo, useCallback, useMemo } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { useToast } from '../components/Toast';
+import { useUndoRedo } from '../contexts/UndoRedoContext';
 import DraggableTable from '../components/tasks/DraggableTable';
 import TaskContextMenu from '../components/tasks/TaskContextMenu';
 import TaskEditModal from '../components/tasks/TaskEditModal';
@@ -12,6 +13,7 @@ import { initTaskRotation, isRotationBlocked, setRotationBlocked, forceRotation 
 const PlanView = memo(() => {
   const { tasks, addTask, updateTask, deleteTask, radars, setTasks, updateRadar } = useContext(AppContext);
   const toast = useToast();
+  const { saveAction } = useUndoRedo();
   
   // Vérifier si on doit inverser les styles
   const altStyle = new URLSearchParams(window.location.search).get('alt') === 'true';
@@ -307,11 +309,18 @@ const PlanView = memo(() => {
     if (oldTask) {
       // Gérer la progression du radar si le statut change
       handleRadarProgression(oldTask, updatedTask);
+
+      // Sauvegarder l'action dans l'historique
+      saveAction({
+        description: `Modification: ${updatedTask.name}`,
+        undo: () => updateTask(oldTask),
+        redo: () => updateTask(updatedTask)
+      });
     }
 
     // Mettre à jour la tâche
     updateTask(updatedTask);
-  }, [tasks, updateTask, handleRadarProgression]);
+  }, [tasks, updateTask, handleRadarProgression, saveAction]);
 
   const handleUpdateDailyTasks = (newTasks) => {
     // Mettre à jour l'ordre de chaque tâche

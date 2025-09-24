@@ -1,9 +1,19 @@
 // Service de gestion de la corbeille
-const TRASH_KEY = 'app_trash';
+import { getCurrentWorkspace } from './workspaceService';
+
+// Obtenir la clé de stockage dynamique en fonction du workspace actuel
+const getTrashKey = () => {
+  const workspace = getCurrentWorkspace();
+  if (!workspace || !workspace.dataKeys) {
+    return 'app_trash'; // Clé par défaut pour la compatibilité
+  }
+  return workspace.dataKeys.trash || 'app_trash';
+};
 
 // Charger la corbeille depuis localStorage
 export const loadTrash = () => {
   try {
+    const TRASH_KEY = getTrashKey();
     const trash = localStorage.getItem(TRASH_KEY);
     return trash ? JSON.parse(trash) : [];
   } catch (error) {
@@ -15,6 +25,7 @@ export const loadTrash = () => {
 // Sauvegarder la corbeille dans localStorage
 export const saveTrash = (trash) => {
   try {
+    const TRASH_KEY = getTrashKey();
     localStorage.setItem(TRASH_KEY, JSON.stringify(trash));
     return true;
   } catch (error) {

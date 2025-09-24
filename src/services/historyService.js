@@ -2,7 +2,17 @@
  * Service de gestion de l'historique des tâches
  */
 
-const HISTORY_KEY = 'gestion_history';
+import { getCurrentWorkspace } from './workspaceService';
+
+// Obtenir la clé de stockage dynamique en fonction du workspace actuel
+const getHistoryKey = () => {
+  const workspace = getCurrentWorkspace();
+  if (!workspace || !workspace.dataKeys) {
+    return 'gestion_history'; // Clé par défaut pour la compatibilité
+  }
+  return workspace.dataKeys.history || 'gestion_history';
+};
+
 const MAX_HISTORY_DAYS = 365; // Garder 1 an d'historique
 
 /**
@@ -22,6 +32,7 @@ const MAX_HISTORY_DAYS = 365; // Garder 1 an d'historique
 // Charger l'historique depuis localStorage
 export const loadHistory = () => {
   try {
+    const HISTORY_KEY = getHistoryKey();
     const data = localStorage.getItem(HISTORY_KEY);
     if (data) {
       const history = JSON.parse(data);
@@ -44,6 +55,7 @@ export const loadHistory = () => {
 // Sauvegarder l'historique dans localStorage
 export const saveHistory = (history) => {
   try {
+    const HISTORY_KEY = getHistoryKey();
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     return true;
   } catch (error) {

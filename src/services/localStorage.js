@@ -1,13 +1,30 @@
-const STORAGE_KEYS = {
-  RADARS: 'gestion_radars',
-  TASKS: 'gestion_tasks',
-  BACKUP_RADARS: 'gestion_radars_backup',
-  BACKUP_TASKS: 'gestion_tasks_backup'
+import { getCurrentWorkspace } from './workspaceService';
+
+// Obtenir les clés de stockage dynamiques en fonction du workspace actuel
+const getStorageKeys = () => {
+  const workspace = getCurrentWorkspace();
+  if (!workspace || !workspace.dataKeys) {
+    // Clés par défaut pour la compatibilité
+    return {
+      RADARS: 'gestion_radars',
+      TASKS: 'gestion_tasks',
+      BACKUP_RADARS: 'gestion_radars_backup',
+      BACKUP_TASKS: 'gestion_tasks_backup'
+    };
+  }
+
+  return {
+    RADARS: workspace.dataKeys.radars || 'gestion_radars',
+    TASKS: workspace.dataKeys.tasks || 'gestion_tasks',
+    BACKUP_RADARS: `${workspace.dataKeys.radars}_backup`,
+    BACKUP_TASKS: `${workspace.dataKeys.tasks}_backup`
+  };
 };
 
 // Fonction utilitaire pour créer une backup
 const createBackup = (key, data) => {
   try {
+    const STORAGE_KEYS = getStorageKeys();
     const backupKey = key === STORAGE_KEYS.RADARS ? STORAGE_KEYS.BACKUP_RADARS : STORAGE_KEYS.BACKUP_TASKS;
     localStorage.setItem(backupKey, JSON.stringify({
       data,
@@ -21,6 +38,7 @@ const createBackup = (key, data) => {
 // Fonction pour restaurer depuis une backup
 const restoreFromBackup = (key) => {
   try {
+    const STORAGE_KEYS = getStorageKeys();
     const backupKey = key === STORAGE_KEYS.RADARS ? STORAGE_KEYS.BACKUP_RADARS : STORAGE_KEYS.BACKUP_TASKS;
     const backup = localStorage.getItem(backupKey);
     if (backup) {
@@ -36,6 +54,7 @@ const restoreFromBackup = (key) => {
 // Radars
 export const loadRadars = () => {
   try {
+    const STORAGE_KEYS = getStorageKeys();
     const data = localStorage.getItem(STORAGE_KEYS.RADARS);
     if (data) {
       const parsed = JSON.parse(data);
@@ -56,11 +75,12 @@ export const loadRadars = () => {
 
 export const saveRadars = (radars) => {
   try {
+    const STORAGE_KEYS = getStorageKeys();
     // Validation des données
     if (!Array.isArray(radars)) {
       throw new Error('Radars must be an array');
     }
-    
+
     // Créer une backup avant de sauvegarder
     const currentData = localStorage.getItem(STORAGE_KEYS.RADARS);
     if (currentData) {
@@ -73,7 +93,7 @@ export const saveRadars = (radars) => {
         // Ignorer si les données actuelles sont corrompues
       }
     }
-    
+
     // Sauvegarder les nouvelles données
     localStorage.setItem(STORAGE_KEYS.RADARS, JSON.stringify(radars));
     return true;
@@ -99,6 +119,7 @@ export const saveRadars = (radars) => {
 // Tasks
 export const loadTasks = () => {
   try {
+    const STORAGE_KEYS = getStorageKeys();
     const data = localStorage.getItem(STORAGE_KEYS.TASKS);
     if (data) {
       const parsed = JSON.parse(data);
@@ -119,11 +140,12 @@ export const loadTasks = () => {
 
 export const saveTasks = (tasks) => {
   try {
+    const STORAGE_KEYS = getStorageKeys();
     // Validation des données
     if (!Array.isArray(tasks)) {
       throw new Error('Tasks must be an array');
     }
-    
+
     // Créer une backup avant de sauvegarder
     const currentData = localStorage.getItem(STORAGE_KEYS.TASKS);
     if (currentData) {
@@ -136,7 +158,7 @@ export const saveTasks = (tasks) => {
         // Ignorer si les données actuelles sont corrompues
       }
     }
-    
+
     // Sauvegarder les nouvelles données
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     return true;

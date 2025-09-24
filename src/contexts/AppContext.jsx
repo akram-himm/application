@@ -61,6 +61,14 @@ const reducer = (state, action) => {
 export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  // Fonction pour recharger les données du workspace
+  const reloadWorkspaceData = useCallback(() => {
+    const newRadars = loadRadars();
+    const newTasks = loadTasks();
+    dispatch({ type: 'SET_RADARS', payload: newRadars });
+    dispatch({ type: 'SET_TASKS', payload: newTasks });
+  }, []);
+
   // Créer des versions "debounced" des fonctions de sauvegarde
   // Cela évite de sauvegarder trop souvent (attend 500ms après le dernier changement)
   const debouncedSaveRadars = useMemo(
@@ -84,15 +92,29 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     // Initialiser avec une sauvegarde toutes les 30 secondes
     autoSaveService.init(performManualSave, 30000);
-    
+
     // Ajouter le callback pour les sauvegardes
     autoSaveService.addSaveCallback(performManualSave);
-    
+
     // Cleanup
     return () => {
       autoSaveService.stop();
     };
   }, [performManualSave]);
+
+  // Écouter les changements de workspace pour recharger les données
+  useEffect(() => {
+    const handleWorkspaceChange = (event) => {
+      // Recharger les données du nouveau workspace
+      reloadWorkspaceData();
+    };
+
+    window.addEventListener('workspaceChanged', handleWorkspaceChange);
+
+    return () => {
+      window.removeEventListener('workspaceChanged', handleWorkspaceChange);
+    };
+  }, [reloadWorkspaceData]);
 
   // Sauvegarder les radars quand ils changent (avec debounce)
   useEffect(() => {
